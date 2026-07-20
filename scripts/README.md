@@ -1,5 +1,25 @@
 # scripts — 農務小幫手工具集
 
+## 統一入口 farm.py（建議從這裡用）
+
+不用記一堆檔名，一個指令操作全部工具：
+
+```bash
+python3 farm.py                                        # 顯示選單
+python3 farm.py crops                                  # 列出知識庫作物
+python3 farm.py today  --file plantings.json           # 今日待辦（文字）
+python3 farm.py today  --file plantings.json --html today.html   # 今日待辦（手機頁）
+python3 farm.py calc   --crop 牛番茄 --date 2026-09-15 --plants 500
+python3 farm.py plan   --start 2026-03                 # 全年輪種
+python3 farm.py report --start 2026-03 --area 2 --html report.html
+python3 farm.py fetch  --crop 甜椒 --start 2026-01-01 --end 2026-12-31 --csv 甜椒.csv
+python3 farm.py market 甜椒.csv --grow-days 90 --market-report
+```
+
+以下為各工具細節（也可單獨執行）。
+
+---
+
 | 腳本 | 功能 |
 |---|---|
 | `daily_tasks.py` | 每日任務產生器（文字版）：讀種植紀錄 → 今天各畦區要做什麼 |
