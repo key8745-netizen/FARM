@@ -2,7 +2,8 @@
 
 | 腳本 | 功能 |
 |---|---|
-| `daily_tasks.py` | 每日任務產生器：讀種植紀錄 → 今天各畦區要做什麼、EC目標、採收狀態 |
+| `daily_tasks.py` | 每日任務產生器（文字版）：讀種植紀錄 → 今天各畦區要做什麼 |
+| `daily_tasks_html.py` | 每日待辦手機頁：可勾選、依畦區分組、勾選狀態記憶（localStorage）|
 | `calc_crop.py` | 作物計算引擎：定植日+株數 → 採收日、肥料、EC曲線、作業排程、分批建議 |
 | `annual_plan.py` | 一年輪種規劃器：安排全年輪種，讓收成落在高價月且符合輪作 |
 | `farm_report.py` | 一鍵年度經營報告（文字版）：輪種+肥料採購彙總+市場策略+管理原則 |
@@ -30,6 +31,14 @@ python3 daily_tasks.py --file plantings.json --plot A區     # 只看某畦區
 
 種植紀錄格式（`plantings.json`）：每筆填畦區、作物、定植日、株數。作物需存在於 `crops.json`。
 可搭配排程工具（如 cron / 手機捷徑）每天早上自動產生當日待辦。
+
+### 手機待辦頁
+
+```bash
+python3 daily_tasks_html.py --file plantings.json --out today.html
+```
+產生手機友善、**可逐項打勾**的當日待辦頁：依畦區分組、生育階段標籤、頂部完成進度條、
+勾選狀態存於瀏覽器（依日期記憶，隔天自動換新）。用手機瀏覽器開啟即可當每日打卡表。
 
 ---
 
