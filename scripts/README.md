@@ -2,6 +2,7 @@
 
 | 腳本 | 功能 |
 |---|---|
+| `daily_tasks.py` | 每日任務產生器：讀種植紀錄 → 今天各畦區要做什麼、EC目標、採收狀態 |
 | `calc_crop.py` | 作物計算引擎：定植日+株數 → 採收日、肥料、EC曲線、作業排程、分批建議 |
 | `annual_plan.py` | 一年輪種規劃器：安排全年輪種，讓收成落在高價月且符合輪作 |
 | `farm_report.py` | 一鍵年度經營報告（文字版）：輪種+肥料採購彙總+市場策略+管理原則 |
@@ -12,6 +13,23 @@
 知識庫：`crops.json`（作物參數，可自行擴充新作物）。全部零套件依賴，有 Python 3 即可跑。
 
 目前收錄作物：牛番茄、彩椒、玉女番茄、高山草莓（茄科/薔薇科高價作物）、高麗菜、敏豆（非茄科輪作與填空作物）。
+
+---
+
+## daily_tasks.py — 每日任務產生器（每天打開看這個）
+
+讀你的種植紀錄，算出**今天每個畦區要做什麼**：到期的排程作業、每日 EC/pH 抄錄（附目前階段目標值）、
+每週黏板巡查、採收狀態、未來 7 天預告。
+
+```bash
+cp plantings.example.json plantings.json   # 複製範例，填入你的畦區與定植日
+python3 daily_tasks.py --file plantings.json               # 今天
+python3 daily_tasks.py --file plantings.json --date 2026-07-20
+python3 daily_tasks.py --file plantings.json --plot A區     # 只看某畦區
+```
+
+種植紀錄格式（`plantings.json`）：每筆填畦區、作物、定植日、株數。作物需存在於 `crops.json`。
+可搭配排程工具（如 cron / 手機捷徑）每天早上自動產生當日待辦。
 
 ---
 
