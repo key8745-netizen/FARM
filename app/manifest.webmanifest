@@ -1,0 +1,13 @@
+{
+  "name": "農務小幫手",
+  "short_name": "農務小幫手",
+  "description": "信義鄉高冷地溫室農務助手：今日待辦、田區管理、作物計算、年度輪種規劃",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#F7F5EF",
+  "theme_color": "#3B6B4A",
+  "lang": "zh-Hant",
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
