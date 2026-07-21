@@ -369,7 +369,7 @@ function renderPlots(){
   // 紀錄歷史
   let recs=(r.records||[]).slice().sort((a,b)=>b.date<a.date?-1:1).map((rc,ri)=>{
     const meta=RTYPES[rc.type]||{t:rc.type,c:"obs"};
-    let extra=rc.type==="ecph"?("EC "+(rc.ec||"?")+" / pH "+(rc.ph||"?")):rc.type==="harv"?(rc.qty+" kg"):rc.type==="spray"?(rc.note+(rc.phi?"（安全期"+rc.phi+"天）":"")):rc.note||"";
+    let extra=rc.type==="ecph"?("EC "+(rc.ec||"?")+" / pH "+(rc.ph||"?")):rc.type==="harv"?(rc.qty+" kg"):rc.type==="spray"?((rc.target?"防"+rc.target+"：":"")+rc.note+(rc.dose?" "+rc.dose:"")+(rc.phi?"（安全期"+rc.phi+"天）":"")):rc.note||"";
     return '<div class="rec"><span class="rd">'+md(parseD(rc.date))+'</span><span class="rt"><span class="rtag '+meta.c+'">'+meta.t+'</span>'+extra+'</span><button class="del" data-r="'+ri+'">刪</button></div>';}).join("");
   let ecHist=(r.records||[]).filter(x=>x.type==="ecph"&&x.ec).slice(-8);
   let ecChart=ecHist.length>=2?'<div class="res"><h4>EC 趨勢</h4><div class="chart">'+ecHist.map(x=>{const h=Math.min(100,(+x.ec)/4*100);return '<div class="bar" style="height:'+h+'%"><b>'+x.ec+'</b><span>'+md(parseD(x.date))+'</span></div>';}).join("")+'</div></div>':"";
@@ -406,7 +406,11 @@ function logModal(type){
   let fields='<label class="f">日期</label><input class="t" id="m-date" type="date" value="'+fmtD(today())+'">';
   if(type==="ecph")fields+='<div class="row2"><div><label class="f">EC (dS/m)</label><input class="t" id="m-ec" type="number" step="0.1" placeholder="2.5"></div><div><label class="f">pH</label><input class="t" id="m-ph" type="number" step="0.1" placeholder="6.5"></div></div>';
   else if(type==="harv")fields+='<label class="f">採收量 (kg)</label><input class="t" id="m-qty" type="number" step="0.1" placeholder="15">';
-  else if(type==="spray")fields+='<label class="f">藥劑/防治對象</label><input class="t" id="m-note" placeholder="例如 防粉蝨 XX劑"><label class="f">安全採收期 (天)</label><input class="t" id="m-phi" type="number" placeholder="例如 7">';
+  else if(type==="spray")fields+='<div class="info" style="margin:6px 0">安全用藥五要點：適藥·適期·適量·稀釋倍數·安全採收期。請依植保系統登記藥填寫。</div>'+
+    '<label class="f">防治對象（病蟲害）</label><input class="t" id="m-target" placeholder="例如 粉蝨">'+
+    '<label class="f">藥劑名稱（含許可證字號佳）</label><input class="t" id="m-note" placeholder="例如 賽速安 50%可濕性粉劑">'+
+    '<div class="row2"><div><label class="f">稀釋倍數</label><input class="t" id="m-dose" placeholder="如 2000倍"></div>'+
+    '<div><label class="f">安全採收期(天)</label><input class="t" id="m-phi" type="number" placeholder="如 7"></div></div>';
   else fields+='<label class="f">內容</label><textarea class="t" id="m-note" placeholder="'+(type==="fert"?"例如 追肥 台肥43號 3kg":type==="work"?"例如 摘側芽、疏果":"例如 葉色正常、發現少量粉蝨")+'"></textarea>';
   mr.innerHTML='<div class="modal-bg" id="mbg"><div class="modal"><h3>登錄'+meta.t+'</h3><p class="note">'+load()[CUR].plot+' · '+load()[CUR].crop+'</p>'+fields+'<button class="btn" id="m-save">儲存</button><button class="btn sec" id="m-cancel">取消</button></div></div>';
   document.getElementById("m-cancel").onclick=()=>mr.innerHTML="";
@@ -415,7 +419,7 @@ function logModal(type){
     const p=load();const rec={type,date:document.getElementById("m-date").value};
     if(type==="ecph"){rec.ec=document.getElementById("m-ec").value;rec.ph=document.getElementById("m-ph").value;}
     else if(type==="harv")rec.qty=document.getElementById("m-qty").value;
-    else if(type==="spray"){rec.note=document.getElementById("m-note").value;rec.phi=document.getElementById("m-phi").value;}
+    else if(type==="spray"){rec.note=document.getElementById("m-note").value;rec.phi=document.getElementById("m-phi").value;rec.target=document.getElementById("m-target").value;rec.dose=document.getElementById("m-dose").value;}
     else rec.note=document.getElementById("m-note").value;
     p[CUR].records=p[CUR].records||[];p[CUR].records.push(rec);save(p);mr.innerHTML="";renderPlots();
   };
@@ -440,7 +444,9 @@ function renderTools(){
     '<div class="row2"><div><label class="f">定植日</label><input class="t" id="c-date" type="date" value="'+fmtD(today())+'"></div><div><label class="f">株數</label><input class="t" id="c-plants" type="number" value="500"></div></div>'+
     '<button class="btn" id="c-go">計算</button><div id="c-res"></div></div>'+
     '<h2 style="margin-top:22px">年度輪種規劃</h2><p class="note">從起始月排全年輪種，收成卡高價月＋輪作。</p>'+
-    '<div class="card"><label class="f">起始月</label><input class="t" id="p-start" type="month" value="'+nowM.getFullYear()+"-"+String(nowM.getMonth()+1).padStart(2,"0")+'"><button class="btn" id="p-go">產生規劃</button><div id="p-res"></div></div>';
+    '<div class="card"><label class="f">起始月</label><input class="t" id="p-start" type="month" value="'+nowM.getFullYear()+"-"+String(nowM.getMonth()+1).padStart(2,"0")+'"><button class="btn" id="p-go">產生規劃</button><div id="p-res"></div></div>'+
+    '<h2 style="margin-top:22px">產銷履歷紀錄簿</h2><p class="note">依台灣安全農業（TGAP）匯出用藥/施肥/採收紀錄，供驗證稽核與追溯。</p>'+
+    '<div class="card"><button class="btn" id="rb-go">匯出履歷紀錄簿</button><div id="rb-res"></div></div>';
   v.querySelector("#c-go").onclick=()=>{
     const c=CROPS[v.querySelector("#c-crop").value];const ds=v.querySelector("#c-date").value;const n=+v.querySelector("#c-plants").value;
     if(!ds||!n)return;const plant=parseD(ds);const first=addD(plant,c.grow);const last=addD(first,c.dur);const ratio=n/c.density;
@@ -456,6 +462,17 @@ function renderTools(){
     while(pos<end){let best=null;for(const[nm,c]of Object.entries(CROPS)){if(c.科===prev)continue;for(let dl=0;dl<=45;dl+=15){const pl=addD(pos,dl);const sc=avgIdx(c,pl);const adj=sc-dl*.001;if(!best||adj>best.adj)best={adj,sc,nm,c,pl};}}if(!best)break;const hs=addD(best.pl,best.c.grow),he=addD(hs,best.c.dur);out.push({nm:best.nm,fam:best.c.科,pl:best.pl,hs,he,sc:best.sc});prev=best.c.科;pos=addD(he,20);}
     const avg=out.reduce((a,r)=>a+r.sc,0)/out.length;
     v.querySelector("#p-res").innerHTML='<div class="res"><b>平均價位分數 '+avg.toFixed(2)+'</b> '+(avg>=1.15?"多數卡高價 🟢":"中上")+'</div>'+out.map((r,i)=>{const[cl,lb]=light(r.sc);return '<div class="rec"><span class="rd">輪'+(i+1)+'</span><span class="rt"><b>'+r.nm+'</b> 定植'+md(r.pl)+' → 採收'+md(r.hs)+'–'+md(r.he)+'　<span class="badge '+cl+'">'+lb+' '+r.sc.toFixed(2)+'</span></span></div>';}).join("");
+  };
+  v.querySelector("#rb-go").onclick=()=>{
+    const plots=load();let csv="日期,田區,作物,類型,防治對象,藥劑/資材,稀釋倍數/用量,安全採收期,備註\n";let n=0;
+    plots.forEach(r=>{(r.records||[]).slice().sort((a,b)=>a.date<b.date?-1:1).forEach(rc=>{
+      if(!["spray","fert","harv","work"].includes(rc.type))return;n++;
+      const ty={spray:"用藥",fert:"施肥",harv:"採收",work:"作業"}[rc.type];
+      const mat=rc.type==="harv"?"":(rc.note||"");
+      const dose=rc.type==="harv"?(rc.qty+"kg"):(rc.dose||"");
+      csv+=[rc.date,r.plot,r.crop,ty,rc.target||"",mat,dose,rc.phi||"",rc.type==="harv"?"產量":""].map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(",")+"\n";});});
+    v.querySelector("#rb-res").innerHTML=n?'<div class="res"><h4>紀錄簿（'+n+' 筆，CSV）</h4><textarea class="t" style="min-height:180px;font-size:.72rem" readonly id="rb-t">'+csv.replace(/</g,"&lt;")+'</textarea><button class="btn" id="rb-copy">複製 CSV</button><div class="foot" style="text-align:left">可貼進 Excel 或匯入產銷履歷系統。用藥紀錄請確認符合植保系統登記藥、稀釋倍數與安全採收期。</div></div>':'<div class="info">尚無用藥/施肥/採收紀錄。到田區登錄後即可匯出。</div>';
+    const cp=v.querySelector("#rb-copy");if(cp)cp.onclick=()=>{const ta=v.querySelector("#rb-t");ta.select();try{document.execCommand("copy");cp.textContent="已複製 ✓";}catch(e){}};
   };
 }
 
