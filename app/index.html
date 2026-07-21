@@ -36,7 +36,7 @@ h2{font-family:Georgia,"Songti TC",serif;font-size:1.2rem;margin:4px 0 3px;}
 .sec-h h3{font-size:.98rem;margin:0;}
 .sec-h span{font-size:.78rem;color:var(--ink-soft);}
 /* KPI */
-.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;}
 .kpi{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:12px 6px;text-align:center;}
 .kpi b{display:block;font-family:Georgia,serif;font-size:1.7rem;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums;}
 .kpi.warn b{color:var(--warn);}
@@ -94,7 +94,9 @@ button{font-family:inherit;cursor:pointer;border:none;border-radius:10px;font-we
 .rtag.ecph{background:var(--accent-soft);color:var(--accent);}
 .rtag.obs{background:var(--pre-bg);color:var(--pre);}
 .rtag.work{background:#E3EAEE;color:var(--blue);}
-@media (prefers-color-scheme:dark){.rtag.work{background:#1C2A31;}}
+.rtag.ipm{background:#EEE8F4;color:#6B44A0;}
+@media (prefers-color-scheme:dark){.rtag.work{background:#1C2A31;}.rtag.ipm{background:#2A1D38;color:#A97FD6;}}
+:root[data-theme="dark"] .rtag.work{background:#1C2A31;}:root[data-theme="dark"] .rtag.ipm{background:#2A1D38;color:#A97FD6;}
 .res{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:13px;margin-top:13px;}
 .res h4{margin:0 0 7px;font-size:1rem;font-family:Georgia,serif;}
 .res .r{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line);font-size:.9rem;}
@@ -162,7 +164,9 @@ const DIAG=[
  {q:"葉背小蟲、黏板誘到白色小蟲",c:"粉蝨/薊馬/蟎",a:"達門檻才查植保系統合法用藥並鎖安全採收期；可用天敵。"},
  {q:"介質偏鹹、植株萎凋生長慢",c:"鹽類累積(EC過高)",a:"減少施肥、澆清水淋洗鹽分、增加有機質。"}
 ];
-const RTYPES={fert:{t:"施肥",c:"fert"},spray:{t:"用藥",c:"spray"},harv:{t:"採收",c:"harv"},ecph:{t:"EC/pH",c:"ecph"},work:{t:"作業",c:"work"},obs:{t:"觀察",c:"obs"}};
+const RTYPES={fert:{t:"施肥",c:"fert"},spray:{t:"用藥",c:"spray"},harv:{t:"採收",c:"harv"},ecph:{t:"EC/pH",c:"ecph"},work:{t:"作業",c:"work"},obs:{t:"觀察",c:"obs"},ipm:{t:"黏板",c:"ipm"}};
+/* IPM 防治門檻（隻/板/週，參考 IPM 精神：超標才用藥） */
+const IPM_THR={粉蝨:5,薊馬:3,葉蟎:5,蚜蟲:10};
 /* 登記農藥快選資料庫（溫室番茄/彩椒常見對象，資料參考植保資訊系統，請自行核對許可證字號） */
 const PESTDB=[
   /* 粉蝨 */
@@ -253,10 +257,13 @@ function tasksFor(rec){
 /* ---------- 總覽 ---------- */
 function renderDash(){
   const plots=load();const v=document.getElementById("view-dash");const tdy=today();
-  let taskCount=0,harvSoon=0,phiWarn=0;
+  let taskCount=0,harvSoon=0,phiWarn=0,ipmAlert=0;
   plots.forEach(r=>{const o=tasksFor(r);if(o.today)taskCount+=o.today.length;
     const[,,age]=stageOf(r);const c=CROPS[r.crop];if(age>=0&&age<c.grow&&c.grow-age<=14)harvSoon++;
-    if(phiLock(r))phiWarn++;});
+    if(phiLock(r))phiWarn++;
+    const li=(r.records||[]).filter(x=>x.type==="ipm").sort((a,b)=>b.date<a.date?-1:1)[0];
+    if(li&&Object.entries({粉蝨:+li.wf,薊馬:+li.th,葉蟎:+li.sm,蚜蟲:+li.ap}).some(([k,v])=>v>=IPM_THR[k]))ipmAlert++;
+  });
   if(!plots.length){v.innerHTML='<div class="empty">歡迎使用農務小幫手 👋<br><br>點下方「🌱 田區」新增你的第一個田區，<br>系統就會開始幫你管理每日農務、生育進度與採收。</div>';return;}
   let dynCount=0;plots.forEach((r,i)=>dynCount+=getDyn(i).length);
   let checkinBtn='<button class="btn" id="checkin" style="margin-top:0;margin-bottom:14px">📝 今日回報（EC值/病蟲害/天氣）→ 動態調整</button>'+
@@ -265,7 +272,8 @@ function renderDash(){
     '<div class="kpi"><b>'+plots.length+'</b><small>田區</small></div>'+
     '<div class="kpi"><b>'+taskCount+'</b><small>今日任務</small></div>'+
     '<div class="kpi"><b>'+harvSoon+'</b><small>近採收</small></div>'+
-    '<div class="kpi '+(phiWarn?'warn':'')+'"><b>'+phiWarn+'</b><small>用藥管制</small></div></div>';
+    '<div class="kpi '+(phiWarn?'warn':'')+'"><b>'+phiWarn+'</b><small>用藥管制</small></div>'+
+    '<div class="kpi '+(ipmAlert?'warn':'')+'"><b>'+ipmAlert+'</b><small>黏板超標</small></div></div>';
 
   // 生育進度卡
   let cards="";
@@ -353,7 +361,11 @@ function exportModal(){
     if(todayRecs.length)todayRecs.forEach(x=>{const m=RTYPES[x.type];txt+="  · "+m.t+"："+(x.ec?"EC"+x.ec+"/pH"+(x.ph||"?"):x.qty?x.qty+"kg":x.note||"")+"\n";});
     const dyn=getDyn(i);if(dyn.length)dyn.forEach(d=>txt+="  ⚠ "+d+"\n");
     if(phi)txt+="  ⚠ 用藥安全期至"+md(phi)+"禁採\n";
-    if(ht)txt+="  · 累計採收 "+ht+"kg\n";});
+    if(ht)txt+="  · 累計採收 "+ht+"kg\n";
+    const li=(r.records||[]).filter(x=>x.type==="ipm").sort((a,b)=>b.date<a.date?-1:1)[0];
+    if(li){const warns=Object.entries({粉蝨:+li.wf,薊馬:+li.th,葉蟎:+li.sm,蚜蟲:+li.ap}).filter(([k,v])=>v>0);
+      txt+="  · 黏板("+md(parseD(li.date))+"): "+(warns.length?warns.map(([k,v])=>k+v+"隻").join("、"):"無蟲")+(warns.some(([k,v])=>v>=IPM_THR[k])?" ⚠超標建議用藥":"")+"\n";
+    }});
   txt+="\n（請顧問就上述現況給施肥/灌溉/用藥與後續管理建議）";
   mr.innerHTML='<div class="modal-bg" id="mbg2"><div class="modal"><h3>匯出今日摘要</h3><p class="note">複製以下文字，貼給顧問或 AI 助手做定期檢視與建議。</p>'+
     '<textarea class="t" id="exp-t" style="min-height:220px;font-size:.8rem" readonly>'+txt.replace(/</g,"&lt;")+'</textarea>'+
@@ -387,6 +399,10 @@ function renderPlots(){
   const c=CROPS[r.crop];const[st,cls,age]=stageOf(r);
   const gpct=age<0?0:Math.min(100,Math.round(age/c.grow*100));
   const o=tasksFor(r);const phi=phiLock(r);const ht=harvestTotal(r);
+  // IPM 黏板狀態
+  const lastIpm=(r.records||[]).filter(x=>x.type==="ipm").sort((a,b)=>b.date<a.date?-1:1)[0]||null;
+  const ipmAlerts=lastIpm?Object.entries({粉蝨:+lastIpm.wf,薊馬:+lastIpm.th,葉蟎:+lastIpm.sm,蚜蟲:+lastIpm.ap}).filter(([k,v])=>v>=IPM_THR[k]).map(([k,v])=>k+"("+v+"隻≥門檻"+IPM_THR[k]+")"):[null];
+  const ipmWarn=lastIpm&&ipmAlerts.length?'<span class="pill">🪤 '+ipmAlerts.join("、")+'　建議查植保系統用藥</span>':lastIpm?'<span class="pill ok">🪤 黏板正常（'+md(parseD(lastIpm.date))+'）</span>':'<span class="pill" style="background:var(--grow-bg);color:var(--grow)">🪤 尚未黏板巡查</span>';
   const dyn=getDyn(CUR);
   let dynHtml=dyn.length?'<div class="card" style="border-color:var(--warn)"><h3 style="margin:0 0 4px;font-size:1rem;color:var(--warn)">📝 今日回報動態調整</h3>'+
     dyn.map((d,di)=>{const k="farm-"+fmtD(today())+"-"+CUR+"-dyn"+di;const ck=localStorage.getItem(k)==="1";
@@ -397,7 +413,7 @@ function renderPlots(){
   // 紀錄歷史
   let recs=(r.records||[]).slice().sort((a,b)=>b.date<a.date?-1:1).map((rc,ri)=>{
     const meta=RTYPES[rc.type]||{t:rc.type,c:"obs"};
-    let extra=rc.type==="ecph"?("EC "+(rc.ec||"?")+" / pH "+(rc.ph||"?")):rc.type==="harv"?(rc.qty+" kg"):rc.type==="spray"?((rc.target?"防"+rc.target+"：":"")+rc.note+(rc.dose?" "+rc.dose:"")+(rc.phi?"（安全期"+rc.phi+"天）":"")):rc.note||"";
+    let extra=rc.type==="ecph"?("EC "+(rc.ec||"?")+" / pH "+(rc.ph||"?")):rc.type==="harv"?(rc.qty+" kg"):rc.type==="spray"?((rc.target?"防"+rc.target+"：":"")+rc.note+(rc.dose?" "+rc.dose:"")+(rc.phi?"（安全期"+rc.phi+"天）":"")):rc.type==="ipm"?((["粉蝨"+rc.wf,"薊馬"+rc.th,"葉蟎"+rc.sm,"蚜蟲"+rc.ap].filter(s=>!/0$/.test(s)).join("・")||"無蟲")+(rc.note?" ｜ "+rc.note:"")):rc.note||"";
     return '<div class="rec"><span class="rd">'+md(parseD(rc.date))+'</span><span class="rt"><span class="rtag '+meta.c+'">'+meta.t+'</span>'+extra+'</span><button class="del" data-r="'+ri+'">刪</button></div>';}).join("");
   let ecHist=(r.records||[]).filter(x=>x.type==="ecph"&&x.ec).slice(-8);
   let ecChart=ecHist.length>=2?'<div class="res"><h4>EC 趨勢</h4><div class="chart">'+ecHist.map(x=>{const h=Math.min(100,(+x.ec)/4*100);return '<div class="bar" style="height:'+h+'%"><b>'+x.ec+'</b><span>'+md(parseD(x.date))+'</span></div>';}).join("")+'</div></div>':"";
@@ -408,7 +424,8 @@ function renderPlots(){
     '<div class="prog"><i class="'+(age>=c.grow?'h':'g')+'" style="width:'+Math.max(age<0?0:Math.round(age/(c.grow+c.dur)*100),2)+'%"></i></div>'+
     '<div class="prog-l"><span>第 '+Math.max(age,0)+' 天</span><span>'+(age>=c.grow?"採收期":"距採收 "+(c.grow-age)+" 天")+'</span></div>'+
     (phi?'<span class="pill">⚠ 用藥安全期至 '+md(phi)+' 禁止採收</span>':'')+
-    (ht?'<span class="pill ok">累計採收 '+ht+' kg</span>':'')+'</div>'+
+    (ht?'<span class="pill ok">累計採收 '+ht+' kg</span>':'')+
+    ipmWarn+'</div>'+
     dynHtml+
     (tasks?'<div class="card"><h3 style="margin:0 0 4px;font-size:1rem">今日待辦</h3>'+tasks+soon+'</div>':'')+
     '<div class="card"><h3 style="margin:0 0 8px;font-size:1rem">快速登錄紀錄</h3><div class="qlog">'+
@@ -417,7 +434,8 @@ function renderPlots(){
       '<button data-log="harv"><span class="qi">🧺</span>採收</button>'+
       '<button data-log="ecph"><span class="qi">🌡️</span>EC/pH</button>'+
       '<button data-log="work"><span class="qi">✂️</span>作業</button>'+
-      '<button data-log="obs"><span class="qi">👀</span>觀察</button></div></div>'+
+      '<button data-log="obs"><span class="qi">👀</span>觀察</button>'+
+      '<button data-log="ipm"><span class="qi">🪤</span>黏板巡查</button></div></div>'+
     ecChart+
     '<div class="card"><h3 style="margin:0 0 6px;font-size:1rem">紀錄歷史 <span style="color:var(--ink-soft);font-weight:400;font-size:.8rem">('+((r.records||[]).length)+' 筆)</span></h3>'+(recs||'<div class="empty" style="padding:16px">尚無紀錄，用上方按鈕登錄。</div>')+'</div>'+
     '<button class="btn sec" id="delp">刪除此田區</button>';
@@ -449,6 +467,16 @@ function logModal(type){
     '<div><label class="f">安全採收期(天)</label><input class="t" id="m-phi" type="number" placeholder="如 7"></div></div>'+
     '<div style="font-size:.75rem;color:var(--ink-soft);margin-top:6px">⚠️ 使用前請核對植保資訊系統登記（輪替不同作用機制延緩抗藥性）</div>';
   }
+  else if(type==="ipm")fields+=
+    '<p style="font-size:.8rem;color:var(--ink-soft);margin:4px 0 10px">每週換板時記錄各板蟲數，超門檻系統自動提醒用藥。</p>'+
+    '<div class="row2">'+
+    '<div><label class="f">粉蝨（隻/板）門檻≥5</label><input class="t" id="m-wf" type="number" min="0" placeholder="0"></div>'+
+    '<div><label class="f">薊馬（隻/板）門檻≥3</label><input class="t" id="m-th" type="number" min="0" placeholder="0"></div>'+
+    '</div><div class="row2">'+
+    '<div><label class="f">葉蟎（隻/板）門檻≥5</label><input class="t" id="m-sm" type="number" min="0" placeholder="0"></div>'+
+    '<div><label class="f">蚜蟲（隻/板）門檻≥10</label><input class="t" id="m-ap" type="number" min="0" placeholder="0"></div>'+
+    '</div>'+
+    '<label class="f">其他觀察</label><textarea class="t" id="m-note" placeholder="例如：更換黃板/藍板、位置、環境狀況"></textarea>';
   else fields+='<label class="f">內容</label><textarea class="t" id="m-note" placeholder="'+(type==="fert"?"例如 追肥 台肥43號 3kg":type==="work"?"例如 摘側芽、疏果":"例如 葉色正常、發現少量粉蝨")+'"></textarea>';
   mr.innerHTML='<div class="modal-bg" id="mbg"><div class="modal"><h3>登錄'+meta.t+'</h3><p class="note">'+load()[CUR].plot+' · '+load()[CUR].crop+'</p>'+fields+'<button class="btn" id="m-save">儲存</button><button class="btn sec" id="m-cancel">取消</button></div></div>';
   document.getElementById("m-cancel").onclick=()=>mr.innerHTML="";
@@ -468,6 +496,7 @@ function logModal(type){
     if(type==="ecph"){rec.ec=document.getElementById("m-ec").value;rec.ph=document.getElementById("m-ph").value;}
     else if(type==="harv")rec.qty=document.getElementById("m-qty").value;
     else if(type==="spray"){rec.note=document.getElementById("m-note").value;rec.phi=document.getElementById("m-phi").value;rec.target=document.getElementById("m-target").value;rec.dose=document.getElementById("m-dose").value;}
+    else if(type==="ipm"){rec.wf=document.getElementById("m-wf").value||"0";rec.th=document.getElementById("m-th").value||"0";rec.sm=document.getElementById("m-sm").value||"0";rec.ap=document.getElementById("m-ap").value||"0";rec.note=document.getElementById("m-note").value;}
     else rec.note=document.getElementById("m-note").value;
     p[CUR].records=p[CUR].records||[];p[CUR].records.push(rec);save(p);mr.innerHTML="";renderPlots();
   };
