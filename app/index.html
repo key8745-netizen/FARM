@@ -259,6 +259,47 @@ const loadIdxOv=()=>{try{return JSON.parse(localStorage.getItem("farm-idx-overri
 const saveIdxOv=o=>localStorage.setItem("farm-idx-override",JSON.stringify(o));
 // App 作物 → AMIS 查詢名（AMIS 用大分類名）
 const AMIS_NAME={"牛番茄":"番茄","彩椒":"甜椒","玉女番茄":"小番茄","高山草莓":"草莓","高麗菜":"甘藍","敏豆":"四季豆"};
+/* ---------- 雲端同步（Firebase / Firestore，選用） ---------- */
+const loadSync=()=>{try{return JSON.parse(localStorage.getItem("farm-sync")||"{}");}catch(e){return{};}};
+const saveSync=s=>localStorage.setItem("farm-sync",JSON.stringify(s));
+// 收集/寫回本機全部資料
+const snapshot=()=>({plots:load(),contracts:loadC(),idxOverride:loadIdxOv(),favMarkets:loadFav()});
+function applySnapshot(d){
+  if(Array.isArray(d.plots))save(d.plots);
+  if(Array.isArray(d.contracts))saveC(d.contracts);
+  if(d.idxOverride&&typeof d.idxOverride==="object")saveIdxOv(d.idxOverride);
+  if(Array.isArray(d.favMarkets))saveFav(d.favMarkets);
+  applyIdxOverride();
+}
+// 寬鬆解析 Firebase 設定（接受 JSON 或 JS 物件字面值）
+function parseCfg(txt){const m=String(txt).match(/\{[\s\S]*\}/);if(!m)throw new Error("找不到設定物件 { }");return (new Function("return ("+m[0]+")"))();}
+// 動態載入 Firebase compat SDK（僅一次）
+function loadFirebase(){return new Promise((res,rej)=>{
+  if(window.firebase&&window.firebase.firestore){res();return;}
+  const base="https://www.gstatic.com/firebasejs/10.12.2/";
+  const s1=document.createElement("script");s1.src=base+"firebase-app-compat.js";
+  s1.onload=()=>{const s2=document.createElement("script");s2.src=base+"firebase-firestore-compat.js";
+    s2.onload=()=>res();s2.onerror=()=>rej(new Error("載入 Firestore SDK 失敗"));document.head.appendChild(s2);};
+  s1.onerror=()=>rej(new Error("載入 Firebase SDK 失敗（需連線）"));document.head.appendChild(s1);
+});}
+async function fbDb(){const s=loadSync();if(!s.config||!s.code)throw new Error("尚未設定雲端同步");
+  await loadFirebase();if(!window.firebase.apps.length)window.firebase.initializeApp(s.config);
+  return window.firebase.firestore();}
+async function cloudPush(){const s=loadSync();const db=await fbDb();
+  const data=Object.assign(snapshot(),{updatedAt:Date.now()});
+  await db.collection("farms").doc(s.code).set(data);
+  const s2=loadSync();s2.lastSync=data.updatedAt;saveSync(s2);return data.updatedAt;}
+async function cloudPull(){const s=loadSync();const db=await fbDb();
+  const doc=await db.collection("farms").doc(s.code).get();
+  if(!doc.exists)throw new Error("雲端尚無此同步碼資料（請先在另一台按上傳）");
+  const d=doc.data();applySnapshot(d);
+  const s2=loadSync();s2.lastSync=d.updatedAt||Date.now();saveSync(s2);return d.updatedAt;}
+// 自動同步：定時比對本機快照有變才推送
+let _lastPushSnap="";
+function autoSyncTick(){const s=loadSync();if(!s.auto||!s.config||!s.code)return;
+  const snap=JSON.stringify(snapshot());if(snap===_lastPushSnap)return;
+  cloudPush().then(()=>{_lastPushSnap=snap;}).catch(()=>{});}
+function applyIdxOverride(){const ov=loadIdxOv();Object.entries(ov).forEach(([crop,idx])=>{if(CROPS[crop]&&Array.isArray(idx)&&idx.length===12)CROPS[crop].idx=idx.slice();});}
 let CUR=null; // current plot id in detail
 
 function ecStage(c,age){const ks=Object.keys(c.ec);let f=age<=0?0:age>=c.grow?.999:age/c.grow;let i=Math.min(Math.floor(f*ks.length),ks.length-1);return[ks[i],c.ec[ks[i]]];}
@@ -626,7 +667,18 @@ function renderTools(){
     '<div class="card"><div class="row2">'+
     '<button class="btn" id="bk-exp">⬇ 備份下載 JSON</button>'+
     '<button class="btn sec" id="bk-imp">⬆ 還原上傳 JSON</button>'+
-    '</div><input type="file" id="bk-file" accept=".json" style="display:none"><div id="bk-res"></div></div>';
+    '</div><input type="file" id="bk-file" accept=".json" style="display:none"><div id="bk-res"></div></div>'+
+    '<h2 style="margin-top:22px">☁️ 雲端同步（手機↔電腦）</h2><p class="note">選用。連到你的 Firebase 專案，讓多台裝置共用同一份資料。同步碼是你的資料鑰匙，請設長一點、勿外流。</p>'+
+    '<div class="card">'+
+    '<label class="f">Firebase 網頁設定（貼上 firebaseConfig 物件）</label>'+
+    '<textarea class="t" id="sy-cfg" style="min-height:120px;font-size:.72rem" placeholder=\'{ "apiKey": "…", "authDomain": "…", "projectId": "…", "appId": "…" }\'></textarea>'+
+    '<label class="f">同步碼（自訂，兩台裝置填一樣的）</label><input class="t" id="sy-code" placeholder="例如 xinyi-farm-9x7k2">'+
+    '<label class="task" style="border:none;padding:8px 3px"><input type="checkbox" id="sy-auto">自動同步（每 15 秒推送變更、開啟時拉取）</label>'+
+    '<button class="btn" id="sy-save">儲存設定</button>'+
+    '<div class="row2" style="margin-top:8px"><button class="btn sec" id="sy-push">⬆ 上傳到雲端</button><button class="btn sec" id="sy-pull">⬇ 從雲端下載</button></div>'+
+    '<div id="sy-res"></div>'+
+    '<div class="foot" style="text-align:left">取得設定：Firebase 主控台 → 專案設定 → 你的應用程式 → SDK 設定與設定 → Config。需啟用 Firestore Database。首次請設定安全規則（見 docs/雲端同步設定.md）。</div>'+
+    '</div>';
   v.querySelector("#c-go").onclick=()=>{
     const c=CROPS[v.querySelector("#c-crop").value];const ds=v.querySelector("#c-date").value;const n=+v.querySelector("#c-plants").value;
     if(!ds||!n)return;const plant=parseD(ds);const first=addD(plant,c.grow);const last=addD(first,c.dur);const ratio=n/c.density;
@@ -769,6 +821,33 @@ function renderTools(){
     };
     reader.readAsText(file);
   };
+  // 雲端同步：帶入已存設定
+  (function(){const s=loadSync();if(s.configText)v.querySelector("#sy-cfg").value=s.configText;
+    if(s.code)v.querySelector("#sy-code").value=s.code;v.querySelector("#sy-auto").checked=!!s.auto;
+    if(s.lastSync)v.querySelector("#sy-res").innerHTML='<div class="foot" style="text-align:left">上次同步：'+new Date(s.lastSync).toLocaleString()+'</div>';})();
+  v.querySelector("#sy-save").onclick=()=>{
+    const res=v.querySelector("#sy-res");
+    try{
+      const cfgText=v.querySelector("#sy-cfg").value.trim();const code=v.querySelector("#sy-code").value.trim();
+      if(!cfgText||!code)throw new Error("請填 Firebase 設定與同步碼");
+      const cfg=parseCfg(cfgText);if(!cfg.projectId||!cfg.apiKey)throw new Error("設定缺 apiKey / projectId");
+      const s=loadSync();s.config=cfg;s.configText=cfgText;s.code=code;s.auto=v.querySelector("#sy-auto").checked;saveSync(s);
+      res.innerHTML='<div class="info">✓ 已儲存。可按上傳/下載測試，或開自動同步。</div>';
+    }catch(e){res.innerHTML='<div class="info" style="color:var(--warn)">設定錯誤：'+e.message+'</div>';}
+  };
+  v.querySelector("#sy-push").onclick=async()=>{
+    const res=v.querySelector("#sy-res");res.innerHTML='<div class="info">上傳中…</div>';
+    try{const ts=await cloudPush();_lastPushSnap=JSON.stringify(snapshot());res.innerHTML='<div class="info">✓ 已上傳到雲端（'+new Date(ts).toLocaleString()+'）</div>';}
+    catch(e){res.innerHTML='<div class="info" style="color:var(--warn)">上傳失敗：'+e.message+'</div>';}
+  };
+  v.querySelector("#sy-pull").onclick=async()=>{
+    const res=v.querySelector("#sy-res");
+    if(!confirm("將以雲端資料覆蓋本機現有資料，確定下載？"))return;
+    res.innerHTML='<div class="info">下載中…</div>';
+    try{const ts=await cloudPull();_lastPushSnap=JSON.stringify(snapshot());
+      res.innerHTML='<div class="info">✓ 已從雲端下載（'+(ts?new Date(ts).toLocaleString():"")+'）。回總覽查看。</div>';}
+    catch(e){res.innerHTML='<div class="info" style="color:var(--warn)">下載失敗：'+e.message+'</div>';}
+  };
 }
 
 /* ---------- 契作管理 ---------- */
@@ -862,9 +941,13 @@ function go(v){
 }
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{if(b.dataset.v==="plots")CUR=null;go(b.dataset.v);});
 // 套用已校正的真實月價指數（若有）覆蓋示範值
-(function(){const ov=loadIdxOv();Object.entries(ov).forEach(([crop,idx])=>{if(CROPS[crop]&&Array.isArray(idx)&&idx.length===12)CROPS[crop].idx=idx.slice();});})();
+applyIdxOverride();
 const t=today();document.getElementById("hd-date").innerHTML=fmtD(t)+"<br>星期"+["日","一","二","三","四","五","六"][t.getDay()];
 renderDash();
+// 啟動時：若開了自動同步，先從雲端拉取最新，再重繪
+(async function(){const s=loadSync();if(s.auto&&s.config&&s.code){try{await cloudPull();_lastPushSnap=JSON.stringify(snapshot());go("dash");}catch(e){}}})();
+setInterval(autoSyncTick,15000);
+window.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")autoSyncTick();});
 
 if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));}
 </script>
