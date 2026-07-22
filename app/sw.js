@@ -1,28 +1,21 @@
-// 農務小幫手 Service Worker — 離線快取（網路優先，確保更新即時生效）
-const CACHE = "farm-assistant-v3";
-const ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./icon.svg"];
-
-self.addEventListener("install", e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+// 農務小幫手 Service Worker — 自我銷毀（kill-switch）
+// 目的：徹底解除舊版 cache-first SW 造成的「更新看不到」問題。
+// 這支 SW 一啟用就清掉所有快取、卸載自己、並強制重新載入所有分頁，
+// 之後頁面不再被 SW 攔截，一律走網路取最新。離線快取暫時停用，
+// 待 App 穩定後可再以「檔名雜湊 + 版本控管」方式重新導入。
+self.addEventListener("install", () => self.skipWaiting());
+self.addEventListener("activate", (e) => {
+  e.waitUntil((async () => {
+    try {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    } catch (_) {}
+    try { await self.clients.claim(); } catch (_) {}
+    try { await self.registration.unregister(); } catch (_) {}
+    try {
+      const cs = await self.clients.matchAll({ type: "window" });
+      cs.forEach(c => c.navigate(c.url));
+    } catch (_) {}
+  })());
 });
-
-self.addEventListener("activate", e => {
-  e.waitUntil(caches.keys().then(ks =>
-    Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
-});
-
-// 網路優先：線上取最新並更新快取；離線才回退快取。
-self.addEventListener("fetch", e => {
-  if (e.request.method !== "GET") return;
-  // 只處理本站資源，外部（Firebase / AMIS 代理）直接放行
-  if (new URL(e.request.url).origin !== self.location.origin) return;
-  e.respondWith(
-    fetch(e.request).then(resp => {
-      const copy = resp.clone();
-      caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
-      return resp;
-    }).catch(() =>
-      caches.match(e.request).then(r => r || caches.match("./index.html"))
-    )
-  );
-});
+// 不攔截 fetch：所有請求直接走網路
