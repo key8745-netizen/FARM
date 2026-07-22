@@ -153,6 +153,18 @@ nav button.on{color:var(--accent);}
   .app{margin-left:auto;padding-left:30px;}
   nav{left:max(0px,calc(50% - 700px));}
 }
+/* 天氣預報小工具 */
+.wx-card{background:linear-gradient(135deg,var(--accent-d) 0%,var(--accent) 100%);color:#fff;border-radius:18px;padding:13px 15px 10px;margin-bottom:14px;box-shadow:0 3px 14px rgba(0,0,0,.10);}
+.wx-title{font-size:.72rem;font-weight:700;letter-spacing:.06em;opacity:.88;margin-bottom:8px;}
+.wx-days{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;}
+.wx-day{text-align:center;padding:6px 2px;}
+.wx-label{font-size:.62rem;font-weight:700;opacity:.75;}
+.wx-icon{font-size:1.4rem;line-height:1.2;margin:2px 0;}
+.wx-txt{font-size:.58rem;opacity:.78;margin-bottom:1px;}
+.wx-temp{font-size:.82rem;font-weight:700;}
+.wx-lo{font-weight:400;opacity:.78;}
+.wx-rain{font-size:.65rem;margin-top:2px;}
+.wx-foot{font-size:.58rem;opacity:.55;text-align:right;margin-top:7px;}
 </style>
 
 </head>
@@ -357,6 +369,67 @@ function tasksFor(rec){
   return out;
 }
 
+/* ---------- 天氣預報（Open-Meteo，免金鑰，支援瀏覽器直連） ---------- */
+const WX_LAT=23.40,WX_LON=120.85; // 信義鄉中心座標
+const WMO_EMOJI={0:'☀️',1:'🌤',2:'⛅',3:'☁️',45:'🌫',48:'🌫',51:'🌦',53:'🌦',55:'🌧',61:'🌦',63:'🌧',65:'🌧',80:'🌦',81:'🌧',82:'⛈',95:'⛈',96:'⛈',99:'⛈',71:'❄️',73:'❄️',75:'❄️',77:'❄️'};
+const WMO_TXT={0:'晴',1:'多雲',2:'局部多雲',3:'陰',45:'霧',48:'霧',51:'毛毛雨',53:'小雨',55:'中雨',61:'小雨',63:'中雨',65:'大雨',80:'陣雨',81:'雷陣雨',82:'暴雨',95:'雷雨',96:'雷雨',99:'大雷雨',71:'小雪',73:'中雪',75:'大雪',77:'冰晶'};
+let _wxCache=null,_wxAt=0;
+async function fetchWeather(){
+  if(_wxCache&&Date.now()-_wxAt<1800000)return _wxCache;
+  const url='https://api.open-meteo.com/v1/forecast?latitude='+WX_LAT+'&longitude='+WX_LON+
+    '&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weathercode'+
+    '&timezone=Asia%2FTaipei&forecast_days=5';
+  const r=await fetch(url);if(!r.ok)throw new Error(r.status);
+  const d=await r.json();_wxCache=d;_wxAt=Date.now();return d;
+}
+function wxAlerts(wx){
+  const hints=[];const d=wx.daily||{};
+  const rain1=d.precipitation_probability_max?d.precipitation_probability_max[1]:0;
+  const rain2=d.precipitation_probability_max?d.precipitation_probability_max[2]:0;
+  const tmin0=d.temperature_2m_min?d.temperature_2m_min[0]:20;
+  const tmin1=d.temperature_2m_min?d.temperature_2m_min[1]:20;
+  const tmax0=d.temperature_2m_max?d.temperature_2m_max[0]:25;
+  if(rain1>=60)hints.push('☔ 明日降雨機率 '+rain1+'%：<b>今日宜完成施藥 / 施肥</b>，避免雨水稀釋與農藥飄移');
+  if(rain1>=60&&rain2>=60)hints.push('🌧 明後兩日持續降雨：溫室加強通風防灰黴，排水清通，適度減少灌溉');
+  if(tmin0<12)hints.push('🌡 今夜低溫 '+tmin0+'°C：<b>夜間保溫</b>（低於 15°C 易落花落果），必要時加溫 / 覆蓋');
+  else if(tmin1<12)hints.push('🌡 明夜預測低溫 '+tmin1+'°C：提前準備保溫設施');
+  if(tmax0>=32)hints.push('☀️ 今日高溫 '+tmax0+'°C：遮陰降溫、增加灌溉，注意薊馬 / 蟎密度');
+  return hints;
+}
+function renderWeatherWidget(wx){
+  const d=wx.daily;if(!d||!d.time)return'';
+  const labels=['今','明','後','大後','5日'];
+  const cells=d.time.slice(0,5).map((dt,i)=>{
+    const code=d.weathercode?d.weathercode[i]:0;
+    const hi=d.temperature_2m_max?Math.round(d.temperature_2m_max[i]):'?';
+    const lo=d.temperature_2m_min?Math.round(d.temperature_2m_min[i]):'?';
+    const rain=d.precipitation_probability_max?d.precipitation_probability_max[i]:0;
+    const bg=rain>=60?'rgba(255,255,255,.18)':rain>=30?'rgba(255,255,255,.1)':'rgba(255,255,255,.06)';
+    return '<div class="wx-day" style="background:'+bg+';border-radius:10px">'+
+      '<div class="wx-label">'+labels[i]+'</div>'+
+      '<div class="wx-icon">'+(WMO_EMOJI[code]||'🌡')+'</div>'+
+      '<div class="wx-txt">'+(WMO_TXT[code]||'')+'</div>'+
+      '<div class="wx-temp"><b>'+hi+'</b>/<span class="wx-lo">'+lo+'</span></div>'+
+      '<div class="wx-rain">💧'+rain+'%</div>'+
+      '</div>';}).join('');
+  return '<div class="wx-card"><div class="wx-title">📍 信義鄉高冷地 · 5日天氣預報</div>'+
+    '<div class="wx-days">'+cells+'</div>'+
+    '<div class="wx-foot">Open-Meteo · 23.4°N 120.85°E · 僅供農事參考</div></div>';
+}
+function loadWx(container){
+  (async()=>{
+    try{
+      const wx=await fetchWeather();
+      const el=container.querySelector('#wx-widget');if(el)el.innerHTML=renderWeatherWidget(wx);
+      const hints=wxAlerts(wx);
+      if(hints.length){
+        const ha=container.querySelector('#wx-alerts');
+        if(ha){ha.innerHTML=hints.map(h=>'<div class="info" style="margin-bottom:6px;background:var(--warn-bg);color:var(--warn)">'+h+'</div>').join('');ha.style.display='';}
+      }
+    }catch(e){/* 離線或受限網路時靜默忽略 */}
+  })();
+}
+
 /* ---------- 總覽 ---------- */
 function renderDash(){
   const plots=load();const v=document.getElementById("view-dash");const tdy=today();
@@ -367,11 +440,11 @@ function renderDash(){
     const li=(r.records||[]).filter(x=>x.type==="ipm").sort((a,b)=>b.date<a.date?-1:1)[0];
     if(li&&Object.entries({粉蝨:+li.wf,薊馬:+li.th,葉蟎:+li.sm,蚜蟲:+li.ap}).some(([k,v])=>v>=IPM_THR[k]))ipmAlert++;
   });
-  if(!plots.length){v.innerHTML='<div class="empty">歡迎使用農務小幫手 👋<br><br>點下方「🌱 田區」新增你的第一個田區，<br>系統就會開始幫你管理每日農務、生育進度與採收。</div>';return;}
+  if(!plots.length){v.innerHTML='<div id="wx-widget"></div><div id="wx-alerts" style="display:none;margin-bottom:4px"></div><div class="empty">歡迎使用農務小幫手 👋<br><br>點下方「🌱 田區」新增你的第一個田區，<br>系統就會開始幫你管理每日農務、生育進度與採收。</div>';loadWx(v);return;}
   let dynCount=0;plots.forEach((r,i)=>dynCount+=getDyn(i).length);
   let checkinBtn='<button class="btn" id="checkin" style="margin-top:0;margin-bottom:14px">📝 今日回報（EC值/病蟲害/天氣）→ 動態調整</button>'+
     (dynCount?'<div class="info" style="margin-bottom:14px">今日回報已產生 '+dynCount+' 項動態調整，見各田區。<button class="del" id="export" style="margin-left:6px">匯出摘要給顧問</button></div>':'');
-  let kpi=checkinBtn+'<div class="kpis">'+
+  let kpi='<div id="wx-widget"></div><div id="wx-alerts" style="display:none;margin-bottom:4px"></div>'+checkinBtn+'<div class="kpis">'+
     '<div class="kpi"><b>'+plots.length+'</b><small>田區</small></div>'+
     '<div class="kpi"><b>'+taskCount+'</b><small>今日任務</small></div>'+
     '<div class="kpi"><b>'+harvSoon+'</b><small>近採收</small></div>'+
@@ -407,6 +480,7 @@ function renderDash(){
   v.querySelectorAll(".card.tap").forEach(cd=>cd.addEventListener("click",()=>openPlot(+cd.dataset.i)));
   const cb=v.querySelector("#checkin");if(cb)cb.onclick=()=>checkinModal();
   const ex=v.querySelector("#export");if(ex)ex.onclick=()=>exportModal();
+  loadWx(v);
 }
 
 /* 每日回報：引導式問答 → 即時決策 */
