@@ -228,6 +228,12 @@ const load=()=>{try{return JSON.parse(localStorage.getItem("farm-plots-v2")||"[]
 const save=p=>localStorage.setItem("farm-plots-v2",JSON.stringify(p));
 const loadC=()=>{try{return JSON.parse(localStorage.getItem("farm-contracts-v1")||"[]");}catch(e){return[];}};
 const saveC=c=>localStorage.setItem("farm-contracts-v1",JSON.stringify(c));
+const loadFav=()=>{try{return JSON.parse(localStorage.getItem("farm-fav-markets")||"[]");}catch(e){return[];}};
+const saveFav=a=>localStorage.setItem("farm-fav-markets",JSON.stringify(a));
+const loadIdxOv=()=>{try{return JSON.parse(localStorage.getItem("farm-idx-override")||"{}");}catch(e){return{};}};
+const saveIdxOv=o=>localStorage.setItem("farm-idx-override",JSON.stringify(o));
+// App 作物 → AMIS 查詢名（AMIS 用大分類名）
+const AMIS_NAME={"牛番茄":"番茄","彩椒":"甜椒","玉女番茄":"小番茄","高山草莓":"草莓","高麗菜":"甘藍","敏豆":"四季豆"};
 let CUR=null; // current plot id in detail
 
 function ecStage(c,age){const ks=Object.keys(c.ec);let f=age<=0?0:age>=c.grow?.999:age/c.grow;let i=Math.min(Math.floor(f*ks.length),ks.length-1);return[ks[i],c.ec[ks[i]]];}
@@ -582,10 +588,13 @@ function renderTools(){
     '<button class="btn" id="c-go">計算</button><div id="c-res"></div></div>'+
     '<h2 style="margin-top:22px">年度輪種規劃</h2><p class="note">從起始月排全年輪種，收成卡高價月＋輪作。</p>'+
     '<div class="card"><label class="f">起始月</label><input class="t" id="p-start" type="month" value="'+nowM.getFullYear()+"-"+String(nowM.getMonth()+1).padStart(2,"0")+'"><button class="btn" id="p-go">產生規劃</button><div id="p-res"></div></div>'+
-    '<h2 style="margin-top:22px">市場行情比價（送哪個市場）</h2><p class="note">抓 AMIS 各批發市場的上/中/下/均價，判斷上貨、下貨分別送哪裡最划算。需部署到 Netlify 才能即時抓取。</p>'+
-    '<div class="card"><div class="row2"><div><label class="f">作物</label><select class="t" id="mk-crop"><option>番茄</option><option>甜椒</option><option>小番茄</option><option>牛番茄</option></select></div>'+
+    '<h2 style="margin-top:22px">市場行情比價（送哪個市場）</h2><p class="note">抓 AMIS 各批發市場的上/中/下/均價，判斷上貨、下貨分別送哪裡最划算，並試算這批貨收入。需部署到 Netlify 才能即時抓取。</p>'+
+    '<div class="card"><div class="row2"><div><label class="f">作物</label><select class="t" id="mk-crop">'+opts+'</select></div>'+
     '<div><label class="f">查詢天數</label><select class="t" id="mk-days"><option value="7">近 7 天</option><option value="14">近 14 天</option><option value="30">近 30 天</option><option value="3">近 3 天</option></select></div></div>'+
-    '<button class="btn" id="mk-go">抓取市場行情</button><div id="mk-res"></div></div>'+
+    '<label class="task" style="border:none;padding:8px 3px"><input type="checkbox" id="mk-fav">只看常送市場（★）</label>'+
+    '<button class="btn" id="mk-go">抓取市場行情</button>'+
+    '<button class="btn sec" id="mk-cal" style="margin-top:8px">用近一年真實行情校正月價指數</button>'+
+    '<div id="mk-res"></div></div>'+
     '<h2 style="margin-top:22px">產銷履歷紀錄簿</h2><p class="note">依台灣安全農業（TGAP）匯出用藥/施肥/採收紀錄，供驗證稽核與追溯。</p>'+
     '<div class="card"><button class="btn" id="rb-go">匯出履歷紀錄簿 CSV</button><div id="rb-res"></div></div>'+
     '<h2 style="margin-top:22px">資料備份 / 還原</h2><p class="note">App 資料存在瀏覽器，清除快取會消失。定期備份 JSON 檔到手機相簿或雲端，需要時可還原。</p>'+
@@ -609,34 +618,91 @@ function renderTools(){
     const avg=out.reduce((a,r)=>a+r.sc,0)/out.length;
     v.querySelector("#p-res").innerHTML='<div class="res"><b>平均價位分數 '+avg.toFixed(2)+'</b> '+(avg>=1.15?"多數卡高價 🟢":"中上")+'</div>'+out.map((r,i)=>{const[cl,lb]=light(r.sc);return '<div class="rec"><span class="rd">輪'+(i+1)+'</span><span class="rt"><b>'+r.nm+'</b> 定植'+md(r.pl)+' → 採收'+md(r.hs)+'–'+md(r.he)+'　<span class="badge '+cl+'">'+lb+' '+r.sc.toFixed(2)+'</span></span></div>';}).join("");
   };
-  v.querySelector("#mk-go").onclick=async()=>{
-    const crop=v.querySelector("#mk-crop").value;const days=+v.querySelector("#mk-days").value;
-    const end=today();const start=addD(end,-(days-1));
+  // 把市場比價結果渲染出來（含常送市場過濾、加星、收入試算）
+  function renderMarket(d,range){
     const res=v.querySelector("#mk-res");
-    res.innerHTML='<div class="info" style="margin-top:12px">查詢中…（'+fmtD(start)+' ~ '+fmtD(end)+'）</div>';
+    const appCrop=v.querySelector("#mk-crop").value;
+    const favOnly=v.querySelector("#mk-fav").checked;
+    const fav=loadFav();
+    let ms=d.markets.slice();
+    if(favOnly)ms=ms.filter(m=>fav.includes(m.market));
+    if(!ms.length){res.innerHTML='<div class="info" style="margin-top:12px;color:var(--warn)">'+(favOnly?"常送市場清單內查無資料，先取消勾選或加★":"查無資料")+'</div>';return;}
+    ms.sort((a,b)=>b.avg-a.avg);
+    // 依「目前顯示的市場」重算最佳，路由才符合實際會送的市場
+    const bU=ms.reduce((a,b)=>b.upper>a.upper?b:a).market;
+    const bL=ms.reduce((a,b)=>b.lower>a.lower?b:a).market;
+    const bM=ms.reduce((a,b)=>b.middle>a.middle?b:a).market;
+    const mU=ms.find(m=>m.market===bU),mM=ms.find(m=>m.market===bM),mL=ms.find(m=>m.market===bL);
+    let rows=ms.map(m=>{
+      const upHi=m.market===bU,loHi=m.market===bL;const isFav=fav.includes(m.market);
+      return '<div class="rec"><span class="rt"><b>'+m.market+'</b> '+
+        '<button class="del" data-fav="'+m.market.replace(/"/g,'')+'" style="padding:0 4px;font-size:1rem;color:'+(isFav?'var(--grow)':'var(--line)')+'">★</button>'+
+        '<div style="font-size:.8rem;color:var(--ink-soft);margin-top:2px">'+
+        '<span'+(upHi?' style="color:var(--harv);font-weight:700"':'')+'>上 '+m.upper+(upHi?' ⭐':'')+'</span>　'+
+        '中 '+m.middle+'　'+
+        '<span'+(loHi?' style="color:var(--harv);font-weight:700"':'')+'>下 '+m.lower+(loHi?' ⭐':'')+'</span>　'+
+        '均 '+m.avg+'　·　量 '+m.totalQty.toLocaleString()+' kg</div></span></div>';
+    }).join("");
+    // 收入試算：預填該作物累計特/優/次（可改）
+    let g={g1:0,g2:0,g3:0};load().forEach(r=>{if(r.crop===appCrop){const gg=harvestGrades(r);g.g1+=gg.g1;g.g2+=gg.g2;g.g3+=gg.g3;}});
+    const calc='<div class="res" style="margin-top:10px"><h4>🧮 這批貨收入試算（依上表最佳市場）</h4>'+
+      '<div class="row2"><div><label class="f">上貨/特級 kg → '+bU+'</label><input class="t" id="mk-q1" type="number" value="'+Math.round(g.g1*10)/10+'"></div>'+
+      '<div><label class="f">中貨/優級 kg → '+bM+'</label><input class="t" id="mk-q2" type="number" value="'+Math.round(g.g2*10)/10+'"></div></div>'+
+      '<label class="f">下貨/次級 kg → '+bL+'</label><input class="t" id="mk-q3" type="number" value="'+Math.round(g.g3*10)/10+'">'+
+      '<div class="info" id="mk-rev" style="margin-top:10px"></div></div>';
+    res.innerHTML='<div class="res" style="margin-top:12px"><h4>📊 '+d.crop+'　各市場行情（元/kg）</h4>'+
+      '<div class="info" style="margin:0 0 10px">🔼 <b>上貨</b>送 <b>'+bU+'</b>（上 '+mU.upper+'）　🔽 <b>下貨</b>送 <b>'+bL+'</b>（下 '+mL.lower+'）</div>'+
+      rows+'<div class="foot" style="text-align:left">'+range+' 交易量加權平均。⭐ 該價位最高市場。點 ★ 設常送市場。資料來源：農業部 AMIS。</div></div>'+calc;
+    const rev=()=>{const q1=+v.querySelector("#mk-q1").value||0,q2=+v.querySelector("#mk-q2").value||0,q3=+v.querySelector("#mk-q3").value||0;
+      const r1=q1*mU.upper,r2=q2*mM.middle,r3=q3*mL.lower;const tot=r1+r2+r3;
+      v.querySelector("#mk-rev").innerHTML='上貨 '+q1+'kg×'+mU.upper+' = <b>'+Math.round(r1).toLocaleString()+'</b> 元（'+bU+'）<br>'+
+        '中貨 '+q2+'kg×'+mM.middle+' = <b>'+Math.round(r2).toLocaleString()+'</b> 元（'+bM+'）<br>'+
+        '下貨 '+q3+'kg×'+mL.lower+' = <b>'+Math.round(r3).toLocaleString()+'</b> 元（'+bL+'）<br>'+
+        '<span style="font-size:1.05rem">合計約 <b style="color:var(--accent)">'+Math.round(tot).toLocaleString()+'</b> 元</span>';};
+    ["mk-q1","mk-q2","mk-q3"].forEach(id=>v.querySelector("#"+id).oninput=rev);rev();
+    v.querySelectorAll("[data-fav]").forEach(b=>b.onclick=()=>{let f=loadFav();const nm=b.dataset.fav;
+      if(f.includes(nm))f=f.filter(x=>x!==nm);else f.push(nm);saveFav(f);renderMarket(d,range);});
+  }
+  let lastMk=null;
+  v.querySelector("#mk-fav").onchange=()=>{if(lastMk)renderMarket(lastMk.d,lastMk.range);};
+  v.querySelector("#mk-go").onclick=async()=>{
+    const appCrop=v.querySelector("#mk-crop").value;const crop=AMIS_NAME[appCrop]||appCrop;const days=+v.querySelector("#mk-days").value;
+    const end=today();const start=addD(end,-(days-1));const range=fmtD(start)+" ~ "+fmtD(end);
+    const res=v.querySelector("#mk-res");
+    res.innerHTML='<div class="info" style="margin-top:12px">查詢中…（'+range+'，AMIS 名稱：'+crop+'）</div>';
     try{
       const r=await fetch("/.netlify/functions/amis",{method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({crop:crop,start:fmtD(start),end:fmtD(end)})});
       if(!r.ok){const tx=await r.text();throw new Error("伺服器回應 "+r.status+"："+tx.slice(0,80));}
       const d=await r.json();
       if(!d.markets||!d.markets.length){res.innerHTML='<div class="info" style="margin-top:12px;color:var(--warn)">'+(d.warnings&&d.warnings[0]||"查無資料")+'</div>';return;}
-      // 依均價排序
-      const ms=d.markets.slice().sort((a,b)=>b.avg-a.avg);
-      const bU=d.best.upper,bL=d.best.lower;
-      let rows=ms.map(m=>{
-        const upHi=m.market===bU,loHi=m.market===bL;
-        return '<div class="rec"><span class="rt"><b>'+m.market+'</b>'+
-          '<div style="font-size:.8rem;color:var(--ink-soft);margin-top:2px">'+
-          '<span'+(upHi?' style="color:var(--harv);font-weight:700"':'')+'>上 '+m.upper+(upHi?' ⭐':'')+'</span>　'+
-          '中 '+m.middle+'　'+
-          '<span'+(loHi?' style="color:var(--harv);font-weight:700"':'')+'>下 '+m.lower+(loHi?' ⭐':'')+'</span>　'+
-          '均 '+m.avg+'　·　量 '+m.totalQty.toLocaleString()+' kg</div></span></div>';
-      }).join("");
-      res.innerHTML='<div class="res" style="margin-top:12px"><h4>📊 '+d.crop+'　各市場行情（元/kg）</h4>'+
-        '<div class="info" style="margin:0 0 10px">🔼 <b>上貨</b>送 <b>'+bU+'</b>（上價最高）　🔽 <b>下貨</b>送 <b>'+bL+'</b>（下價最高）</div>'+
-        rows+'<div class="foot" style="text-align:left">依 '+fmtD(start)+' ~ '+fmtD(end)+' 交易量加權平均。⭐ 為該價位最高市場。資料來源：農業部 AMIS。</div></div>';
+      lastMk={d:d,range:range};renderMarket(d,range);
     }catch(e){
       res.innerHTML='<div class="info" style="margin-top:12px;color:var(--warn)">抓取失敗：'+e.message+'<br><br>此功能需<b>部署到 Netlify</b>（含 /.netlify/functions/amis 代理）才能即時抓取。本機以 file:// 或純靜態開啟時無法連上。</div>';
+    }
+  };
+  // 用近一年真實行情校正月價指數
+  v.querySelector("#mk-cal").onclick=async()=>{
+    const appCrop=v.querySelector("#mk-crop").value;const crop=AMIS_NAME[appCrop]||appCrop;
+    const res=v.querySelector("#mk-res");
+    const end=today();const start=addD(end,-364);
+    res.innerHTML='<div class="info" style="margin-top:12px">抓取近一年資料校正中…（可能需 10~30 秒）</div>';
+    try{
+      const r=await fetch("/.netlify/functions/amis",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({crop:crop,start:fmtD(start),end:fmtD(end),monthly:true})});
+      if(!r.ok){const tx=await r.text();throw new Error("伺服器回應 "+r.status+"："+tx.slice(0,80));}
+      const d=await r.json();
+      if(!d.monthly||!d.monthly.some(x=>x>0)){res.innerHTML='<div class="info" style="margin-top:12px;color:var(--warn)">回傳資料不足，無法校正。</div>';return;}
+      const vals=d.monthly;const nz=vals.filter(x=>x>0);const avg=nz.reduce((a,b)=>a+b,0)/nz.length;
+      const idx=vals.map((x,i)=>x>0?Math.round(x/avg*100)/100:(CROPS[appCrop]?CROPS[appCrop].idx[i]:1));
+      const ov=loadIdxOv();ov[appCrop]=idx;saveIdxOv(ov);if(CROPS[appCrop])CROPS[appCrop].idx=idx.slice();
+      const mn=["1","2","3","4","5","6","7","8","9","10","11","12"];
+      res.innerHTML='<div class="res" style="margin-top:12px"><h4>✅ 已用真實行情校正「'+appCrop+'」月價指數</h4>'+
+        '<div class="foot" style="text-align:left;margin:0 0 8px">全期均價 '+Math.round(avg)+' 元/kg。指數 = 該月均價 / 全期均價。已存入本機並套用到規劃/契作。</div>'+
+        idx.map((x,i)=>'<div class="r"><span>'+mn[i]+'月</span><b style="color:'+(x>=1.15?'var(--harv)':x<=0.9?'var(--warn)':'var(--ink)')+'">'+x.toFixed(2)+'</b></div>').join("")+
+        '</div>';
+    }catch(e){
+      res.innerHTML='<div class="info" style="margin-top:12px;color:var(--warn)">校正失敗：'+e.message+'<br><br>此功能需部署到 Netlify 才能抓取。</div>';
     }
   };
   v.querySelector("#rb-go").onclick=()=>{
@@ -770,6 +836,8 @@ function go(v){
   if(v==="dash")renderDash();if(v==="plots")renderPlots();if(v==="contract")renderContract();if(v==="diag")renderDiag();if(v==="tools")renderTools();
 }
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{if(b.dataset.v==="plots")CUR=null;go(b.dataset.v);});
+// 套用已校正的真實月價指數（若有）覆蓋示範值
+(function(){const ov=loadIdxOv();Object.entries(ov).forEach(([crop,idx])=>{if(CROPS[crop]&&Array.isArray(idx)&&idx.length===12)CROPS[crop].idx=idx.slice();});})();
 const t=today();document.getElementById("hd-date").innerHTML=fmtD(t)+"<br>星期"+["日","一","二","三","四","五","六"][t.getDay()];
 renderDash();
 

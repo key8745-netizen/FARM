@@ -101,17 +101,35 @@ function aggregateByMarket(rows) {
   }));
 }
 
+/** 依月份彙總均價（交易量加權），回傳 12 元素陣列（無資料月為 0）。TransDate 為民國 YYY.MM.DD */
+function aggregateByMonth(rows) {
+  const sum = new Array(12).fill(0);
+  const wsum = new Array(12).fill(0);
+  rows.forEach((r) => {
+    if (!(typeof r.Avg_Price === 'number' && r.Avg_Price > 0)) return;
+    const parts = String(r.TransDate || '').split('.');
+    if (parts.length < 2) return;
+    const mo = parseInt(parts[1], 10) - 1;
+    if (mo < 0 || mo > 11) return;
+    const q = typeof r.Trans_Quantity === 'number' && r.Trans_Quantity > 0 ? r.Trans_Quantity : 1;
+    sum[mo] += r.Avg_Price * q;
+    wsum[mo] += q;
+  });
+  return sum.map((s, i) => (wsum[i] > 0 ? round1(s / wsum[i]) : 0));
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
-  let crop, start, end;
+  let crop, start, end, monthly;
   try {
     const body = JSON.parse(event.body || '{}');
     crop = body.crop;
     start = body.start;
     end = body.end || body.start;
+    monthly = body.monthly === true;
     const dateOk = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
     if (typeof crop !== 'string' || crop.trim().length === 0) throw new Error('crop');
     if (!dateOk(start) || !dateOk(end)) throw new Error('date');
@@ -141,9 +159,12 @@ exports.handler = async (event) => {
     avg: bestBy('avg'),
   };
 
+  const payload = { crop, start, end, rocStart, rocEnd, markets, best, warnings };
+  if (monthly) payload.monthly = aggregateByMonth(rows);
+
   return {
     statusCode: 200,
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ crop, start, end, rocStart, rocEnd, markets, best, warnings }),
+    body: JSON.stringify(payload),
   };
 };
