@@ -167,6 +167,27 @@ const DIAG=[
 const RTYPES={fert:{t:"施肥",c:"fert"},spray:{t:"用藥",c:"spray"},harv:{t:"採收",c:"harv"},ecph:{t:"EC/pH",c:"ecph"},work:{t:"作業",c:"work"},obs:{t:"觀察",c:"obs"},ipm:{t:"黏板",c:"ipm"}};
 /* IPM 防治門檻（隻/板/週，參考 IPM 精神：超標才用藥） */
 const IPM_THR={粉蝨:5,薊馬:3,葉蟎:5,蚜蟲:10};
+/* 施肥快選資料庫（溫室介質栽培番茄/彩椒，數值為參考，請依植株反應微調） */
+const FERTDB=[
+  /* 苗期（定植後 0–14 天） */
+  {stage:"苗期",crop:"番茄/彩椒",name:"台肥43號液肥（N7-P5-K5）",dose:"稀釋800倍",note:"定植初期促根、補充氮磷"},
+  {stage:"苗期",crop:"番茄/彩椒",name:"磷酸二氫鉀（MKP 0-52-34）",dose:"稀釋2000倍",note:"促根發育、防弱苗"},
+  /* 生長期（定植後 15–35 天） */
+  {stage:"生長期",crop:"番茄/彩椒",name:"台肥43號液肥（N7-P5-K5）",dose:"稀釋600倍",note:"促莖葉生長"},
+  {stage:"生長期",crop:"番茄/彩椒",name:"硝酸鈣（CaNO3 15.5-0-0+Ca）",dose:"每株3g溶水灌",note:"預防缺鈣（尻腐病）"},
+  {stage:"生長期",crop:"番茄/彩椒",name:"硝酸鎂（MgNO3 11-0-0+Mg）",dose:"稀釋1000倍",note:"預防老葉黃化缺鎂"},
+  /* 花期（定植後 30–60 天） */
+  {stage:"花期",crop:"番茄/彩椒",name:"磷酸二氫鉀（MKP 0-52-34）",dose:"稀釋1500倍",note:"促花芽分化、提高坐果率；控氮避免徒長"},
+  {stage:"花期",crop:"番茄/彩椒",name:"台肥46號液肥（N4-P4-K12）",dose:"稀釋500倍",note:"提高鉀比例促花及早期果發育"},
+  {stage:"花期",crop:"番茄/彩椒",name:"硝酸鈣（CaNO3 15.5-0-0+Ca）",dose:"每株3g溶水灌",note:"持續補鈣防尻腐病"},
+  /* 果期（初採前後） */
+  {stage:"果期",crop:"番茄",name:"台肥46號液肥（N4-P4-K12）",dose:"稀釋400倍",note:"高鉀促果實轉色、提升糖度"},
+  {stage:"果期",crop:"番茄",name:"富力鉀（硝酸鉀 NOP 13-0-45）",dose:"稀釋1500倍",note:"快速補鉀增色增甜"},
+  {stage:"果期",crop:"彩椒",name:"台肥46號液肥（N4-P4-K12）",dose:"稀釋400倍",note:"高鉀促彩椒轉色、提高光澤"},
+  {stage:"果期",crop:"番茄/彩椒",name:"硝酸鈣（CaNO3 15.5-0-0+Ca）",dose:"每株3g溶水灌",note:"採收期持續補鈣維持果實硬度"},
+  /* 追肥通用 */
+  {stage:"追肥",crop:"番茄/彩椒",name:"有機質液肥（魚蛋白/海藻萃取）",dose:"稀釋500倍",note:"增強根圈微生物活性、緩衝EC波動"},
+];
 /* 登記農藥快選資料庫（溫室番茄/彩椒常見對象，資料參考植保資訊系統，請自行核對許可證字號） */
 const PESTDB=[
   /* 粉蝨 */
@@ -450,8 +471,24 @@ function renderPlots(){
 function logModal(type){
   const meta=RTYPES[type];const mr=document.getElementById("modal-root");
   let fields='<label class="f">日期</label><input class="t" id="m-date" type="date" value="'+fmtD(today())+'">';
-  if(type==="ecph")fields+='<div class="row2"><div><label class="f">EC (dS/m)</label><input class="t" id="m-ec" type="number" step="0.1" placeholder="2.5"></div><div><label class="f">pH</label><input class="t" id="m-ph" type="number" step="0.1" placeholder="6.5"></div></div>';
+  if(type==="ecph"){
+    const rc=load()[CUR];const cr=rc?CROPS[rc.crop]:null;
+    const[,,age]=rc?stageOf(rc):[0,0,0];
+    let ecTarget=cr?Object.entries(cr.ec).map(([s,v])=>s+"："+v).join("　"):"";
+    let stTarget="";if(cr){const ec=cr.ec;stTarget=age<14?ec["苗期"]:age<35?ec["生長期"]:age<60?ec["花期"]:ec["果期"];}
+    fields+='<div class="info" style="margin-bottom:8px">目標 EC <b>'+(stTarget||"2.0–3.0")+'</b> dS/m　· pH 目標 <b>6.0–6.8</b>'+(ecTarget?'<br><small style="color:var(--ink-soft)">'+ecTarget+'</small>':'')+'</div>'+
+    '<div class="row2"><div><label class="f">EC 實測值 (dS/m)</label><input class="t" id="m-ec" type="number" step="0.1" placeholder="2.5"></div><div><label class="f">pH 實測值</label><input class="t" id="m-ph" type="number" step="0.1" placeholder="6.5"></div></div>';
+  }
   else if(type==="harv")fields+='<label class="f">採收量 (kg)</label><input class="t" id="m-qty" type="number" step="0.1" placeholder="15">';
+  else if(type==="fert"){
+    const crop=load()[CUR]?load()[CUR].crop:"";
+    const fertOpts=FERTDB.filter(f=>!crop||f.crop.includes(crop.replace(/牛|玉女/,"").trim())||f.crop==="番茄/彩椒");
+    const byStage={};fertOpts.forEach(f=>{(byStage[f.stage]=byStage[f.stage]||[]).push(f);});
+    const ddOpts=Object.entries(byStage).map(([s,fs])=>'<optgroup label="'+s+'">'+fs.map(f=>'<option value="'+f.name+'|'+f.dose+'|'+f.note+'">'+f.name+'</option>').join("")+'</optgroup>').join("");
+    fields+='<label class="f">快選推薦肥料（依生育階段）</label>'+
+    '<select class="t" id="m-fq"><option value="">── 請選擇或手動填寫 ──</option>'+ddOpts+'</select>'+
+    '<label class="f">施肥內容（肥料、用量、方式）</label><textarea class="t" id="m-note" placeholder="例如 台肥46號 稀釋500倍 灌根 每株500ml"></textarea>';
+  }
   else if(type==="spray"){
     const crop=load()[CUR]?load()[CUR].crop:"";
     const opts=PESTDB.filter(p=>!crop||p.crop.includes(crop.replace(/牛|玉女/,"").trim())||p.crop==="番茄/彩椒");
@@ -481,6 +518,14 @@ function logModal(type){
   mr.innerHTML='<div class="modal-bg" id="mbg"><div class="modal"><h3>登錄'+meta.t+'</h3><p class="note">'+load()[CUR].plot+' · '+load()[CUR].crop+'</p>'+fields+'<button class="btn" id="m-save">儲存</button><button class="btn sec" id="m-cancel">取消</button></div></div>';
   document.getElementById("m-cancel").onclick=()=>mr.innerHTML="";
   document.getElementById("mbg").onclick=e=>{if(e.target.id==="mbg")mr.innerHTML="";};
+  if(type==="fert"){
+    const fq=document.getElementById("m-fq");
+    if(fq)fq.onchange=function(){
+      const v=this.value;if(!v)return;
+      const[name,dose,note]=v.split("|");
+      document.getElementById("m-note").value=name+"　"+dose+"　（"+note+"）";
+    };
+  }
   if(type==="spray"){
     document.getElementById("m-quick").onchange=function(){
       const v=this.value;if(!v)return;
@@ -523,7 +568,12 @@ function renderTools(){
     '<h2 style="margin-top:22px">年度輪種規劃</h2><p class="note">從起始月排全年輪種，收成卡高價月＋輪作。</p>'+
     '<div class="card"><label class="f">起始月</label><input class="t" id="p-start" type="month" value="'+nowM.getFullYear()+"-"+String(nowM.getMonth()+1).padStart(2,"0")+'"><button class="btn" id="p-go">產生規劃</button><div id="p-res"></div></div>'+
     '<h2 style="margin-top:22px">產銷履歷紀錄簿</h2><p class="note">依台灣安全農業（TGAP）匯出用藥/施肥/採收紀錄，供驗證稽核與追溯。</p>'+
-    '<div class="card"><button class="btn" id="rb-go">匯出履歷紀錄簿</button><div id="rb-res"></div></div>';
+    '<div class="card"><button class="btn" id="rb-go">匯出履歷紀錄簿 CSV</button><div id="rb-res"></div></div>'+
+    '<h2 style="margin-top:22px">資料備份 / 還原</h2><p class="note">App 資料存在瀏覽器，清除快取會消失。定期備份 JSON 檔到手機相簿或雲端，需要時可還原。</p>'+
+    '<div class="card"><div class="row2">'+
+    '<button class="btn" id="bk-exp">⬇ 備份下載 JSON</button>'+
+    '<button class="btn sec" id="bk-imp">⬆ 還原上傳 JSON</button>'+
+    '</div><input type="file" id="bk-file" accept=".json" style="display:none"><div id="bk-res"></div></div>';
   v.querySelector("#c-go").onclick=()=>{
     const c=CROPS[v.querySelector("#c-crop").value];const ds=v.querySelector("#c-date").value;const n=+v.querySelector("#c-plants").value;
     if(!ds||!n)return;const plant=parseD(ds);const first=addD(plant,c.grow);const last=addD(first,c.dur);const ratio=n/c.density;
@@ -550,6 +600,32 @@ function renderTools(){
       csv+=[rc.date,r.plot,r.crop,ty,rc.target||"",mat,dose,rc.phi||"",rc.type==="harv"?"產量":""].map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(",")+"\n";});});
     v.querySelector("#rb-res").innerHTML=n?'<div class="res"><h4>紀錄簿（'+n+' 筆，CSV）</h4><textarea class="t" style="min-height:180px;font-size:.72rem" readonly id="rb-t">'+csv.replace(/</g,"&lt;")+'</textarea><button class="btn" id="rb-copy">複製 CSV</button><div class="foot" style="text-align:left">可貼進 Excel 或匯入產銷履歷系統。用藥紀錄請確認符合植保系統登記藥、稀釋倍數與安全採收期。</div></div>':'<div class="info">尚無用藥/施肥/採收紀錄。到田區登錄後即可匯出。</div>';
     const cp=v.querySelector("#rb-copy");if(cp)cp.onclick=()=>{const ta=v.querySelector("#rb-t");ta.select();try{document.execCommand("copy");cp.textContent="已複製 ✓";}catch(e){}};
+  };
+  // 備份：下載 JSON
+  v.querySelector("#bk-exp").onclick=()=>{
+    const data={version:2,exported:fmtD(today()),plots:load()};
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob);const a=document.createElement("a");
+    a.href=url;a.download="農務小幫手備份_"+fmtD(today())+".json";a.click();
+    URL.revokeObjectURL(url);
+    v.querySelector("#bk-res").innerHTML='<div class="info">已下載備份檔案，請存到相簿或雲端。</div>';
+  };
+  // 還原：讀取 JSON
+  v.querySelector("#bk-imp").onclick=()=>v.querySelector("#bk-file").click();
+  v.querySelector("#bk-file").onchange=function(){
+    const file=this.files[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=e=>{
+      try{
+        const data=JSON.parse(e.target.result);
+        const plots=data.plots||data; // 支援舊版直接存陣列
+        if(!Array.isArray(plots))throw new Error("格式不符");
+        if(!confirm("將以備份檔覆蓋現有所有田區資料（共"+plots.length+"筆田區），確定還原？"))return;
+        save(plots);
+        v.querySelector("#bk-res").innerHTML='<div class="info">✓ 還原成功，已載入 '+plots.length+' 個田區。</div>';
+      }catch(err){v.querySelector("#bk-res").innerHTML='<div class="info" style="color:var(--warn)">檔案格式錯誤：'+err.message+'</div>';}
+    };
+    reader.readAsText(file);
   };
 }
 
