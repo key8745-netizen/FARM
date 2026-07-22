@@ -539,14 +539,15 @@ function renderPlots(){
       '<button data-log="ecph"><span class="qi">🌡️</span>EC/pH</button>'+
       '<button data-log="work"><span class="qi">✂️</span>作業</button>'+
       '<button data-log="obs"><span class="qi">👀</span>觀察</button>'+
-      '<button data-log="ipm"><span class="qi">🪤</span>黏板巡查</button></div></div>'+
+      '<button data-log="ipm"><span class="qi">🪤</span>黏板巡查</button>'+
+      '<button data-log="ai" style="grid-column:1/-1;background:var(--accent);color:#fff;border:none"><span class="qi">📸</span>每日拍照 + AI 診斷</button></div></div>'+
     ecChart+
     '<div class="card"><h3 style="margin:0 0 6px;font-size:1rem">紀錄歷史 <span style="color:var(--ink-soft);font-weight:400;font-size:.8rem">('+((r.records||[]).length)+' 筆)</span></h3>'+(recs||'<div class="empty" style="padding:16px">尚無紀錄，用上方按鈕登錄。</div>')+'</div>'+
     '<button class="btn sec" id="delp">刪除此田區</button>';
   v.querySelector("#bk").onclick=()=>{CUR=null;renderPlots();};
   v.querySelector("#delp").onclick=()=>{if(confirm("確定刪除「"+r.plot+"」及其所有紀錄？")){const p=load();p.splice(CUR,1);save(p);CUR=null;renderPlots();}};
   v.querySelectorAll(".task input").forEach(b=>b.onchange=()=>localStorage.setItem(b.dataset.k,b.checked?"1":"0"));
-  v.querySelectorAll("[data-log]").forEach(b=>b.onclick=()=>logModal(b.dataset.log));
+  v.querySelectorAll("[data-log]").forEach(b=>b.onclick=()=>b.dataset.log==="ai"?aiModal():logModal(b.dataset.log));
   v.querySelectorAll(".del[data-r]").forEach(b=>b.onclick=()=>{const p=load();p[CUR].records.splice(+b.dataset.r,1);save(p);renderPlots();});
 }
 
@@ -638,6 +639,72 @@ function logModal(type){
     p[CUR].records=p[CUR].records||[];p[CUR].records.push(rec);save(p);mr.innerHTML="";renderPlots();
   };
 }
+
+/* ---------- 每日拍照 + AI 診斷 ---------- */
+// 壓縮圖片為 dataURL（長邊 max 1024、JPEG 0.7），控制上傳大小
+function compressImage(file,max,q){return new Promise((res,rej)=>{
+  const img=new Image();const url=URL.createObjectURL(file);
+  img.onload=()=>{URL.revokeObjectURL(url);let w=img.width,h=img.height;
+    if(Math.max(w,h)>max){if(w>=h){h=Math.round(h*max/w);w=max;}else{w=Math.round(w*max/h);h=max;}}
+    const c=document.createElement("canvas");c.width=w;c.height=h;
+    c.getContext("2d").drawImage(img,0,0,w,h);res(c.toDataURL("image/jpeg",q));};
+  img.onerror=()=>{URL.revokeObjectURL(url);rej(new Error("讀取圖片失敗"));};img.src=url;});}
+function aiModal(){
+  const r=load()[CUR];if(!r)return;const c=CROPS[r.crop];const[st,,age]=stageOf(r);const mr=document.getElementById("modal-root");
+  // 近期趨勢：最近幾筆 EC 與觀察
+  const ecs=(r.records||[]).filter(x=>x.type==="ecph"&&x.ec).slice(-4).map(x=>md(parseD(x.date))+" EC"+x.ec).join("、");
+  let imgs=[];
+  mr.innerHTML='<div class="modal-bg" id="mbg"><div class="modal"><h3>📸 每日拍照 + AI 診斷</h3><p class="note">'+r.plot+' · '+r.crop+'（第'+Math.max(age,0)+'天/'+st+'）</p>'+
+    '<div class="info" style="margin-bottom:8px">拍生長點/新葉、異常部位特寫最有用；放硬幣當比例尺、白紙校色更準。</div>'+
+    '<label class="f">照片（可多張，建議 1–5 張）</label><input class="t" id="ai-file" type="file" accept="image/*" multiple>'+
+    '<div id="ai-thumbs" style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0"></div>'+
+    '<div class="row2"><div><label class="f">給液 EC</label><input class="t" id="ai-gec" type="number" step="0.1" placeholder="2.5"></div><div><label class="f">給液 pH</label><input class="t" id="ai-gph" type="number" step="0.1" placeholder="6.0"></div></div>'+
+    '<div class="row2"><div><label class="f">排液 EC</label><input class="t" id="ai-dec" type="number" step="0.1" placeholder="3.0"></div><div><label class="f">排液 pH</label><input class="t" id="ai-dph" type="number" step="0.1" placeholder="6.2"></div></div>'+
+    '<div class="row2"><div><label class="f">日高溫 ℃</label><input class="t" id="ai-th" type="number" placeholder="28"></div><div><label class="f">夜低溫 ℃</label><input class="t" id="ai-tl" type="number" placeholder="12"></div></div>'+
+    '<label class="f">具體觀察（含部位＋程度）</label><textarea class="t" id="ai-obs" placeholder="例如：下位葉葉緣黃化約3片、生長點正常、有少量粉蝨"></textarea>'+
+    '<button class="btn" id="ai-go">🤖 送 AI 診斷</button><div id="ai-res"></div>'+
+    '<button class="btn sec" id="ai-x">關閉</button></div></div>';
+  document.getElementById("ai-x").onclick=()=>mr.innerHTML="";
+  document.getElementById("mbg").onclick=e=>{if(e.target.id==="mbg")mr.innerHTML="";};
+  const thumbs=document.getElementById("ai-thumbs");
+  document.getElementById("ai-file").onchange=async function(){
+    for(const f of Array.from(this.files).slice(0,5-imgs.length)){
+      try{const d=await compressImage(f,1024,0.7);imgs.push(d);
+        const im=document.createElement("img");im.src=d;im.style.cssText="width:64px;height:64px;object-fit:cover;border-radius:8px";thumbs.appendChild(im);}catch(e){}
+    }
+  };
+  document.getElementById("ai-go").onclick=async()=>{
+    const res=document.getElementById("ai-res");
+    const data={giveEC:v("ai-gec"),givePH:v("ai-gph"),drainEC:v("ai-dec"),drainPH:v("ai-dph"),tempHigh:v("ai-th"),tempLow:v("ai-tl")};
+    const obs=v("ai-obs");
+    if(!imgs.length&&!obs&&!data.giveEC){res.innerHTML='<div class="info" style="color:var(--warn)">請至少提供照片、觀察或數據其中之一。</div>';return;}
+    res.innerHTML='<div class="info" style="margin-top:10px">AI 診斷中…（含照片可能需 10–40 秒）</div>';
+    try{
+      const rp=await fetch("/.netlify/functions/diagnose",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({crop:r.crop,stage:st,ageDays:Math.max(age,0),plot:r.plot,data:data,observation:obs,recentTrend:ecs,images:imgs})});
+      const d=await rp.json();
+      if(!d.ok){res.innerHTML='<div class="info" style="color:var(--warn);margin-top:10px">'+(d.error||"診斷失敗")+'<br><br>此功能需部署到 Netlify 並設定 ANTHROPIC_API_KEY 才能使用。</div>';return;}
+      const g=d.diagnosis;
+      if(!g){res.innerHTML='<div class="res" style="margin-top:10px"><h4>AI 回覆</h4><div style="white-space:pre-wrap;font-size:.88rem">'+(d.raw||"").replace(/</g,"&lt;")+'</div></div>';return;}
+      const acts=[];if(g.處置){["灌溉","施肥","用藥","其他"].forEach(k=>{if(g.處置[k]&&!/維持|暫不|無/.test(g.處置[k]))acts.push(k+"："+g.處置[k]);});}
+      res.innerHTML='<div class="res" style="margin-top:10px"><h4>🤖 診斷（信心：'+(g.信心||"?")+'）</h4>'+
+        '<div class="info" style="margin:0 0 8px"><b>'+(g.狀態||"")+'</b></div>'+
+        (g.問題&&g.問題.length?'<div style="font-size:.86rem;margin-bottom:6px"><b>問題：</b><br>'+g.問題.map(x=>"· "+x).join("<br>")+'</div>':'')+
+        '<div style="font-size:.86rem;margin-bottom:6px"><b>立即處置：</b><br>'+["灌溉","施肥","用藥","其他"].map(k=>g.處置&&g.處置[k]?"· <b>"+k+"</b>："+g.處置[k]:"").filter(Boolean).join("<br>")+'</div>'+
+        (g.資料缺口&&g.資料缺口.length?'<div style="font-size:.8rem;color:var(--ink-soft)">補充資料：'+g.資料缺口.join("、")+'</div>':'')+
+        (g.追蹤?'<div style="font-size:.8rem;color:var(--ink-soft);margin-top:4px">追蹤：'+g.追蹤+'</div>':'')+
+        '<div class="foot" style="text-align:left">AI 判斷僅供參考，用藥前務必查植保系統登記藥並守安全採收期。</div>'+
+        '<button class="btn" id="ai-apply" style="margin-top:6px">套用為今日動態調整並存紀錄</button></div>';
+      const ap=document.getElementById("ai-apply");if(ap)ap.onclick=()=>{
+        const cur=getDyn(CUR);acts.forEach(a=>cur.push("🤖 "+a));setDyn(CUR,cur);
+        const p=load();p[CUR].records=p[CUR].records||[];
+        p[CUR].records.push({type:"obs",date:fmtD(today()),note:"AI診斷："+(g.狀態||"")+(acts.length?"｜處置："+acts.join("；"):"")});
+        save(p);mr.innerHTML="";renderPlots();
+      };
+    }catch(e){res.innerHTML='<div class="info" style="color:var(--warn);margin-top:10px">連線失敗：'+e.message+'<br>需部署到 Netlify 才能使用。</div>';}
+  };
+}
+function v(id){const el=document.getElementById(id);return el?el.value.trim():"";}
 
 /* ---------- 診斷 ---------- */
 function renderDiag(){
