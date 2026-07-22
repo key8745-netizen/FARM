@@ -946,7 +946,8 @@ function go(v){
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{if(b.dataset.v==="plots")CUR=null;go(b.dataset.v);});
 // 套用已校正的真實月價指數（若有）覆蓋示範值
 applyIdxOverride();
-const t=today();document.getElementById("hd-date").innerHTML=fmtD(t)+"<br>星期"+["日","一","二","三","四","五","六"][t.getDay()];
+const APP_VERSION="OMO-v2 · 0722";
+const t=today();document.getElementById("hd-date").innerHTML=fmtD(t)+"<br>星期"+["日","一","二","三","四","五","六"][t.getDay()]+'<br><span style="color:var(--accent);font-weight:700">'+APP_VERSION+'</span>';
 renderDash();
 // 啟動時：若開了自動同步，先從雲端拉取最新，再重繪
 (async function(){const s=loadSync();if(s.auto&&s.config&&s.code){try{await cloudPull();_lastPushSnap=JSON.stringify(snapshot());go("dash");}catch(e){}}})();
