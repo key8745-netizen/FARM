@@ -1,0 +1,220 @@
+# scripts — 農務小幫手工具集
+
+## 統一入口 farm.py（建議從這裡用）
+
+不用記一堆檔名，一個指令操作全部工具：
+
+```bash
+python3 farm.py                                        # 顯示選單
+python3 farm.py crops                                  # 列出知識庫作物
+python3 farm.py today  --file plantings.json           # 今日待辦（文字）
+python3 farm.py today  --file plantings.json --html today.html   # 今日待辦（手機頁）
+python3 farm.py calc   --crop 牛番茄 --date 2026-09-15 --plants 500
+python3 farm.py plan   --start 2026-03                 # 全年輪種
+python3 farm.py report --start 2026-03 --area 2 --html report.html
+python3 farm.py fetch  --crop 甜椒 --start 2026-01-01 --end 2026-12-31 --csv 甜椒.csv
+python3 farm.py market 甜椒.csv --grow-days 90 --market-report
+```
+
+以下為各工具細節（也可單獨執行）。
+
+---
+
+| 腳本 | 功能 |
+|---|---|
+| `daily_tasks.py` | 每日任務產生器（文字版）：讀種植紀錄 → 今天各畦區要做什麼 |
+| `daily_tasks_html.py` | 每日待辦手機頁：可勾選、依畦區分組、勾選狀態記憶（localStorage）|
+| `calc_crop.py` | 作物計算引擎：定植日+株數 → 採收日、肥料、EC曲線、作業排程、分批建議 |
+| `annual_plan.py` | 一年輪種規劃器：安排全年輪種，讓收成落在高價月且符合輪作 |
+| `farm_report.py` | 一鍵年度經營報告（文字版）：輪種+肥料採購彙總+市場策略+管理原則 |
+| `farm_report_html.py` | 視覺化年度經營報告：輸出自帶樣式的單檔 HTML（輪種時間軸、價位色標）|
+| `fetch_amis.py` | 抓農產品交易行情、月統計、標旺季/爛價 |
+| `analyze_market.py` | 行情進階分析：多市場比價、季節指數、去年同期、種植紅黃綠燈 |
+
+知識庫：`crops.json`（作物參數，可自行擴充新作物）。全部零套件依賴，有 Python 3 即可跑。
+
+目前收錄作物：牛番茄、彩椒、玉女番茄、高山草莓（茄科/薔薇科高價作物）、高麗菜、敏豆（非茄科輪作與填空作物）。
+
+---
+
+## daily_tasks.py — 每日任務產生器（每天打開看這個）
+
+讀你的種植紀錄，算出**今天每個畦區要做什麼**：到期的排程作業、每日 EC/pH 抄錄（附目前階段目標值）、
+每週黏板巡查、採收狀態、未來 7 天預告。
+
+```bash
+cp plantings.example.json plantings.json   # 複製範例，填入你的畦區與定植日
+python3 daily_tasks.py --file plantings.json               # 今天
+python3 daily_tasks.py --file plantings.json --date 2026-07-20
+python3 daily_tasks.py --file plantings.json --plot A區     # 只看某畦區
+```
+
+種植紀錄格式（`plantings.json`）：每筆填畦區、作物、定植日、株數。作物需存在於 `crops.json`。
+可搭配排程工具（如 cron / 手機捷徑）每天早上自動產生當日待辦。
+
+### 手機待辦頁
+
+```bash
+python3 daily_tasks_html.py --file plantings.json --out today.html
+```
+產生手機友善、**可逐項打勾**的當日待辦頁：依畦區分組、生育階段標籤、頂部完成進度條、
+勾選狀態存於瀏覽器（依日期記憶，隔天自動換新）。用手機瀏覽器開啟即可當每日打卡表。
+
+---
+
+## calc_crop.py — 作物計算引擎
+
+```bash
+# 牛番茄 500 株，9/15 定植，分 4 梯
+python3 calc_crop.py --crop 牛番茄 --date 2026-09-15 --plants 500 --batches 4
+
+# 彩椒 800 株，4/1 定植（高冷地夏作，卡夏季高價）
+python3 calc_crop.py --crop 彩椒 --date 2026-04-01 --plants 800
+```
+
+輸出：初採/採收結束日、對應期作、肥料總量與每株量、EC 目標曲線、含實際日期的作業排程、分批定植表。
+新增作物只要編輯 `crops.json`。
+
+---
+
+## annual_plan.py — 一年輪種規劃器
+
+為單一畦區安排整年輪種，讓每輪收成盡量落在**高價月**，並遵守**輪作**（不連作同科，降低土傳病害）。
+
+```bash
+python3 annual_plan.py --start 2026-04                       # 全部作物
+python3 annual_plan.py --start 2026-04 --only 彩椒,高麗菜,敏豆   # 限定作物
+python3 annual_plan.py --start 2026-04 --per-crop            # 只看各作物最佳定植月
+```
+
+輸出兩部分：
+1. **各作物最佳定植月** — 幾月定植 → 採收落在高價月（🟢/🟡/🔴）
+2. **年度輪種時間表** — 一畦區的輪次序列、定植日、採收期、價位分數、輪作檢查
+
+### 怎麼解讀（重要觀念）
+
+- 番茄/彩椒是**長採收（120–150 天）茄科**作物，一年只能排 1–2 輪，**夏季高價那一檔最關鍵**。
+- 規劃器會誠實顯示：若把長週期作物排進秋冬，收成會撞低價（🔴）——這說明**秋冬檔期不該硬種夏果**，可改短期葉菜或讓地休養接益菌。
+- 理想安排常是：**春定植 → 夏季高價採收（主力茄科）** + **短期非茄科（高麗菜/敏豆）填空並養地**。
+
+> ⚠️ `crops.json` 的「月價指數」為示範值。請先用 `fetch_amis.py` + `analyze_market.py` 撈信義鄉常送市場的實際歷史行情，替換後規劃才準。
+
+---
+
+## farm_report.py — 一鍵年度經營報告
+
+輸入畦區面積，整合輸出一份完整年度報告：輪種時間表、各輪肥料需求、**全年採購彙總**、市場策略提醒、共通管理原則。
+
+```bash
+python3 farm_report.py --start 2026-03 --area 2                    # 2 分地全作物
+python3 farm_report.py --start 2026-03 --area 2 --only 高山草莓,敏豆,高麗菜
+```
+
+`--area` 單位為分地（1 分地 = 0.1 公頃），會依作物密度自動換算株數與肥料總量。
+這是最上層的整合工具，把 `annual_plan.py` + `calc_crop.py` + 市場策略串成一頁式經營藍圖。
+
+### 視覺化 HTML 版
+
+```bash
+python3 farm_report_html.py --start 2026-03 --area 2 --out report.html
+```
+輸出自帶樣式的單檔 HTML，用瀏覽器開啟即可看：**輪種時間軸**（育成期/採收期分段、價位以綠/琥珀/紅色標）、
+肥料採購 stat tiles、輪種明細表、市場策略。支援淺色/深色主題。可直接分享或列印。
+
+---
+
+# 行情資料工具
+
+## fetch_amis.py — 抓取農產品交易行情並做月統計
+
+連接農業部「農產品交易行情」開放資料 API，抓取指定作物、日期區間的批發市場行情，
+輸出明細 CSV，並計算**每月平均均價與交易量**，自動標出**最高價月（旺季）**與**最低價月（爛價期）**。
+
+- 資料來源：https://data.moa.gov.tw/Service/OpenData/FromM/FarmTransData.aspx
+- 欄位：交易日期、作物代號/名稱、市場代號/名稱、上/中/下價、平均價、交易量
+- **零套件依賴**（只用 Python 3 標準函式庫），有 Python 3 就能跑。
+
+### 用法
+
+```bash
+# 抓牛番茄 2026/06/01~07/18 行情，輸出 CSV 並印月統計
+python3 fetch_amis.py --crop 牛番茄 --start 2026-06-01 --end 2026-07-18 --csv 牛番茄.csv
+
+# 抓甜椒（彩椒）整年，估算旺季與爛價期
+python3 fetch_amis.py --crop 甜椒 --start 2026-01-01 --end 2026-12-31
+
+# 指定市場
+python3 fetch_amis.py --crop 牛番茄 --start 2026-06-01 --end 2026-07-18 --market 台北一
+```
+
+### 輸出範例
+
+```
+共取得 42 筆『牛番茄』交易紀錄（2026-06-01 ~ 2026-07-18）
+已輸出明細至 牛番茄.csv
+
+=== 月統計（平均均價 元/公斤、總交易量 公斤）===
+月份           平均均價        總交易量     筆數
+2026-06        29.8         2,700       2
+2026-07        52.0           600       1
+
+📈 最高價月: 2026-07 (52.0 元/公斤) — 旺季/高價空窗參考
+📉 最低價月: 2026-06 (29.8 元/公斤) — 爛價期，避開此時採收
+```
+
+### 說明
+
+- API 日期參數採**民國年**（YYYY.MM.DD）格式，腳本會自動幫你把西元日期換算成民國年。
+- 建議在**自己的電腦或伺服器**執行；部分受限網路環境（含某些雲端沙箱）會擋外連。
+- 想擴充：可加入多市場比價、歷史年度同期比較、季節分解價格預測（見
+  `docs/research/行情季節分析-估算爛價與旺季.md`）。
+
+---
+
+## analyze_market.py — 行情進階分析
+
+吃 `fetch_amis.py` 產出的 CSV，做更深的分析（離線可跑、零套件依賴）：
+
+1. **多市場比價** — 各市場平均均價與交易量，找送哪個市場最好
+2. **季節指數** — 每月價 / 全期平均，>1.1 旺季📈、<0.9 淡季📉
+3. **去年同期比較** — 同月今年 vs 去年漲跌
+4. **移動平均趨勢** — 近期價格方向
+5. **種植紅黃綠燈** — 依「定植後 N 天採收落在哪個價格帶」給🟢/🟡/🔴
+
+### 用法
+
+```bash
+# 甜椒（生育約90天），含多市場比價
+python3 analyze_market.py 甜椒.csv --grow-days 90 --market-report
+
+# 牛番茄（生育約60天），可同時吃多年份多檔 CSV
+python3 analyze_market.py 牛番茄_2024.csv 牛番茄_2025.csv --grow-days 60
+```
+
+### 種植紅黃綠燈範例（甜椒）
+
+```
+   定植月    →採收月     採收季節指數    建議
+    3月     06月        0.57      🔴 爛價，避開
+    4月     07月        1.25      🟢 好價，建議種
+    5月     08月        1.54      🟢 好價，建議種
+    9月     12月        0.47      🔴 爛價，避開
+```
+→ 印證信義鄉策略：**4–5 月定植、夏季採收卡高價；避開撞平地盛產爛價的月份。**
+
+### 建議流程
+
+```bash
+# 1. 先抓多年資料
+python3 fetch_amis.py --crop 甜椒 --start 2023-01-01 --end 2023-12-31 --csv 甜椒_2023.csv
+python3 fetch_amis.py --crop 甜椒 --start 2024-01-01 --end 2024-12-31 --csv 甜椒_2024.csv
+python3 fetch_amis.py --crop 甜椒 --start 2025-01-01 --end 2025-12-31 --csv 甜椒_2025.csv
+# 2. 合併分析
+python3 analyze_market.py 甜椒_2023.csv 甜椒_2024.csv 甜椒_2025.csv --grow-days 90 --market-report
+```
+
+### 下一步
+
+- [ ] 用腳本撈牛番茄、甜椒近 3–5 年資料，建立信義鄉的季節模型
+- [ ] 確認信義鄉常送市場的市場代號，加入固定比價清單
+- [ ] 把季節指數與紅黃綠燈接到系統的「季節熱力圖」與「這個月能種嗎」介面

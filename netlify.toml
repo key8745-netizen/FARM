@@ -1,0 +1,22 @@
+# Netlify 部署設定 — 農務小幫手 PWA + AMIS 行情代理
+#
+# 靜態站台 = app/ 資料夾（純前端 PWA，無需 build）
+# Serverless 函式 = netlify/functions/（代理 data.moa.gov.tw，繞過瀏覽器跨域）
+#
+# 部署：把整個 repo 連到 Netlify，或用 `netlify deploy` CLI。
+# 部署後 App 內「市場行情」會呼叫 /.netlify/functions/amis 取得即時各市場價。
+
+[build]
+  publish = "app"
+  command = ""
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# PWA 單頁：非函式路徑一律回 index.html（不影響 /.netlify/functions/*）
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  force = false

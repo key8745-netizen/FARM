@@ -1,0 +1,848 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#3B6B4A">
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="農務小幫手">
+<title>農務小幫手</title>
+<style>
+:root{
+  --paper:#F4F2EB;--ink:#222820;--ink-soft:#5C6353;--line:#DCE0D2;--card:#FFFFFF;--card2:#FAF9F4;
+  --accent:#3B6B4A;--accent-d:#2E5539;--accent-soft:#E8EFE5;
+  --harv:#4E8C5A;--harv-bg:#E4EFE2;--grow:#B9832A;--grow-bg:#F4E9D2;--pre:#78806F;--pre-bg:#EAECE3;
+  --warn:#B5533C;--warn-bg:#F4E1DA;--done:#9AA391;--blue:#3E6B84;
+}
+@media (prefers-color-scheme:dark){:root{
+  --paper:#14170F;--ink:#E9EBE1;--ink-soft:#9FA595;--line:#2C3226;--card:#1D2218;--card2:#191E14;
+  --accent:#7FB98C;--accent-d:#93C79E;--accent-soft:#232E1D;
+  --harv:#77BE86;--harv-bg:#212F1D;--grow:#D6A94E;--grow-bg:#2D2713;--pre:#868E7C;--pre-bg:#22271C;
+  --warn:#D9846B;--warn-bg:#2E1D16;--done:#5B6350;--blue:#77A6BE;
+}}
+:root[data-theme="light"]{--paper:#F4F2EB;--ink:#222820;--ink-soft:#5C6353;--line:#DCE0D2;--card:#FFFFFF;--card2:#FAF9F4;--accent:#3B6B4A;--accent-d:#2E5539;--accent-soft:#E8EFE5;--harv:#4E8C5A;--harv-bg:#E4EFE2;--grow:#B9832A;--grow-bg:#F4E9D2;--pre:#78806F;--pre-bg:#EAECE3;--warn:#B5533C;--warn-bg:#F4E1DA;--done:#9AA391;--blue:#3E6B84;}
+:root[data-theme="dark"]{--paper:#14170F;--ink:#E9EBE1;--ink-soft:#9FA595;--line:#2C3226;--card:#1D2218;--card2:#191E14;--accent:#7FB98C;--accent-d:#93C79E;--accent-soft:#232E1D;--harv:#77BE86;--harv-bg:#212F1D;--grow:#D6A94E;--grow-bg:#2D2713;--pre:#868E7C;--pre-bg:#22271C;--warn:#D9846B;--warn-bg:#2E1D16;--done:#5B6350;--blue:#77A6BE;}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased;}
+.app{max-width:600px;margin:0 auto;padding:14px 14px 92px;}
+header{display:flex;justify-content:space-between;align-items:flex-end;padding:4px 2px 12px;border-bottom:2px solid var(--ink);margin-bottom:16px;}
+.eyebrow{font-size:.68rem;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);font-weight:700;}
+h1{font-family:Georgia,"Songti TC",serif;font-size:1.5rem;margin:.08em 0 0;}
+.hd-date{font-size:.8rem;color:var(--ink-soft);text-align:right;}
+h2{font-family:Georgia,"Songti TC",serif;font-size:1.2rem;margin:4px 0 3px;}
+.note{font-size:.82rem;color:var(--ink-soft);margin:0 0 13px;}
+.sec-h{display:flex;justify-content:space-between;align-items:baseline;margin:20px 0 8px;}
+.sec-h h3{font-size:.98rem;margin:0;}
+.sec-h span{font-size:.78rem;color:var(--ink-soft);}
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:12px 6px;text-align:center;}
+.kpi b{display:block;font-family:Georgia,serif;font-size:1.7rem;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums;}
+.kpi.warn b{color:var(--warn);}
+.kpi small{font-size:.68rem;color:var(--ink-soft);display:block;margin-top:5px;}
+/* card */
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:11px;}
+.card.tap{cursor:pointer;transition:transform .08s;}
+.card.tap:active{transform:scale(.99);}
+.card-top{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.card-top h3{font-size:1.06rem;margin:0;}
+.crop{color:var(--accent);}
+.stage{font-size:.68rem;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap;}
+.stage.harv{background:var(--harv-bg);color:var(--harv);}.stage.grow{background:var(--grow-bg);color:var(--grow);}
+.stage.pre{background:var(--pre-bg);color:var(--pre);}
+.sub{font-size:.78rem;color:var(--ink-soft);margin:4px 0 9px;}
+.prog{height:9px;background:var(--line);border-radius:6px;overflow:hidden;position:relative;}
+.prog i{display:block;height:100%;border-radius:6px;}
+.prog i.g{background:linear-gradient(90deg,var(--accent),var(--harv));}
+.prog i.h{background:var(--harv);}
+.prog-l{display:flex;justify-content:space-between;font-size:.72rem;color:var(--ink-soft);margin-top:5px;font-variant-numeric:tabular-nums;}
+.pill{display:inline-block;font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--warn-bg);color:var(--warn);margin-top:8px;}
+.pill.ok{background:var(--harv-bg);color:var(--harv);}
+/* task */
+.task{display:flex;align-items:flex-start;gap:10px;padding:10px 3px;border-bottom:1px solid var(--line);cursor:pointer;}
+.task:last-child{border-bottom:none;}
+.task input{width:22px;height:22px;margin:0;flex-shrink:0;accent-color:var(--accent);}
+.task span{font-size:.93rem;}
+.task input:checked+span{color:var(--done);text-decoration:line-through;}
+.soon{margin-top:9px;padding-top:8px;border-top:1px dashed var(--line);font-size:.82rem;color:var(--ink-soft);}
+.info{font-size:.88rem;background:var(--accent-soft);border-radius:9px;padding:9px 11px;margin:6px 0;}
+/* forms */
+label.f{display:block;font-size:.78rem;color:var(--ink-soft);font-weight:600;margin:11px 0 4px;}
+input.t,select.t,textarea.t{width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:10px;background:var(--card2);color:var(--ink);font-size:.98rem;font-family:inherit;}
+textarea.t{resize:vertical;min-height:52px;}
+button{font-family:inherit;cursor:pointer;border:none;border-radius:10px;font-weight:600;}
+.btn{background:var(--accent);color:#fff;padding:12px;width:100%;margin-top:14px;font-size:1rem;}
+@media (prefers-color-scheme:dark){.btn{color:#12160f;}}
+:root[data-theme="dark"] .btn{color:#12160f;}
+.btn.sec{background:transparent;color:var(--accent);border:1.5px solid var(--accent);}
+.del{background:transparent;color:var(--warn);font-size:.8rem;padding:4px 6px;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+/* quick log */
+.qlog{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:6px 0 4px;}
+.qlog button{background:var(--card2);border:1px solid var(--line);color:var(--ink);padding:11px 4px;font-size:.82rem;display:flex;flex-direction:column;gap:4px;align-items:center;}
+.qlog button .qi{font-size:1.3rem;}
+/* records */
+.rec{display:flex;gap:10px;padding:9px 2px;border-bottom:1px solid var(--line);font-size:.86rem;}
+.rec:last-child{border-bottom:none;}
+.rec .rd{color:var(--ink-soft);font-variant-numeric:tabular-nums;white-space:nowrap;font-size:.8rem;min-width:42px;}
+.rec .rt{flex:1;}
+.rtag{display:inline-block;font-size:.66rem;font-weight:700;padding:1px 7px;border-radius:20px;margin-right:6px;}
+.rtag.fert{background:var(--grow-bg);color:var(--grow);}
+.rtag.spray{background:var(--warn-bg);color:var(--warn);}
+.rtag.harv{background:var(--harv-bg);color:var(--harv);}
+.rtag.ecph{background:var(--accent-soft);color:var(--accent);}
+.rtag.obs{background:var(--pre-bg);color:var(--pre);}
+.rtag.work{background:#E3EAEE;color:var(--blue);}
+.rtag.ipm{background:#EEE8F4;color:#6B44A0;}
+@media (prefers-color-scheme:dark){.rtag.work{background:#1C2A31;}.rtag.ipm{background:#2A1D38;color:#A97FD6;}}
+:root[data-theme="dark"] .rtag.work{background:#1C2A31;}:root[data-theme="dark"] .rtag.ipm{background:#2A1D38;color:#A97FD6;}
+.res{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:13px;margin-top:13px;}
+.res h4{margin:0 0 7px;font-size:1rem;font-family:Georgia,serif;}
+.res .r{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line);font-size:.9rem;}
+.res .r:last-child{border-bottom:none;}
+.res .r b{font-variant-numeric:tabular-nums;}
+.empty{text-align:center;color:var(--ink-soft);padding:34px 12px;font-size:.9rem;}
+.back{background:none;color:var(--accent);font-size:.9rem;padding:6px 0;margin-bottom:6px;font-weight:600;}
+.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:.75rem;font-weight:700;font-variant-numeric:tabular-nums;}
+.badge.hi{background:var(--harv-bg);color:var(--harv);}.badge.mid{background:var(--grow-bg);color:var(--grow);}.badge.lo{background:var(--warn-bg);color:var(--warn);}
+.diag-q{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:12px 14px;margin-bottom:9px;cursor:pointer;font-size:.95rem;display:flex;justify-content:space-between;align-items:center;}
+.diag-q:active{background:var(--card2);}
+.diag-a{background:var(--warn-bg);border-radius:11px;padding:12px 14px;margin:-4px 0 9px;font-size:.9rem;}
+.diag-a b{color:var(--warn);}
+.chart{display:flex;align-items:flex-end;gap:6px;height:110px;padding:8px 0;}
+.chart .bar{flex:1;background:var(--accent);border-radius:5px 5px 0 0;min-height:3px;position:relative;}
+.chart .bar span{position:absolute;bottom:-18px;left:0;right:0;text-align:center;font-size:.64rem;color:var(--ink-soft);}
+.chart .bar b{position:absolute;top:-16px;left:0;right:0;text-align:center;font-size:.62rem;color:var(--ink-soft);font-variant-numeric:tabular-nums;}
+.foot{font-size:.74rem;color:var(--ink-soft);text-align:center;margin-top:18px;line-height:1.7;}
+nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);display:flex;max-width:600px;margin:0 auto;padding-bottom:env(safe-area-inset-bottom);}
+nav button{flex:1;background:none;padding:9px 2px 11px;color:var(--ink-soft);font-size:.68rem;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:2px;}
+nav button .ic{font-size:1.3rem;line-height:1;}
+nav button.on{color:var(--accent);}
+.hidden{display:none;}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;z-index:20;}
+.modal{background:var(--card);border-radius:18px 18px 0 0;width:100%;max-width:600px;padding:18px 16px calc(20px + env(safe-area-inset-bottom));max-height:88vh;overflow-y:auto;}
+.modal h3{margin:0 0 2px;font-size:1.15rem;}
+</style>
+
+</head>
+<body>
+<div class="app">
+  <header>
+    <div><div class="eyebrow">農務小幫手 · 信義鄉溫室</div><h1 id="title">經營總覽</h1></div>
+    <div class="hd-date" id="hd-date"></div>
+  </header>
+  <main id="view-dash"></main>
+  <main id="view-plots" class="hidden"></main>
+  <main id="view-contract" class="hidden"></main>
+  <main id="view-diag" class="hidden"></main>
+  <main id="view-tools" class="hidden"></main>
+  <nav>
+    <button data-v="dash" class="on"><span class="ic">📊</span>總覽</button>
+    <button data-v="plots"><span class="ic">🌱</span>田區</button>
+    <button data-v="contract"><span class="ic">🤝</span>契作</button>
+    <button data-v="diag"><span class="ic">🔍</span>診斷</button>
+    <button data-v="tools"><span class="ic">🧮</span>工具</button>
+  </nav>
+</div>
+<div id="modal-root"></div>
+
+<script>
+const CROPS={
+ "牛番茄":{科:"茄科",grow:60,dur:120,density:20000,fert:{堆肥:10000,N:250,P2O5:200,K2O:180},ec:{"苗期":2.0,"生長期":2.5,"花期":2.8,"果期":3.0},idx:[.85,.85,.9,.95,1,1.2,1.3,1.35,1.25,1.05,.9,.85],sched:[[0,"定植、澆定根水"],[3,"巡查活著率、補植死苗"],[8,"立支架/牽繩固定"],[14,"開始摘側芽（單幹整枝）"],[21,"第一次追肥"],[35,"開花，輔助授粉"],[45,"疏果、摘老葉"],[60,"開始分批採收"]]},
+ "彩椒":{科:"茄科",grow:90,dur:150,density:18000,fert:{堆肥:10000,N:250,P2O5:150,K2O:300},ec:{"苗期":1.8,"生長期":2.3,"花期":2.6,"果期":3.0},idx:[.7,.7,.75,.8,.85,1.3,1.4,1.5,1.3,1.1,.8,.7],sched:[[0,"定植、澆定根水"],[5,"巡查活著率"],[10,"立支架/牽繩"],[20,"整枝"],[25,"第一次追肥"],[40,"開花，輔助授粉"],[55,"疏果、防裂果"],[90,"開始分批採收"]]},
+ "玉女番茄":{科:"茄科",grow:80,dur:140,density:16000,fert:{堆肥:6000,N:220,P2O5:180,K2O:220},ec:{"苗期":2.2,"生長期":2.8,"花期":3.2,"果期":3.5},idx:[1.2,1.2,1.1,1,.95,.95,1,1.05,1.1,1.15,1.2,1.25],sched:[[0,"定植、澆定根水"],[3,"補植死苗"],[10,"單蔓誘引"],[20,"摘側芽、追肥"],[35,"開花授粉"],[50,"疏果、摘老葉"],[80,"轉色後採收"]]},
+ "高山草莓":{科:"薔薇科",grow:90,dur:120,density:40000,fert:{堆肥:8000,N:150,P2O5:120,K2O:200},ec:{"苗期":1,"生長期":1.4,"花果期":1.8},idx:[.9,.9,.9,1,1.2,1.6,1.7,1.6,1.3,1,.9,.85],sched:[[0,"定植（高架離土）"],[7,"補植、遮陰降溫"],[25,"摘匍匐莖、追肥"],[45,"開花、放蜂授粉"],[70,"疏果、防灰黴病"],[90,"轉紅後採收"]]},
+ "高麗菜":{科:"十字花科",grow:70,dur:20,density:30000,fert:{堆肥:8000,N:200,P2O5:100,K2O:150},ec:{"苗期":1.5,"生長期":2,"結球期":2.5},idx:[.85,.85,.9,1,1.15,1.3,1.35,1.3,1.1,.95,.85,.8],sched:[[0,"定植"],[5,"補植、除草"],[20,"追肥"],[40,"結球初期追肥"],[70,"結球飽滿採收"]]},
+ "敏豆":{科:"豆科",grow:55,dur:35,density:60000,fert:{堆肥:6000,N:80,P2O5:100,K2O:120},ec:{"苗期":1.2,"生長期":1.8,"結莢期":2},idx:[.9,.9,.95,1.05,1.15,1.25,1.3,1.25,1.1,.95,.85,.85],sched:[[0,"播種/定植"],[7,"疏苗、立支架"],[25,"追肥、引蔓"],[40,"開花"],[55,"嫩莢採收"]]}
+};
+const DIAG=[
+ {q:"老葉黃化、下位葉較嚴重",c:"缺氮",a:"適量追加氮肥，勿過量致徒長。"},
+ {q:"老葉葉緣焦枯、果肩黃不轉色",c:"缺鉀",a:"補鉀肥；結果期需鉀量大。"},
+ {q:"果頂褐斑凹陷（尻腐病）",c:"缺鈣＋水分不穩",a:"補鈣並穩定灌溉（忌忽乾忽濕），摘除病果。"},
+ {q:"落花、落果",c:"溫度<15或>35℃／病毒",a:"調控溫度：冬季保溫、夏季遮陰通風；查是否病毒。"},
+ {q:"裂果",c:"水分忽乾忽濕",a:"穩定灌溉，勿驟然大量給水。"},
+ {q:"葉片捲曲叢生、畸形、矮化",c:"疑病毒病",a:"拔除病株、防治媒介昆蟲（粉蝨/蚜蟲）；病毒無藥重預防。"},
+ {q:"葉背小蟲、黏板誘到白色小蟲",c:"粉蝨/薊馬/蟎",a:"達門檻才查植保系統合法用藥並鎖安全採收期；可用天敵。"},
+ {q:"介質偏鹹、植株萎凋生長慢",c:"鹽類累積(EC過高)",a:"減少施肥、澆清水淋洗鹽分、增加有機質。"}
+];
+const RTYPES={fert:{t:"施肥",c:"fert"},spray:{t:"用藥",c:"spray"},harv:{t:"採收",c:"harv"},ecph:{t:"EC/pH",c:"ecph"},work:{t:"作業",c:"work"},obs:{t:"觀察",c:"obs"},ipm:{t:"黏板",c:"ipm"}};
+/* IPM 防治門檻（隻/板/週，參考 IPM 精神：超標才用藥） */
+const IPM_THR={粉蝨:5,薊馬:3,葉蟎:5,蚜蟲:10};
+/* 施肥快選資料庫（溫室介質栽培番茄/彩椒，數值為參考，請依植株反應微調） */
+const FERTDB=[
+  /* 苗期（定植後 0–14 天） */
+  {stage:"苗期",crop:"番茄/彩椒",name:"台肥43號液肥（N7-P5-K5）",dose:"稀釋800倍",note:"定植初期促根、補充氮磷"},
+  {stage:"苗期",crop:"番茄/彩椒",name:"磷酸二氫鉀（MKP 0-52-34）",dose:"稀釋2000倍",note:"促根發育、防弱苗"},
+  /* 生長期（定植後 15–35 天） */
+  {stage:"生長期",crop:"番茄/彩椒",name:"台肥43號液肥（N7-P5-K5）",dose:"稀釋600倍",note:"促莖葉生長"},
+  {stage:"生長期",crop:"番茄/彩椒",name:"硝酸鈣（CaNO3 15.5-0-0+Ca）",dose:"每株3g溶水灌",note:"預防缺鈣（尻腐病）"},
+  {stage:"生長期",crop:"番茄/彩椒",name:"硝酸鎂（MgNO3 11-0-0+Mg）",dose:"稀釋1000倍",note:"預防老葉黃化缺鎂"},
+  /* 花期（定植後 30–60 天） */
+  {stage:"花期",crop:"番茄/彩椒",name:"磷酸二氫鉀（MKP 0-52-34）",dose:"稀釋1500倍",note:"促花芽分化、提高坐果率；控氮避免徒長"},
+  {stage:"花期",crop:"番茄/彩椒",name:"台肥46號液肥（N4-P4-K12）",dose:"稀釋500倍",note:"提高鉀比例促花及早期果發育"},
+  {stage:"花期",crop:"番茄/彩椒",name:"硝酸鈣（CaNO3 15.5-0-0+Ca）",dose:"每株3g溶水灌",note:"持續補鈣防尻腐病"},
+  /* 果期（初採前後） */
+  {stage:"果期",crop:"番茄",name:"台肥46號液肥（N4-P4-K12）",dose:"稀釋400倍",note:"高鉀促果實轉色、提升糖度"},
+  {stage:"果期",crop:"番茄",name:"富力鉀（硝酸鉀 NOP 13-0-45）",dose:"稀釋1500倍",note:"快速補鉀增色增甜"},
+  {stage:"果期",crop:"彩椒",name:"台肥46號液肥（N4-P4-K12）",dose:"稀釋400倍",note:"高鉀促彩椒轉色、提高光澤"},
+  {stage:"果期",crop:"番茄/彩椒",name:"硝酸鈣（CaNO3 15.5-0-0+Ca）",dose:"每株3g溶水灌",note:"採收期持續補鈣維持果實硬度"},
+  /* 追肥通用 */
+  {stage:"追肥",crop:"番茄/彩椒",name:"有機質液肥（魚蛋白/海藻萃取）",dose:"稀釋500倍",note:"增強根圈微生物活性、緩衝EC波動"},
+];
+/* 登記農藥快選資料庫（溫室番茄/彩椒常見對象，資料參考植保資訊系統，請自行核對許可證字號） */
+const PESTDB=[
+  /* 粉蝨 */
+  {crop:"番茄/彩椒",target:"粉蝨",name:"賽速安 25%水分散性粒劑（WG）",dose:"2000倍",phi:5,moa:"菸鹼類（IRAC 4A）"},
+  {crop:"番茄/彩椒",target:"粉蝨",name:"速賜樂 22.4%懸浮劑（SC）",dose:"2000倍",phi:7,moa:"脂質合成抑制（IRAC 23）"},
+  {crop:"番茄/彩椒",target:"粉蝨",name:"亞滅培 20%可溶性粉劑（SP）",dose:"3000倍",phi:7,moa:"菸鹼類（IRAC 4A）"},
+  /* 薊馬 */
+  {crop:"番茄/彩椒",target:"薊馬",name:"賜滅芬 24%懸浮劑（SC）",dose:"1000倍",phi:3,moa:"多點作用（IRAC 5）"},
+  {crop:"番茄/彩椒",target:"薊馬",name:"賽速安 25%水分散性粒劑（WG）",dose:"2000倍",phi:5,moa:"菸鹼類（IRAC 4A）"},
+  /* 葉蟎（紅蜘蛛） */
+  {crop:"番茄/彩椒",target:"葉蟎（紅蜘蛛）",name:"賽芬蟎 20%懸浮劑（SC）",dose:"2000倍",phi:3,moa:"IRAC 25（脂氧化酶抑制）"},
+  {crop:"番茄/彩椒",target:"葉蟎（紅蜘蛛）",name:"畢芬寧 10%乳劑（EC）",dose:"1000倍",phi:7,moa:"合成除蟲菊酯（IRAC 3A）"},
+  /* 蚜蟲 */
+  {crop:"番茄/彩椒",target:"蚜蟲",name:"亞滅培 20%可溶性粉劑（SP）",dose:"3000倍",phi:7,moa:"菸鹼類（IRAC 4A）"},
+  {crop:"番茄/彩椒",target:"蚜蟲",name:"賽速安 25%水分散性粒劑（WG）",dose:"2000倍",phi:5,moa:"菸鹼類（IRAC 4A）"},
+  /* 灰黴病 */
+  {crop:"番茄/彩椒",target:"灰黴病",name:"億力 50%可濕性粉劑（WP）",dose:"1000倍",phi:7,moa:"二羰醯亞胺（FRAC 2）"},
+  {crop:"番茄/彩椒",target:"灰黴病",name:"撲克拉錳 46%可濕性粉劑（WP）",dose:"1000倍",phi:7,moa:"DMI（FRAC 3）"},
+  /* 晚疫病／疫病 */
+  {crop:"番茄",target:"晚疫病",name:"亞托敏 23%懸浮劑（SC）",dose:"1500倍",phi:7,moa:"QoI（FRAC 11）"},
+  {crop:"番茄",target:"晚疫病",name:"甲霜靈 25%可濕性粉劑（WP）",dose:"600倍",phi:5,moa:"苯醯胺（FRAC 4）"},
+  /* 露菌病 */
+  {crop:"彩椒",target:"露菌病",name:"亞托敏 23%懸浮劑（SC）",dose:"1500倍",phi:7,moa:"QoI（FRAC 11）"},
+  /* 細菌性斑點病 */
+  {crop:"番茄/彩椒",target:"細菌性斑點病",name:"嘉賜銅 29%可濕性粉劑（WP）",dose:"1000倍",phi:5,moa:"無機銅（FRAC M1）"},
+  /* 白粉病 */
+  {crop:"彩椒",target:"白粉病",name:"賽普護粒 40%水分散性粒劑（WG）",dose:"3000倍",phi:7,moa:"DMI+QoI（FRAC 3+11）"},
+];
+const DAY=864e5;
+const today=()=>{const d=new Date();return new Date(d.getFullYear(),d.getMonth(),d.getDate());};
+const parseD=s=>{const[y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d);};
+const fmtD=dt=>dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0");
+const md=dt=>String(dt.getMonth()+1).padStart(2,"0")+"/"+String(dt.getDate()).padStart(2,"0");
+const addD=(dt,n)=>new Date(dt.getTime()+n*DAY);
+const load=()=>{try{return JSON.parse(localStorage.getItem("farm-plots-v2")||"[]");}catch(e){return[];}};
+const save=p=>localStorage.setItem("farm-plots-v2",JSON.stringify(p));
+const loadC=()=>{try{return JSON.parse(localStorage.getItem("farm-contracts-v1")||"[]");}catch(e){return[];}};
+const saveC=c=>localStorage.setItem("farm-contracts-v1",JSON.stringify(c));
+const loadFav=()=>{try{return JSON.parse(localStorage.getItem("farm-fav-markets")||"[]");}catch(e){return[];}};
+const saveFav=a=>localStorage.setItem("farm-fav-markets",JSON.stringify(a));
+const loadIdxOv=()=>{try{return JSON.parse(localStorage.getItem("farm-idx-override")||"{}");}catch(e){return{};}};
+const saveIdxOv=o=>localStorage.setItem("farm-idx-override",JSON.stringify(o));
+// App 作物 → AMIS 查詢名（AMIS 用大分類名）
+const AMIS_NAME={"牛番茄":"番茄","彩椒":"甜椒","玉女番茄":"小番茄","高山草莓":"草莓","高麗菜":"甘藍","敏豆":"四季豆"};
+let CUR=null; // current plot id in detail
+
+function ecStage(c,age){const ks=Object.keys(c.ec);let f=age<=0?0:age>=c.grow?.999:age/c.grow;let i=Math.min(Math.floor(f*ks.length),ks.length-1);return[ks[i],c.ec[ks[i]]];}
+function stageOf(rec){const c=CROPS[rec.crop];const age=Math.round((today()-parseD(rec.date))/DAY);if(age<0)return["未定植","pre",age];if(age>=c.grow)return["採收中","harv",age];return["生育中","grow",age];}
+function phiLock(rec){// 用藥安全採收期鎖定
+  let latest=null;(rec.records||[]).forEach(r=>{if(r.type==="spray"&&r.phi){const end=addD(parseD(r.date),+r.phi);if(!latest||end>latest)latest=end;}});
+  if(latest&&latest>today())return latest;return null;}
+function harvestTotal(rec){return (rec.records||[]).filter(r=>r.type==="harv").reduce((a,r)=>a+(+r.qty||0),0);}
+function harvestGrades(rec){const g={g1:0,g2:0,g3:0};(rec.records||[]).filter(r=>r.type==="harv").forEach(r=>{g.g1+=+r.g1||0;g.g2+=+r.g2||0;g.g3+=+r.g3||0;});return{g1:Math.round(g.g1*10)/10,g2:Math.round(g.g2*10)/10,g3:Math.round(g.g3*10)/10};}
+/* 動態任務（每日回報產生，存 localStorage 依日期+田區） */
+function dynKey(idx){return "farm-dyn-"+fmtD(today())+"-"+idx;}
+function getDyn(idx){try{return JSON.parse(localStorage.getItem(dynKey(idx))||"[]");}catch(e){return[];}}
+function setDyn(idx,arr){localStorage.setItem(dynKey(idx),JSON.stringify(arr));}
+/* 動態規則引擎：依回報產生警示/新增任務/處置建議 */
+function evalCheckin(rec,inp){
+  const c=CROPS[rec.crop];const age=Math.round((today()-parseD(rec.date))/DAY);
+  const[stg,target]=ecStage(c,age);const out=[];
+  if(inp.ec){const ec=+inp.ec;
+    if(ec>Math.max(3.5,target*1.3))out.push({lv:"warn",t:"⚠ EC "+ec+" 偏高（目標約"+target+"）→ 今日淋洗鹽分：澆清水沖排、暫停追肥"});
+    else if(ec<target*0.6)out.push({lv:"info",t:"EC "+ec+" 偏低（目標約"+target+"）→ 可適度追肥補養分"});
+    else out.push({lv:"ok",t:"EC "+ec+" 在合理範圍（目標約"+target+"）"});}
+  if(inp.ph){const ph=+inp.ph;
+    if(ph<5.5)out.push({lv:"warn",t:"⚠ pH "+ph+" 偏酸 → 施用石灰資材調整，過酸不利益菌與吸收"});
+    else if(ph>7.2)out.push({lv:"warn",t:"⚠ pH "+ph+" 偏鹼 → 酸化調整，注意微量元素固定"});}
+  if(inp.pest&&inp.pest!=="無"){
+    out.push({lv:"warn",t:"🪤 發現「"+inp.pest+"」→ 加掛黃色黏板監測密度；達門檻才查植保系統合法用藥並鎖安全採收期"});
+    if(inp.pest.indexOf("病")>=0||inp.pest.indexOf("毒")>=0)out.push({lv:"warn",t:"疑似病害 → 立即拔除病株移出園外、避免擴散；工具消毒"});}
+  if(inp.weather&&inp.weather!=="正常"){
+    const w=inp.weather;
+    if(w.indexOf("低溫")>=0||w.indexOf("寒")>=0)out.push({lv:"warn",t:"🌡️ "+w+" → 夜間保溫（覆蓋/加溫），花果期低於15℃易落花落果"});
+    if(w.indexOf("豪雨")>=0||w.indexOf("颱")>=0)out.push({lv:"warn",t:"🌧️ "+w+" → 加強排水、暫緩採收、穩定介質水分防裂果、綁固支架"});
+    if(w.indexOf("高溫")>=0||w.indexOf("乾")>=0)out.push({lv:"info",t:"☀️ "+w+" → 遮陰降溫、增加灌溉但保持穩定，注意薊馬/蟎"});}
+  if(inp.symptom&&inp.symptom!=="無"){
+    const d=DIAG.find(x=>x.q===inp.symptom);
+    if(d)out.push({lv:"warn",t:"🔍 "+inp.symptom+"：可能"+d.c+" → "+d.a});}
+  return out;
+}
+
+function tasksFor(rec){
+  const c=CROPS[rec.crop];const plant=parseD(rec.date);const age=Math.round((today()-plant)/DAY);
+  const out={age,today:[],soon:[]};if(age<0){out.pre=(-age);return out;}
+  if(age>c.grow+c.dur+30){out.done=1;return out;}
+  c.sched.forEach(([d,t])=>{const df=d-age;if(df===0)out.today.push("📋 "+t);else if(df>0&&df<=7)out.soon.push(md(addD(plant,d))+"（"+df+"天）"+t);});
+  const[stg,ecv]=ecStage(c,age);
+  out.today.push("🌡️ 抄錄 EC/pH（"+stg+"，目標約"+ecv+"）");
+  out.today.push("👀 巡視植株異常（黃化/捲葉/落花/裂果）");
+  if(age%7===0)out.today.push("🪤 黏板巡查病蟲害");
+  if(age>=c.grow){out.today.push("🧺 採收期第"+(age-c.grow)+"天：分批採收、記錄產量");}
+  else if(c.grow-age<=7&&c.grow-age>0)out.soon.push(md(addD(plant,c.grow))+"（"+(c.grow-age)+"天）預計開始採收");
+  return out;
+}
+
+/* ---------- 總覽 ---------- */
+function renderDash(){
+  const plots=load();const v=document.getElementById("view-dash");const tdy=today();
+  let taskCount=0,harvSoon=0,phiWarn=0,ipmAlert=0;
+  plots.forEach(r=>{const o=tasksFor(r);if(o.today)taskCount+=o.today.length;
+    const[,,age]=stageOf(r);const c=CROPS[r.crop];if(age>=0&&age<c.grow&&c.grow-age<=14)harvSoon++;
+    if(phiLock(r))phiWarn++;
+    const li=(r.records||[]).filter(x=>x.type==="ipm").sort((a,b)=>b.date<a.date?-1:1)[0];
+    if(li&&Object.entries({粉蝨:+li.wf,薊馬:+li.th,葉蟎:+li.sm,蚜蟲:+li.ap}).some(([k,v])=>v>=IPM_THR[k]))ipmAlert++;
+  });
+  if(!plots.length){v.innerHTML='<div class="empty">歡迎使用農務小幫手 👋<br><br>點下方「🌱 田區」新增你的第一個田區，<br>系統就會開始幫你管理每日農務、生育進度與採收。</div>';return;}
+  let dynCount=0;plots.forEach((r,i)=>dynCount+=getDyn(i).length);
+  let checkinBtn='<button class="btn" id="checkin" style="margin-top:0;margin-bottom:14px">📝 今日回報（EC值/病蟲害/天氣）→ 動態調整</button>'+
+    (dynCount?'<div class="info" style="margin-bottom:14px">今日回報已產生 '+dynCount+' 項動態調整，見各田區。<button class="del" id="export" style="margin-left:6px">匯出摘要給顧問</button></div>':'');
+  let kpi=checkinBtn+'<div class="kpis">'+
+    '<div class="kpi"><b>'+plots.length+'</b><small>田區</small></div>'+
+    '<div class="kpi"><b>'+taskCount+'</b><small>今日任務</small></div>'+
+    '<div class="kpi"><b>'+harvSoon+'</b><small>近採收</small></div>'+
+    '<div class="kpi '+(phiWarn?'warn':'')+'"><b>'+phiWarn+'</b><small>用藥管制</small></div>'+
+    '<div class="kpi '+(ipmAlert?'warn':'')+'"><b>'+ipmAlert+'</b><small>黏板超標</small></div></div>';
+
+  // 生育進度卡
+  let cards="";
+  plots.forEach((r,i)=>{
+    const c=CROPS[r.crop];const[st,cls,age]=stageOf(r);
+    const pct=age<0?0:Math.min(100,Math.round(age/(c.grow+c.dur)*100));
+    const gpct=age<0?0:Math.min(100,Math.round(age/c.grow*100));
+    const toHarv=c.grow-age;
+    const phi=phiLock(r);const ht=harvestTotal(r);
+    let statusline=age<0?(-age)+" 天後定植":age>=c.grow?"採收中 · 累計 "+ht+" kg":"距採收 "+toHarv+" 天";
+    let bar=age>=c.grow?'<i class="h" style="width:'+pct+'%"></i>':'<i class="g" style="width:'+Math.max(gpct,2)+'%"></i>';
+    let pill=phi?'<span class="pill">⚠ 用藥安全期至 '+md(phi)+' 禁採</span>':(age>=c.grow?'<span class="pill ok">可採收</span>':'');
+    cards+='<div class="card tap" data-i="'+i+'"><div class="card-top"><h3>'+r.plot+'　<span class="crop">'+r.crop+'</span></h3><span class="stage '+cls+'">'+st+'</span></div>'+
+      '<div class="sub">定植 '+r.date+'　·　'+(r.plants||"?")+' 株　·　'+statusline+'</div>'+
+      '<div class="prog">'+bar+'</div>'+
+      '<div class="prog-l"><span>定植</span><span>'+(age>=c.grow?"採收期":"生育 "+gpct+"%")+'</span><span>結束</span></div>'+pill+'</div>';
+  });
+
+  // 近期採收 + 今日任務摘要
+  let upcoming=plots.map(r=>{const c=CROPS[r.crop];const[,,age]=stageOf(r);const d=c.grow-age;return{r,d,age,c};})
+    .filter(x=>x.age>=0&&x.d>0&&x.d<=30).sort((a,b)=>a.d-b.d);
+  let up=upcoming.length?'<div class="card">'+upcoming.map(x=>'<div class="rec"><span class="rd">'+x.d+'天</span><span class="rt"><b>'+x.r.plot+' '+x.r.crop+'</b> 預計 '+md(addD(parseD(x.r.date),x.c.grow))+' 開始採收</span></div>').join("")+'</div>':'';
+
+  v.innerHTML=kpi+
+    '<div class="sec-h"><h3>各田區生育進度</h3><span>點卡片看詳情與紀錄</span></div>'+cards+
+    (up?'<div class="sec-h"><h3>30 天內即將採收</h3></div>'+up:'')+
+    '<div class="foot">用藥一律查植保系統合法登記藥並守安全採收期。數值為示範，請經台中區農業改良場校正。</div>';
+  v.querySelectorAll(".card.tap").forEach(cd=>cd.addEventListener("click",()=>openPlot(+cd.dataset.i)));
+  const cb=v.querySelector("#checkin");if(cb)cb.onclick=()=>checkinModal();
+  const ex=v.querySelector("#export");if(ex)ex.onclick=()=>exportModal();
+}
+
+/* 每日回報：引導式問答 → 即時決策 */
+function checkinModal(){
+  const plots=load();const mr=document.getElementById("modal-root");
+  let opts=plots.map((r,i)=>'<option value="'+i+'">'+r.plot+' · '+r.crop+'</option>').join("");
+  let symp='<option>無</option>'+DIAG.map(d=>'<option>'+d.q+'</option>').join("");
+  mr.innerHTML='<div class="modal-bg" id="mbg"><div class="modal"><h3>📝 今日回報</h3>'+
+    '<p class="note">回答現況，系統立即判斷要不要給肥/給水/給藥並調整今日待辦。</p>'+
+    '<label class="f">哪個田區？</label><select class="t" id="k-plot">'+opts+'</select>'+
+    '<label class="f">植株狀態（觀察到的徵狀）</label><select class="t" id="k-symp">'+symp+'</select>'+
+    '<div class="row2"><div><label class="f">介質 EC (dS/m)</label><input class="t" id="k-ec" type="number" step="0.1" placeholder="如 2.5"></div>'+
+    '<div><label class="f">pH</label><input class="t" id="k-ph" type="number" step="0.1" placeholder="如 6.5"></div></div>'+
+    '<label class="f">病蟲害發現</label><select class="t" id="k-pest"><option>無</option><option>粉蝨</option><option>薊馬</option><option>蟎類</option><option>蚜蟲</option><option>疑似病害（斑點/萎凋）</option><option>疑似病毒病</option></select>'+
+    '<label class="f">天氣/環境</label><select class="t" id="k-wx"><option>正常</option><option>低溫寒流</option><option>豪雨/颱風</option><option>高溫乾燥</option></select>'+
+    '<label class="f">今日施作（選填）</label><input class="t" id="k-work" placeholder="如 摘側芽、澆水">'+
+    '<button class="btn" id="k-go">分析並給建議</button><button class="btn sec" id="k-cancel">取消</button>'+
+    '<div id="k-res"></div></div></div>';
+  document.getElementById("k-cancel").onclick=()=>mr.innerHTML="";
+  document.getElementById("mbg").onclick=e=>{if(e.target.id==="mbg")mr.innerHTML="";};
+  document.getElementById("k-go").onclick=()=>{
+    const idx=+document.getElementById("k-plot").value;const rec=load()[idx];
+    const inp={ec:document.getElementById("k-ec").value,ph:document.getElementById("k-ph").value,
+      pest:document.getElementById("k-pest").value,weather:document.getElementById("k-wx").value,
+      symptom:document.getElementById("k-symp").value,work:document.getElementById("k-work").value};
+    const advice=evalCheckin(rec,inp);
+    // 存紀錄
+    const p=load();p[idx].records=p[idx].records||[];
+    if(inp.ec||inp.ph)p[idx].records.push({type:"ecph",date:fmtD(today()),ec:inp.ec,ph:inp.ph});
+    if(inp.work)p[idx].records.push({type:"work",date:fmtD(today()),note:inp.work});
+    if(inp.pest&&inp.pest!=="無")p[idx].records.push({type:"obs",date:fmtD(today()),note:"發現"+inp.pest});
+    if(inp.symptom&&inp.symptom!=="無")p[idx].records.push({type:"obs",date:fmtD(today()),note:inp.symptom});
+    save(p);
+    // 動態任務
+    const dyn=advice.filter(a=>a.lv==="warn").map(a=>a.t);setDyn(idx,dyn);
+    // 顯示決策
+    let html='<div class="res"><h4>今日建議（'+rec.plot+'）</h4>';
+    if(!advice.length)html+='<div class="rec"><span class="rt">✅ 現況正常，依原定待辦即可。</span></div>';
+    advice.forEach(a=>{const col=a.lv==="warn"?"var(--warn)":a.lv==="ok"?"var(--harv)":"var(--ink)";
+      html+='<div class="rec"><span class="rt" style="color:'+col+'">'+a.t+'</span></div>';});
+    html+='</div><button class="btn" id="k-done">完成（已更新田區與今日待辦）</button>';
+    document.getElementById("k-res").innerHTML=html;
+    document.getElementById("k-go").style.display="none";
+    document.getElementById("k-done").onclick=()=>{mr.innerHTML="";renderDash();};
+  };
+}
+
+/* 匯出今日摘要（貼給顧問/我做定期檢視） */
+function exportModal(){
+  const plots=load();const mr=document.getElementById("modal-root");const t=fmtD(today());
+  let txt="【農務小幫手 今日摘要 "+t+"】\n信義鄉高冷地溫室\n";
+  plots.forEach((r,i)=>{const c=CROPS[r.crop];const[st,,age]=stageOf(r);const phi=phiLock(r);const ht=harvestTotal(r);
+    txt+="\n▌"+r.plot+" "+r.crop+"（第"+Math.max(age,0)+"天/"+st+"）\n";
+    const todayRecs=(r.records||[]).filter(x=>x.date===t);
+    if(todayRecs.length)todayRecs.forEach(x=>{const m=RTYPES[x.type];txt+="  · "+m.t+"："+(x.ec?"EC"+x.ec+"/pH"+(x.ph||"?"):x.qty?x.qty+"kg":x.note||"")+"\n";});
+    const dyn=getDyn(i);if(dyn.length)dyn.forEach(d=>txt+="  ⚠ "+d+"\n");
+    if(phi)txt+="  ⚠ 用藥安全期至"+md(phi)+"禁採\n";
+    if(ht)txt+="  · 累計採收 "+ht+"kg\n";
+    const li=(r.records||[]).filter(x=>x.type==="ipm").sort((a,b)=>b.date<a.date?-1:1)[0];
+    if(li){const warns=Object.entries({粉蝨:+li.wf,薊馬:+li.th,葉蟎:+li.sm,蚜蟲:+li.ap}).filter(([k,v])=>v>0);
+      txt+="  · 黏板("+md(parseD(li.date))+"): "+(warns.length?warns.map(([k,v])=>k+v+"隻").join("、"):"無蟲")+(warns.some(([k,v])=>v>=IPM_THR[k])?" ⚠超標建議用藥":"")+"\n";
+    }});
+  txt+="\n（請顧問就上述現況給施肥/灌溉/用藥與後續管理建議）";
+  mr.innerHTML='<div class="modal-bg" id="mbg2"><div class="modal"><h3>匯出今日摘要</h3><p class="note">複製以下文字，貼給顧問或 AI 助手做定期檢視與建議。</p>'+
+    '<textarea class="t" id="exp-t" style="min-height:220px;font-size:.8rem" readonly>'+txt.replace(/</g,"&lt;")+'</textarea>'+
+    '<button class="btn" id="exp-copy">複製</button><button class="btn sec" id="exp-x">關閉</button></div></div>';
+  document.getElementById("exp-x").onclick=()=>mr.innerHTML="";
+  document.getElementById("mbg2").onclick=e=>{if(e.target.id==="mbg2")mr.innerHTML="";};
+  document.getElementById("exp-copy").onclick=()=>{const ta=document.getElementById("exp-t");ta.select();try{document.execCommand("copy");document.getElementById("exp-copy").textContent="已複製 ✓";}catch(e){}};
+}
+
+/* ---------- 田區詳情 ---------- */
+function openPlot(i){CUR=i;go("plots");renderPlots();}
+function renderPlots(){
+  const plots=load();const v=document.getElementById("view-plots");
+  if(CUR===null){ // 列表 + 新增
+    let opts=Object.keys(CROPS).map(n=>'<option>'+n+'</option>').join("");
+    let list=plots.length?plots.map((r,i)=>{const[st,cls,age]=stageOf(r);
+      return '<div class="card tap" data-i="'+i+'"><div class="card-top"><h3>'+r.plot+'　<span class="crop">'+r.crop+'</span></h3><span class="stage '+cls+'">'+st+'</span></div><div class="sub">定植 '+r.date+'　·　'+(r.plants||"?")+' 株　·　'+(age>=0?"第 "+age+" 天":"未定植")+'　·　紀錄 '+((r.records||[]).length)+' 筆</div></div>';}).join(""):'<div class="empty">尚無田區，用下方表單新增。</div>';
+    v.innerHTML='<h2>我的田區</h2><p class="note">點田區可登錄施肥/用藥/採收等紀錄。資料存在你的手機。</p>'+list+
+      '<div class="card"><h3 style="margin:0 0 2px">＋ 新增田區</h3>'+
+      '<label class="f">畦區名稱</label><input class="t" id="np" placeholder="例如 A區">'+
+      '<label class="f">作物</label><select class="t" id="nc">'+opts+'</select>'+
+      '<div class="row2"><div><label class="f">定植日</label><input class="t" id="nd" type="date" value="'+fmtD(today())+'"></div>'+
+      '<div><label class="f">株數</label><input class="t" id="nn" type="number" value="300"></div></div>'+
+      '<button class="btn" id="addp">新增田區</button></div>';
+    v.querySelector("#addp").onclick=()=>{const p=load();p.push({plot:v.querySelector("#np").value.trim()||"未命名",crop:v.querySelector("#nc").value,date:v.querySelector("#nd").value,plants:+v.querySelector("#nn").value||0,records:[]});save(p);renderPlots();};
+    v.querySelectorAll(".card.tap").forEach(cd=>cd.onclick=()=>openPlot(+cd.dataset.i));
+    return;
+  }
+  // 詳情
+  const r=plots[CUR];if(!r){CUR=null;return renderPlots();}
+  const c=CROPS[r.crop];const[st,cls,age]=stageOf(r);
+  const gpct=age<0?0:Math.min(100,Math.round(age/c.grow*100));
+  const o=tasksFor(r);const phi=phiLock(r);const ht=harvestTotal(r);
+  // IPM 黏板狀態
+  const lastIpm=(r.records||[]).filter(x=>x.type==="ipm").sort((a,b)=>b.date<a.date?-1:1)[0]||null;
+  const ipmAlerts=lastIpm?Object.entries({粉蝨:+lastIpm.wf,薊馬:+lastIpm.th,葉蟎:+lastIpm.sm,蚜蟲:+lastIpm.ap}).filter(([k,v])=>v>=IPM_THR[k]).map(([k,v])=>k+"("+v+"隻≥門檻"+IPM_THR[k]+")"):[null];
+  const ipmWarn=lastIpm&&ipmAlerts.length?'<span class="pill">🪤 '+ipmAlerts.join("、")+'　建議查植保系統用藥</span>':lastIpm?'<span class="pill ok">🪤 黏板正常（'+md(parseD(lastIpm.date))+'）</span>':'<span class="pill" style="background:var(--grow-bg);color:var(--grow)">🪤 尚未黏板巡查</span>';
+  const dyn=getDyn(CUR);
+  let dynHtml=dyn.length?'<div class="card" style="border-color:var(--warn)"><h3 style="margin:0 0 4px;font-size:1rem;color:var(--warn)">📝 今日回報動態調整</h3>'+
+    dyn.map((d,di)=>{const k="farm-"+fmtD(today())+"-"+CUR+"-dyn"+di;const ck=localStorage.getItem(k)==="1";
+      return '<label class="task"><input type="checkbox" data-k="'+k+'"'+(ck?" checked":"")+'><span>'+d+'</span></label>';}).join("")+'</div>':"";
+  let tasks=(o.today||[]).map((t,ti)=>{const k="farm-"+fmtD(today())+"-"+CUR+"-"+ti;const ck=localStorage.getItem(k)==="1";
+    return '<label class="task"><input type="checkbox" data-k="'+k+'"'+(ck?" checked":"")+'><span>'+t+'</span></label>';}).join("");
+  let soon=(o.soon&&o.soon.length)?'<div class="soon"><b>未來7天：</b>'+o.soon.join("；")+'</div>':"";
+  // 紀錄歷史
+  let recs=(r.records||[]).slice().sort((a,b)=>b.date<a.date?-1:1).map((rc,ri)=>{
+    const meta=RTYPES[rc.type]||{t:rc.type,c:"obs"};
+    let extra=rc.type==="ecph"?("EC "+(rc.ec||"?")+" / pH "+(rc.ph||"?")):rc.type==="harv"?(rc.qty+" kg"+((rc.g1!=null&&(rc.g2||rc.g3))?"（特"+rc.g1+"/優"+rc.g2+"/次"+rc.g3+"）":"")):rc.type==="spray"?((rc.target?"防"+rc.target+"：":"")+rc.note+(rc.dose?" "+rc.dose:"")+(rc.phi?"（安全期"+rc.phi+"天）":"")):rc.type==="ipm"?((["粉蝨"+rc.wf,"薊馬"+rc.th,"葉蟎"+rc.sm,"蚜蟲"+rc.ap].filter(s=>!/0$/.test(s)).join("・")||"無蟲")+(rc.note?" ｜ "+rc.note:"")):rc.note||"";
+    return '<div class="rec"><span class="rd">'+md(parseD(rc.date))+'</span><span class="rt"><span class="rtag '+meta.c+'">'+meta.t+'</span>'+extra+'</span><button class="del" data-r="'+ri+'">刪</button></div>';}).join("");
+  let ecHist=(r.records||[]).filter(x=>x.type==="ecph"&&x.ec).slice(-8);
+  let ecChart=ecHist.length>=2?'<div class="res"><h4>EC 趨勢</h4><div class="chart">'+ecHist.map(x=>{const h=Math.min(100,(+x.ec)/4*100);return '<div class="bar" style="height:'+h+'%"><b>'+x.ec+'</b><span>'+md(parseD(x.date))+'</span></div>';}).join("")+'</div></div>':"";
+
+  v.innerHTML='<button class="back" id="bk">‹ 返回</button>'+
+    '<div class="card"><div class="card-top"><h3>'+r.plot+'　<span class="crop">'+r.crop+'</span></h3><span class="stage '+cls+'">'+st+'</span></div>'+
+    '<div class="sub">定植 '+r.date+'　·　'+(r.plants||"?")+' 株　·　'+c.科+'</div>'+
+    '<div class="prog"><i class="'+(age>=c.grow?'h':'g')+'" style="width:'+Math.max(age<0?0:Math.round(age/(c.grow+c.dur)*100),2)+'%"></i></div>'+
+    '<div class="prog-l"><span>第 '+Math.max(age,0)+' 天</span><span>'+(age>=c.grow?"採收期":"距採收 "+(c.grow-age)+" 天")+'</span></div>'+
+    (phi?'<span class="pill">⚠ 用藥安全期至 '+md(phi)+' 禁止採收</span>':'')+
+    (ht?'<span class="pill ok">累計採收 '+(Math.round(ht*10)/10)+' kg</span>':'')+
+    ((()=>{const g=harvestGrades(r);return (g.g2||g.g3)?'<span class="pill ok" style="background:var(--accent-soft);color:var(--accent)">特'+g.g1+'/優'+g.g2+'/次'+g.g3+' kg</span>':'';})())+
+    ipmWarn+'</div>'+
+    dynHtml+
+    (tasks?'<div class="card"><h3 style="margin:0 0 4px;font-size:1rem">今日待辦</h3>'+tasks+soon+'</div>':'')+
+    '<div class="card"><h3 style="margin:0 0 8px;font-size:1rem">快速登錄紀錄</h3><div class="qlog">'+
+      '<button data-log="fert"><span class="qi">💊</span>施肥</button>'+
+      '<button data-log="spray"><span class="qi">🧴</span>用藥</button>'+
+      '<button data-log="harv"><span class="qi">🧺</span>採收</button>'+
+      '<button data-log="ecph"><span class="qi">🌡️</span>EC/pH</button>'+
+      '<button data-log="work"><span class="qi">✂️</span>作業</button>'+
+      '<button data-log="obs"><span class="qi">👀</span>觀察</button>'+
+      '<button data-log="ipm"><span class="qi">🪤</span>黏板巡查</button></div></div>'+
+    ecChart+
+    '<div class="card"><h3 style="margin:0 0 6px;font-size:1rem">紀錄歷史 <span style="color:var(--ink-soft);font-weight:400;font-size:.8rem">('+((r.records||[]).length)+' 筆)</span></h3>'+(recs||'<div class="empty" style="padding:16px">尚無紀錄，用上方按鈕登錄。</div>')+'</div>'+
+    '<button class="btn sec" id="delp">刪除此田區</button>';
+  v.querySelector("#bk").onclick=()=>{CUR=null;renderPlots();};
+  v.querySelector("#delp").onclick=()=>{if(confirm("確定刪除「"+r.plot+"」及其所有紀錄？")){const p=load();p.splice(CUR,1);save(p);CUR=null;renderPlots();}};
+  v.querySelectorAll(".task input").forEach(b=>b.onchange=()=>localStorage.setItem(b.dataset.k,b.checked?"1":"0"));
+  v.querySelectorAll("[data-log]").forEach(b=>b.onclick=()=>logModal(b.dataset.log));
+  v.querySelectorAll(".del[data-r]").forEach(b=>b.onclick=()=>{const p=load();p[CUR].records.splice(+b.dataset.r,1);save(p);renderPlots();});
+}
+
+/* ---------- 登錄 modal ---------- */
+function logModal(type){
+  const meta=RTYPES[type];const mr=document.getElementById("modal-root");
+  let fields='<label class="f">日期</label><input class="t" id="m-date" type="date" value="'+fmtD(today())+'">';
+  if(type==="ecph"){
+    const rc=load()[CUR];const cr=rc?CROPS[rc.crop]:null;
+    const[,,age]=rc?stageOf(rc):[0,0,0];
+    let ecTarget=cr?Object.entries(cr.ec).map(([s,v])=>s+"："+v).join("　"):"";
+    let stTarget="";if(cr){const ec=cr.ec;stTarget=age<14?ec["苗期"]:age<35?ec["生長期"]:age<60?ec["花期"]:ec["果期"];}
+    fields+='<div class="info" style="margin-bottom:8px">目標 EC <b>'+(stTarget||"2.0–3.0")+'</b> dS/m　· pH 目標 <b>6.0–6.8</b>'+(ecTarget?'<br><small style="color:var(--ink-soft)">'+ecTarget+'</small>':'')+'</div>'+
+    '<div class="row2"><div><label class="f">EC 實測值 (dS/m)</label><input class="t" id="m-ec" type="number" step="0.1" placeholder="2.5"></div><div><label class="f">pH 實測值</label><input class="t" id="m-ph" type="number" step="0.1" placeholder="6.5"></div></div>';
+  }
+  else if(type==="harv")fields+=
+    '<p style="font-size:.8rem;color:var(--ink-soft);margin:4px 0 8px">分級記錄，方便對應契作規格與計價。若不分級，全填在特級即可。</p>'+
+    '<div class="row2"><div><label class="f">特級 (kg)</label><input class="t" id="m-g1" type="number" step="0.1" placeholder="0"></div>'+
+    '<div><label class="f">優級 (kg)</label><input class="t" id="m-g2" type="number" step="0.1" placeholder="0"></div></div>'+
+    '<label class="f">次級／處理果 (kg)</label><input class="t" id="m-g3" type="number" step="0.1" placeholder="0">'+
+    '<div class="info" style="margin-top:8px">合計：<b id="m-gtot">0</b> kg</div>';
+  else if(type==="fert"){
+    const crop=load()[CUR]?load()[CUR].crop:"";
+    const fertOpts=FERTDB.filter(f=>!crop||f.crop.includes(crop.replace(/牛|玉女/,"").trim())||f.crop==="番茄/彩椒");
+    const byStage={};fertOpts.forEach(f=>{(byStage[f.stage]=byStage[f.stage]||[]).push(f);});
+    const ddOpts=Object.entries(byStage).map(([s,fs])=>'<optgroup label="'+s+'">'+fs.map(f=>'<option value="'+f.name+'|'+f.dose+'|'+f.note+'">'+f.name+'</option>').join("")+'</optgroup>').join("");
+    fields+='<label class="f">快選推薦肥料（依生育階段）</label>'+
+    '<select class="t" id="m-fq"><option value="">── 請選擇或手動填寫 ──</option>'+ddOpts+'</select>'+
+    '<label class="f">施肥內容（肥料、用量、方式）</label><textarea class="t" id="m-note" placeholder="例如 台肥46號 稀釋500倍 灌根 每株500ml"></textarea>';
+  }
+  else if(type==="spray"){
+    const crop=load()[CUR]?load()[CUR].crop:"";
+    const opts=PESTDB.filter(p=>!crop||p.crop.includes(crop.replace(/牛|玉女/,"").trim())||p.crop==="番茄/彩椒");
+    const byTarget={};opts.forEach(p=>{(byTarget[p.target]=byTarget[p.target]||[]).push(p);});
+    const ddOpts=Object.entries(byTarget).map(([t,ps])=>
+      '<optgroup label="'+t+'">'+ps.map((p,i)=>'<option value="'+t+'|'+p.name+'|'+p.dose+'|'+p.phi+'">'+p.name+'</option>').join("")+'</optgroup>').join("");
+    fields+='<div class="info" style="margin:6px 0">安全用藥五要點：適藥·適期·適量·稀釋倍數·安全採收期。請依植保系統登記藥填寫。</div>'+
+    '<label class="f">快選登記藥（選後自動填入）</label>'+
+    '<select class="t" id="m-quick"><option value="">── 請選擇或手動填寫 ──</option>'+ddOpts+'</select>'+
+    '<label class="f">防治對象（病蟲害）</label><input class="t" id="m-target" placeholder="例如 粉蝨">'+
+    '<label class="f">藥劑名稱（含許可證字號佳）</label><input class="t" id="m-note" placeholder="例如 賽速安 25%水分散性粒劑">'+
+    '<div class="row2"><div><label class="f">稀釋倍數</label><input class="t" id="m-dose" placeholder="如 2000倍"></div>'+
+    '<div><label class="f">安全採收期(天)</label><input class="t" id="m-phi" type="number" placeholder="如 7"></div></div>'+
+    '<div style="font-size:.75rem;color:var(--ink-soft);margin-top:6px">⚠️ 使用前請核對植保資訊系統登記（輪替不同作用機制延緩抗藥性）</div>';
+  }
+  else if(type==="ipm")fields+=
+    '<p style="font-size:.8rem;color:var(--ink-soft);margin:4px 0 10px">每週換板時記錄各板蟲數，超門檻系統自動提醒用藥。</p>'+
+    '<div class="row2">'+
+    '<div><label class="f">粉蝨（隻/板）門檻≥5</label><input class="t" id="m-wf" type="number" min="0" placeholder="0"></div>'+
+    '<div><label class="f">薊馬（隻/板）門檻≥3</label><input class="t" id="m-th" type="number" min="0" placeholder="0"></div>'+
+    '</div><div class="row2">'+
+    '<div><label class="f">葉蟎（隻/板）門檻≥5</label><input class="t" id="m-sm" type="number" min="0" placeholder="0"></div>'+
+    '<div><label class="f">蚜蟲（隻/板）門檻≥10</label><input class="t" id="m-ap" type="number" min="0" placeholder="0"></div>'+
+    '</div>'+
+    '<label class="f">其他觀察</label><textarea class="t" id="m-note" placeholder="例如：更換黃板/藍板、位置、環境狀況"></textarea>';
+  else fields+='<label class="f">內容</label><textarea class="t" id="m-note" placeholder="'+(type==="fert"?"例如 追肥 台肥43號 3kg":type==="work"?"例如 摘側芽、疏果":"例如 葉色正常、發現少量粉蝨")+'"></textarea>';
+  mr.innerHTML='<div class="modal-bg" id="mbg"><div class="modal"><h3>登錄'+meta.t+'</h3><p class="note">'+load()[CUR].plot+' · '+load()[CUR].crop+'</p>'+fields+'<button class="btn" id="m-save">儲存</button><button class="btn sec" id="m-cancel">取消</button></div></div>';
+  document.getElementById("m-cancel").onclick=()=>mr.innerHTML="";
+  document.getElementById("mbg").onclick=e=>{if(e.target.id==="mbg")mr.innerHTML="";};
+  if(type==="harv"){
+    const upd=()=>{const s=["m-g1","m-g2","m-g3"].reduce((a,id)=>a+(+document.getElementById(id).value||0),0);document.getElementById("m-gtot").textContent=Math.round(s*10)/10;};
+    ["m-g1","m-g2","m-g3"].forEach(id=>document.getElementById(id).oninput=upd);
+  }
+  if(type==="fert"){
+    const fq=document.getElementById("m-fq");
+    if(fq)fq.onchange=function(){
+      const v=this.value;if(!v)return;
+      const[name,dose,note]=v.split("|");
+      document.getElementById("m-note").value=name+"　"+dose+"　（"+note+"）";
+    };
+  }
+  if(type==="spray"){
+    document.getElementById("m-quick").onchange=function(){
+      const v=this.value;if(!v)return;
+      const[t,name,dose,phi]=v.split("|");
+      document.getElementById("m-target").value=t;
+      document.getElementById("m-note").value=name;
+      document.getElementById("m-dose").value=dose;
+      document.getElementById("m-phi").value=phi;
+    };
+  }
+  document.getElementById("m-save").onclick=()=>{
+    const p=load();const rec={type,date:document.getElementById("m-date").value};
+    if(type==="ecph"){rec.ec=document.getElementById("m-ec").value;rec.ph=document.getElementById("m-ph").value;}
+    else if(type==="harv"){rec.g1=+document.getElementById("m-g1").value||0;rec.g2=+document.getElementById("m-g2").value||0;rec.g3=+document.getElementById("m-g3").value||0;rec.qty=Math.round((rec.g1+rec.g2+rec.g3)*10)/10;}
+    else if(type==="spray"){rec.note=document.getElementById("m-note").value;rec.phi=document.getElementById("m-phi").value;rec.target=document.getElementById("m-target").value;rec.dose=document.getElementById("m-dose").value;}
+    else if(type==="ipm"){rec.wf=document.getElementById("m-wf").value||"0";rec.th=document.getElementById("m-th").value||"0";rec.sm=document.getElementById("m-sm").value||"0";rec.ap=document.getElementById("m-ap").value||"0";rec.note=document.getElementById("m-note").value;}
+    else rec.note=document.getElementById("m-note").value;
+    p[CUR].records=p[CUR].records||[];p[CUR].records.push(rec);save(p);mr.innerHTML="";renderPlots();
+  };
+}
+
+/* ---------- 診斷 ---------- */
+function renderDiag(){
+  const v=document.getElementById("view-diag");
+  v.innerHTML='<h2>病蟲害・生理障礙診斷</h2><p class="note">點選你觀察到的徵狀，看可能原因與處置。診斷僅供初判，確診請洽台中區農業改良場。</p>'+
+    DIAG.map((d,i)=>'<div class="diag-q" data-i="'+i+'"><span>'+d.q+'</span><span style="color:var(--ink-soft)">›</span></div><div class="diag-a hidden" id="da-'+i+'"><b>可能原因：'+d.c+'</b><br>處置：'+d.a+'</div>').join("")+
+    '<div class="foot">用藥一律查植保系統合法登記藥並嚴守安全採收期。</div>';
+  v.querySelectorAll(".diag-q").forEach(q=>q.onclick=()=>document.getElementById("da-"+q.dataset.i).classList.toggle("hidden"));
+}
+
+/* ---------- 工具：計算 + 規劃 ---------- */
+function renderTools(){
+  const v=document.getElementById("view-tools");
+  let opts=Object.keys(CROPS).map(n=>'<option>'+n+'</option>').join("");
+  const nowM=new Date();
+  v.innerHTML='<h2>作物計算</h2><p class="note">輸入作物、定植日、株數 → 採收日、肥料、作業排程。</p>'+
+    '<div class="card"><label class="f">作物</label><select class="t" id="c-crop">'+opts+'</select>'+
+    '<div class="row2"><div><label class="f">定植日</label><input class="t" id="c-date" type="date" value="'+fmtD(today())+'"></div><div><label class="f">株數</label><input class="t" id="c-plants" type="number" value="500"></div></div>'+
+    '<button class="btn" id="c-go">計算</button><div id="c-res"></div></div>'+
+    '<h2 style="margin-top:22px">年度輪種規劃</h2><p class="note">從起始月排全年輪種，收成卡高價月＋輪作。</p>'+
+    '<div class="card"><label class="f">起始月</label><input class="t" id="p-start" type="month" value="'+nowM.getFullYear()+"-"+String(nowM.getMonth()+1).padStart(2,"0")+'"><button class="btn" id="p-go">產生規劃</button><div id="p-res"></div></div>'+
+    '<h2 style="margin-top:22px">市場行情比價（送哪個市場）</h2><p class="note">抓 AMIS 各批發市場的上/中/下/均價，判斷上貨、下貨分別送哪裡最划算，並試算這批貨收入。需部署到 Netlify 才能即時抓取。</p>'+
+    '<div class="card"><div class="row2"><div><label class="f">作物</label><select class="t" id="mk-crop">'+opts+'</select></div>'+
+    '<div><label class="f">查詢天數</label><select class="t" id="mk-days"><option value="7">近 7 天</option><option value="14">近 14 天</option><option value="30">近 30 天</option><option value="3">近 3 天</option></select></div></div>'+
+    '<label class="task" style="border:none;padding:8px 3px"><input type="checkbox" id="mk-fav">只看常送市場（★）</label>'+
+    '<button class="btn" id="mk-go">抓取市場行情</button>'+
+    '<button class="btn sec" id="mk-cal" style="margin-top:8px">用近一年真實行情校正月價指數</button>'+
+    '<div id="mk-res"></div></div>'+
+    '<h2 style="margin-top:22px">產銷履歷紀錄簿</h2><p class="note">依台灣安全農業（TGAP）匯出用藥/施肥/採收紀錄，供驗證稽核與追溯。</p>'+
+    '<div class="card"><button class="btn" id="rb-go">匯出履歷紀錄簿 CSV</button><div id="rb-res"></div></div>'+
+    '<h2 style="margin-top:22px">資料備份 / 還原</h2><p class="note">App 資料存在瀏覽器，清除快取會消失。定期備份 JSON 檔到手機相簿或雲端，需要時可還原。</p>'+
+    '<div class="card"><div class="row2">'+
+    '<button class="btn" id="bk-exp">⬇ 備份下載 JSON</button>'+
+    '<button class="btn sec" id="bk-imp">⬆ 還原上傳 JSON</button>'+
+    '</div><input type="file" id="bk-file" accept=".json" style="display:none"><div id="bk-res"></div></div>';
+  v.querySelector("#c-go").onclick=()=>{
+    const c=CROPS[v.querySelector("#c-crop").value];const ds=v.querySelector("#c-date").value;const n=+v.querySelector("#c-plants").value;
+    if(!ds||!n)return;const plant=parseD(ds);const first=addD(plant,c.grow);const last=addD(first,c.dur);const ratio=n/c.density;
+    let fert=Object.entries(c.fert).map(([k,x])=>'<div class="r"><span>'+k+'</span><b>'+(x*ratio).toFixed(1)+' kg</b></div>').join("");
+    let sched=c.sched.map(([d,t])=>'<div class="r"><span>'+md(addD(plant,d))+'</span><b style="font-weight:500">'+t+'</b></div>').join("");
+    v.querySelector("#c-res").innerHTML='<div class="res"><h4>🌱 採收預估</h4><div class="r"><span>初次採收</span><b>'+fmtD(first)+'（+'+c.grow+'天）</b></div><div class="r"><span>採收結束</span><b>'+fmtD(last)+'</b></div></div><div class="res"><h4>💊 肥料需求（'+n+'株）</h4>'+fert+'</div><div class="res"><h4>📋 作業排程</h4>'+sched+'</div>';
+  };
+  v.querySelector("#p-go").onclick=()=>{
+    const mv=v.querySelector("#p-start").value;if(!mv)return;const[y,m]=mv.split("-").map(Number);
+    const avgIdx=(c,pl)=>{const st=addD(pl,c.grow),en=addD(st,c.dur);let ms=[],cur=st;while(cur<=en){if(!ms.includes(cur.getMonth()))ms.push(cur.getMonth());cur=addD(cur,15);}return ms.reduce((a,mm)=>a+c.idx[mm],0)/ms.length;};
+    const light=s=>s>=1.15?["hi","高價"]:s<=.9?["lo","低價"]:["mid","普通"];
+    let pos=new Date(y,m-1,1),end=addD(pos,400),prev=null,out=[];
+    while(pos<end){let best=null;for(const[nm,c]of Object.entries(CROPS)){if(c.科===prev)continue;for(let dl=0;dl<=45;dl+=15){const pl=addD(pos,dl);const sc=avgIdx(c,pl);const adj=sc-dl*.001;if(!best||adj>best.adj)best={adj,sc,nm,c,pl};}}if(!best)break;const hs=addD(best.pl,best.c.grow),he=addD(hs,best.c.dur);out.push({nm:best.nm,fam:best.c.科,pl:best.pl,hs,he,sc:best.sc});prev=best.c.科;pos=addD(he,20);}
+    const avg=out.reduce((a,r)=>a+r.sc,0)/out.length;
+    v.querySelector("#p-res").innerHTML='<div class="res"><b>平均價位分數 '+avg.toFixed(2)+'</b> '+(avg>=1.15?"多數卡高價 🟢":"中上")+'</div>'+out.map((r,i)=>{const[cl,lb]=light(r.sc);return '<div class="rec"><span class="rd">輪'+(i+1)+'</span><span class="rt"><b>'+r.nm+'</b> 定植'+md(r.pl)+' → 採收'+md(r.hs)+'–'+md(r.he)+'　<span class="badge '+cl+'">'+lb+' '+r.sc.toFixed(2)+'</span></span></div>';}).join("");
+  };
+  // 把市場比價結果渲染出來（含常送市場過濾、加星、收入試算）
+  function renderMarket(d,range){
+    const res=v.querySelector("#mk-res");
+    const appCrop=v.querySelector("#mk-crop").value;
+    const favOnly=v.querySelector("#mk-fav").checked;
+    const fav=loadFav();
+    let ms=d.markets.slice();
+    if(favOnly)ms=ms.filter(m=>fav.includes(m.market));
+    if(!ms.length){res.innerHTML='<div class="info" style="margin-top:12px;color:var(--warn)">'+(favOnly?"常送市場清單內查無資料，先取消勾選或加★":"查無資料")+'</div>';return;}
+    ms.sort((a,b)=>b.avg-a.avg);
+    // 依「目前顯示的市場」重算最佳，路由才符合實際會送的市場
+    const bU=ms.reduce((a,b)=>b.upper>a.upper?b:a).market;
+    const bL=ms.reduce((a,b)=>b.lower>a.lower?b:a).market;
+    const bM=ms.reduce((a,b)=>b.middle>a.middle?b:a).market;
+    const mU=ms.find(m=>m.market===bU),mM=ms.find(m=>m.market===bM),mL=ms.find(m=>m.market===bL);
+    let rows=ms.map(m=>{
+      const upHi=m.market===bU,loHi=m.market===bL;const isFav=fav.includes(m.market);
+      return '<div class="rec"><span class="rt"><b>'+m.market+'</b> '+
+        '<button class="del" data-fav="'+m.market.replace(/"/g,'')+'" style="padding:0 4px;font-size:1rem;color:'+(isFav?'var(--grow)':'var(--line)')+'">★</button>'+
+        '<div style="font-size:.8rem;color:var(--ink-soft);margin-top:2px">'+
+        '<span'+(upHi?' style="color:var(--harv);font-weight:700"':'')+'>上 '+m.upper+(upHi?' ⭐':'')+'</span>　'+
+        '中 '+m.middle+'　'+
+        '<span'+(loHi?' style="color:var(--harv);font-weight:700"':'')+'>下 '+m.lower+(loHi?' ⭐':'')+'</span>　'+
+        '均 '+m.avg+'　·　量 '+m.totalQty.toLocaleString()+' kg</div></span></div>';
+    }).join("");
+    // 收入試算：預填該作物累計特/優/次（可改）
+    let g={g1:0,g2:0,g3:0};load().forEach(r=>{if(r.crop===appCrop){const gg=harvestGrades(r);g.g1+=gg.g1;g.g2+=gg.g2;g.g3+=gg.g3;}});
+    const calc='<div class="res" style="margin-top:10px"><h4>🧮 這批貨收入試算（依上表最佳市場）</h4>'+
+      '<div class="row2"><div><label class="f">上貨/特級 kg → '+bU+'</label><input class="t" id="mk-q1" type="number" value="'+Math.round(g.g1*10)/10+'"></div>'+
+      '<div><label class="f">中貨/優級 kg → '+bM+'</label><input class="t" id="mk-q2" type="number" value="'+Math.round(g.g2*10)/10+'"></div></div>'+
+      '<label class="f">下貨/次級 kg → '+bL+'</label><input class="t" id="mk-q3" type="number" value="'+Math.round(g.g3*10)/10+'">'+
+      '<div class="info" id="mk-rev" style="margin-top:10px"></div></div>';
+    res.innerHTML='<div class="res" style="margin-top:12px"><h4>📊 '+d.crop+'　各市場行情（元/kg）</h4>'+
+      '<div class="info" style="margin:0 0 10px">🔼 <b>上貨</b>送 <b>'+bU+'</b>（上 '+mU.upper+'）　🔽 <b>下貨</b>送 <b>'+bL+'</b>（下 '+mL.lower+'）</div>'+
+      rows+'<div class="foot" style="text-align:left">'+range+' 交易量加權平均。⭐ 該價位最高市場。點 ★ 設常送市場。資料來源：農業部 AMIS。</div></div>'+calc;
+    const rev=()=>{const q1=+v.querySelector("#mk-q1").value||0,q2=+v.querySelector("#mk-q2").value||0,q3=+v.querySelector("#mk-q3").value||0;
+      const r1=q1*mU.upper,r2=q2*mM.middle,r3=q3*mL.lower;const tot=r1+r2+r3;
+      v.querySelector("#mk-rev").innerHTML='上貨 '+q1+'kg×'+mU.upper+' = <b>'+Math.round(r1).toLocaleString()+'</b> 元（'+bU+'）<br>'+
+        '中貨 '+q2+'kg×'+mM.middle+' = <b>'+Math.round(r2).toLocaleString()+'</b> 元（'+bM+'）<br>'+
+        '下貨 '+q3+'kg×'+mL.lower+' = <b>'+Math.round(r3).toLocaleString()+'</b> 元（'+bL+'）<br>'+
+        '<span style="font-size:1.05rem">合計約 <b style="color:var(--accent)">'+Math.round(tot).toLocaleString()+'</b> 元</span>';};
+    ["mk-q1","mk-q2","mk-q3"].forEach(id=>v.querySelector("#"+id).oninput=rev);rev();
+    v.querySelectorAll("[data-fav]").forEach(b=>b.onclick=()=>{let f=loadFav();const nm=b.dataset.fav;
+      if(f.includes(nm))f=f.filter(x=>x!==nm);else f.push(nm);saveFav(f);renderMarket(d,range);});
+  }
+  let lastMk=null;
+  v.querySelector("#mk-fav").onchange=()=>{if(lastMk)renderMarket(lastMk.d,lastMk.range);};
+  v.querySelector("#mk-go").onclick=async()=>{
+    const appCrop=v.querySelector("#mk-crop").value;const crop=AMIS_NAME[appCrop]||appCrop;const days=+v.querySelector("#mk-days").value;
+    const end=today();const start=addD(end,-(days-1));const range=fmtD(start)+" ~ "+fmtD(end);
+    const res=v.querySelector("#mk-res");
+    res.innerHTML='<div class="info" style="margin-top:12px">查詢中…（'+range+'，AMIS 名稱：'+crop+'）</div>';
+    try{
+      const r=await fetch("/.netlify/functions/amis",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({crop:crop,start:fmtD(start),end:fmtD(end)})});
+      if(!r.ok){const tx=await r.text();throw new Error("伺服器回應 "+r.status+"："+tx.slice(0,80));}
+      const d=await r.json();
+      if(!d.markets||!d.markets.length){res.innerHTML='<div class="info" style="margin-top:12px;color:var(--warn)">'+(d.warnings&&d.warnings[0]||"查無資料")+'</div>';return;}
+      lastMk={d:d,range:range};renderMarket(d,range);
+    }catch(e){
+      res.innerHTML='<div class="info" style="margin-top:12px;color:var(--warn)">抓取失敗：'+e.message+'<br><br>此功能需<b>部署到 Netlify</b>（含 /.netlify/functions/amis 代理）才能即時抓取。本機以 file:// 或純靜態開啟時無法連上。</div>';
+    }
+  };
+  // 用近一年真實行情校正月價指數
+  v.querySelector("#mk-cal").onclick=async()=>{
+    const appCrop=v.querySelector("#mk-crop").value;const crop=AMIS_NAME[appCrop]||appCrop;
+    const res=v.querySelector("#mk-res");
+    const end=today();const start=addD(end,-364);
+    res.innerHTML='<div class="info" style="margin-top:12px">抓取近一年資料校正中…（可能需 10~30 秒）</div>';
+    try{
+      const r=await fetch("/.netlify/functions/amis",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({crop:crop,start:fmtD(start),end:fmtD(end),monthly:true})});
+      if(!r.ok){const tx=await r.text();throw new Error("伺服器回應 "+r.status+"："+tx.slice(0,80));}
+      const d=await r.json();
+      if(!d.monthly||!d.monthly.some(x=>x>0)){res.innerHTML='<div class="info" style="margin-top:12px;color:var(--warn)">回傳資料不足，無法校正。</div>';return;}
+      const vals=d.monthly;const nz=vals.filter(x=>x>0);const avg=nz.reduce((a,b)=>a+b,0)/nz.length;
+      const idx=vals.map((x,i)=>x>0?Math.round(x/avg*100)/100:(CROPS[appCrop]?CROPS[appCrop].idx[i]:1));
+      const ov=loadIdxOv();ov[appCrop]=idx;saveIdxOv(ov);if(CROPS[appCrop])CROPS[appCrop].idx=idx.slice();
+      const mn=["1","2","3","4","5","6","7","8","9","10","11","12"];
+      res.innerHTML='<div class="res" style="margin-top:12px"><h4>✅ 已用真實行情校正「'+appCrop+'」月價指數</h4>'+
+        '<div class="foot" style="text-align:left;margin:0 0 8px">全期均價 '+Math.round(avg)+' 元/kg。指數 = 該月均價 / 全期均價。已存入本機並套用到規劃/契作。</div>'+
+        idx.map((x,i)=>'<div class="r"><span>'+mn[i]+'月</span><b style="color:'+(x>=1.15?'var(--harv)':x<=0.9?'var(--warn)':'var(--ink)')+'">'+x.toFixed(2)+'</b></div>').join("")+
+        '</div>';
+    }catch(e){
+      res.innerHTML='<div class="info" style="margin-top:12px;color:var(--warn)">校正失敗：'+e.message+'<br><br>此功能需部署到 Netlify 才能抓取。</div>';
+    }
+  };
+  v.querySelector("#rb-go").onclick=()=>{
+    const plots=load();let csv="日期,田區,作物,類型,防治對象,藥劑/資材,稀釋倍數/用量,安全採收期,備註\n";let n=0;
+    plots.forEach(r=>{(r.records||[]).slice().sort((a,b)=>a.date<b.date?-1:1).forEach(rc=>{
+      if(!["spray","fert","harv","work"].includes(rc.type))return;n++;
+      const ty={spray:"用藥",fert:"施肥",harv:"採收",work:"作業"}[rc.type];
+      const mat=rc.type==="harv"?"":(rc.note||"");
+      const dose=rc.type==="harv"?(rc.qty+"kg"):(rc.dose||"");
+      const gradeNote=rc.type==="harv"?((rc.g2||rc.g3)?"分級 特"+(rc.g1||0)+"/優"+(rc.g2||0)+"/次"+(rc.g3||0)+"kg":"產量"):"";
+      csv+=[rc.date,r.plot,r.crop,ty,rc.target||"",mat,dose,rc.phi||"",gradeNote].map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(",")+"\n";});});
+    v.querySelector("#rb-res").innerHTML=n?'<div class="res"><h4>紀錄簿（'+n+' 筆，CSV）</h4><textarea class="t" style="min-height:180px;font-size:.72rem" readonly id="rb-t">'+csv.replace(/</g,"&lt;")+'</textarea><button class="btn" id="rb-copy">複製 CSV</button><div class="foot" style="text-align:left">可貼進 Excel 或匯入產銷履歷系統。用藥紀錄請確認符合植保系統登記藥、稀釋倍數與安全採收期。</div></div>':'<div class="info">尚無用藥/施肥/採收紀錄。到田區登錄後即可匯出。</div>';
+    const cp=v.querySelector("#rb-copy");if(cp)cp.onclick=()=>{const ta=v.querySelector("#rb-t");ta.select();try{document.execCommand("copy");cp.textContent="已複製 ✓";}catch(e){}};
+  };
+  // 備份：下載 JSON
+  v.querySelector("#bk-exp").onclick=()=>{
+    const data={version:2,exported:fmtD(today()),plots:load(),contracts:loadC()};
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob);const a=document.createElement("a");
+    a.href=url;a.download="農務小幫手備份_"+fmtD(today())+".json";a.click();
+    URL.revokeObjectURL(url);
+    v.querySelector("#bk-res").innerHTML='<div class="info">已下載備份檔案，請存到相簿或雲端。</div>';
+  };
+  // 還原：讀取 JSON
+  v.querySelector("#bk-imp").onclick=()=>v.querySelector("#bk-file").click();
+  v.querySelector("#bk-file").onchange=function(){
+    const file=this.files[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=e=>{
+      try{
+        const data=JSON.parse(e.target.result);
+        const plots=data.plots||data; // 支援舊版直接存陣列
+        if(!Array.isArray(plots))throw new Error("格式不符");
+        if(!confirm("將以備份檔覆蓋現有所有田區資料（共"+plots.length+"筆田區），確定還原？"))return;
+        save(plots);
+        if(Array.isArray(data.contracts))saveC(data.contracts);
+        v.querySelector("#bk-res").innerHTML='<div class="info">✓ 還原成功，已載入 '+plots.length+' 個田區'+(data.contracts?'、'+data.contracts.length+' 筆契約':'')+'。</div>';
+      }catch(err){v.querySelector("#bk-res").innerHTML='<div class="info" style="color:var(--warn)">檔案格式錯誤：'+err.message+'</div>';}
+    };
+    reader.readAsText(file);
+  };
+}
+
+/* ---------- 契作管理 ---------- */
+// 累計某作物在區間內可交貨量（kg），跨全部田區。有分級時只計特+優（次級不供契作）
+function harvestOfCrop(crop,from,to){
+  let sum=0;load().forEach(r=>{if(r.crop!==crop)return;(r.records||[]).forEach(x=>{
+    if(x.type!=="harv")return;const d=x.date;if(d<from||d>to)return;
+    const deliver=(x.g1!=null||x.g2!=null)?((+x.g1||0)+(+x.g2||0)):(+x.qty||0);
+    sum+=deliver;});});
+  return Math.round(sum*10)/10;
+}
+function renderContract(){
+  const v=document.getElementById("view-contract");
+  const cs=loadC();const t=fmtD(today());
+  let cropOpts=Object.keys(CROPS).map(n=>'<option>'+n+'</option>').join("");
+  // 新增表單
+  let form='<div class="card"><h3 style="margin:0 0 6px;font-size:1rem">＋ 新增契約</h3>'+
+    '<div class="row2"><div><label class="f">買方（通路/合作社）</label><input class="t" id="ct-buyer" placeholder="例如 全聯／有機店"></div>'+
+    '<div><label class="f">作物</label><select class="t" id="ct-crop">'+cropOpts+'</select></div></div>'+
+    '<div class="row2"><div><label class="f">保底價（元/kg）</label><input class="t" id="ct-price" type="number" placeholder="45"></div>'+
+    '<div><label class="f">每週供應量（kg）</label><input class="t" id="ct-week" type="number" placeholder="100"></div></div>'+
+    '<div class="row2"><div><label class="f">起始日</label><input class="t" id="ct-start" type="date" value="'+t+'"></div>'+
+    '<div><label class="f">結束日</label><input class="t" id="ct-end" type="date"></div></div>'+
+    '<label class="f">分級規格</label><input class="t" id="ct-grade" placeholder="例如 單果150g以上、色澤均勻、無日燒裂果">'+
+    '<div class="row2"><div><label class="f">認證要求</label><input class="t" id="ct-cert" placeholder="產銷履歷/有機"></div>'+
+    '<div><label class="f">付款週期</label><input class="t" id="ct-pay" placeholder="月結30天"></div></div>'+
+    '<label class="f">備註</label><input class="t" id="ct-note" placeholder="計價方式、拒收處理、不可抗力…">'+
+    '<button class="btn" id="ct-add">新增契約</button></div>';
+  // 契約清單
+  let list="";
+  if(!cs.length){list='<div class="empty" style="padding:22px">尚無契約。<br>新增契約後，系統會依採收紀錄自動追蹤供貨進度，並提示契作或走市場。</div>';}
+  else{
+    cs.forEach((c,i)=>{
+      const cr=CROPS[c.crop];
+      // 本期供貨進度：起始~今日，週數×週量 = 應供；實際採收累計
+      const start=c.start,end=c.end||t,upto=(t<end?t:end);
+      const weeks=Math.max(0,Math.floor((parseD(upto)-parseD(start))/(7*DAY)))+1;
+      const need=(+c.week||0)*weeks;
+      const got=harvestOfCrop(c.crop,start,upto);
+      const rate=need>0?Math.round(got/need*100):0;
+      const gap=Math.round((got-need)*10)/10;
+      const barCls=rate>=100?"h":"g";
+      const gapTxt=gap>=0?'<span class="pill ok">達標，餘 '+gap+' kg 可走市場</span>':'<span class="pill">缺口 '+(-gap)+' kg，注意履約</span>';
+      // 契作 vs 市場：用當月價指數判斷
+      const mIdx=cr?cr.idx[new Date().getMonth()]:1;
+      let mkt=mIdx<=0.9?['ok','🟢 目前市場爛價（指數'+mIdx.toFixed(2)+'）→ 契作保底最划算']:
+              mIdx>=1.15?['','🔴 目前市場旺季（指數'+mIdx.toFixed(2)+'）→ 超出承諾量可考慮留量走市場']:
+              ['','🟡 市場平盤（指數'+mIdx.toFixed(2)+'）→ 依承諾穩定供貨'];
+      // 量力而為：近4週實際週均 vs 承諾週量
+      const from4=fmtD(addD(today(),-28));
+      const got4=harvestOfCrop(c.crop,from4,t);
+      const wk4=Math.round(got4/4*10)/10;
+      let cap=wk4>0?(wk4< (+c.week||0)?'<div class="info" style="margin-top:8px;background:var(--warn-bg);color:var(--warn)">⚠️ 近4週實際週均僅 '+wk4+' kg，低於承諾 '+c.week+' kg／週。承諾量宜 ≤ 穩定產能 70–80%，避免違約。</div>':'<div class="info" style="margin-top:8px">近4週週均 '+wk4+' kg，高於承諾，產能充足。</div>'):'';
+      const expired=c.end&&t>c.end;
+      const soon=c.end&&!expired&&(parseD(c.end)-today())<=14*DAY;
+      list+='<div class="card"'+(expired?' style="opacity:.6"':'')+'>'+
+        '<div class="card-top"><h3>'+c.buyer+'　<span class="crop">'+c.crop+'</span></h3>'+
+        (expired?'<span class="stage pre">已到期</span>':soon?'<span class="stage grow">將到期</span>':'<span class="stage harv">履約中</span>')+'</div>'+
+        '<div class="sub">保底 '+(c.price||"?")+' 元/kg　·　每週 '+(c.week||"?")+' kg　·　'+c.start+' ~ '+(c.end||"未定")+'</div>'+
+        (c.grade?'<div style="font-size:.8rem;color:var(--ink-soft);margin:2px 0">規格：'+c.grade+'</div>':'')+
+        (c.cert?'<div style="font-size:.8rem;color:var(--ink-soft)">認證：'+c.cert+(c.pay?'　·　付款：'+c.pay:'')+'</div>':(c.pay?'<div style="font-size:.8rem;color:var(--ink-soft)">付款：'+c.pay+'</div>':''))+
+        '<div style="margin-top:10px"><div class="prog"><i class="'+barCls+'" style="width:'+Math.min(rate,100)+'%"></i></div>'+
+        '<div class="prog-l"><span>可交貨(特+優) '+got+' / 應供 '+need+' kg</span><span>'+rate+'%</span></div></div>'+
+        gapTxt+'<br><span class="pill '+mkt[0]+'" style="margin-top:6px">'+mkt[1]+'</span>'+
+        cap+
+        (c.note?'<div style="font-size:.78rem;color:var(--ink-soft);margin-top:8px">備註：'+c.note+'</div>':'')+
+        '<button class="del" data-cd="'+i+'" style="margin-top:8px">刪除契約</button></div>';
+    });
+  }
+  v.innerHTML='<h2>契作管理</h2><p class="note">登錄契約後，系統依採收紀錄追蹤供貨達標率，並提示「契作保底 vs 走市場」與量力而為。契約低價的意義是保住爛價期不虧本。</p>'+
+    list+form+
+    '<div class="foot" style="text-align:left">簽約前確認：所有權移轉時點、計價方式、天災/拒收風險由誰負擔、分級與驗收標準。承諾量建議 ≤ 穩定產能 70–80%，保留緩衝分散風險。</div>';
+  const add=v.querySelector("#ct-add");
+  add.onclick=()=>{
+    const c={buyer:v.querySelector("#ct-buyer").value.trim()||"未命名買方",crop:v.querySelector("#ct-crop").value,
+      price:v.querySelector("#ct-price").value,week:v.querySelector("#ct-week").value,
+      start:v.querySelector("#ct-start").value,end:v.querySelector("#ct-end").value,
+      grade:v.querySelector("#ct-grade").value.trim(),cert:v.querySelector("#ct-cert").value.trim(),
+      pay:v.querySelector("#ct-pay").value.trim(),note:v.querySelector("#ct-note").value.trim()};
+    const cs2=loadC();cs2.push(c);saveC(cs2);renderContract();
+  };
+  v.querySelectorAll(".del[data-cd]").forEach(b=>b.onclick=()=>{if(confirm("刪除此契約？")){const cs2=loadC();cs2.splice(+b.dataset.cd,1);saveC(cs2);renderContract();}});
+}
+
+/* ---------- 導覽 ---------- */
+function go(v){
+  document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("on",x.dataset.v===v));
+  ["dash","plots","contract","diag","tools"].forEach(id=>document.getElementById("view-"+id).classList.toggle("hidden",id!==v));
+  const T={dash:"經營總覽",plots:"我的田區",contract:"契作管理",diag:"診斷",tools:"工具"};document.getElementById("title").textContent=T[v];
+  if(v==="dash")renderDash();if(v==="plots")renderPlots();if(v==="contract")renderContract();if(v==="diag")renderDiag();if(v==="tools")renderTools();
+}
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{if(b.dataset.v==="plots")CUR=null;go(b.dataset.v);});
+// 套用已校正的真實月價指數（若有）覆蓋示範值
+(function(){const ov=loadIdxOv();Object.entries(ov).forEach(([crop,idx])=>{if(CROPS[crop]&&Array.isArray(idx)&&idx.length===12)CROPS[crop].idx=idx.slice();});})();
+const t=today();document.getElementById("hd-date").innerHTML=fmtD(t)+"<br>星期"+["日","一","二","三","四","五","六"][t.getDay()];
+renderDash();
+
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));}
+</script>
+
+</body>
+</html>
