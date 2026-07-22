@@ -236,6 +236,7 @@ function phiLock(rec){// 用藥安全採收期鎖定
   let latest=null;(rec.records||[]).forEach(r=>{if(r.type==="spray"&&r.phi){const end=addD(parseD(r.date),+r.phi);if(!latest||end>latest)latest=end;}});
   if(latest&&latest>today())return latest;return null;}
 function harvestTotal(rec){return (rec.records||[]).filter(r=>r.type==="harv").reduce((a,r)=>a+(+r.qty||0),0);}
+function harvestGrades(rec){const g={g1:0,g2:0,g3:0};(rec.records||[]).filter(r=>r.type==="harv").forEach(r=>{g.g1+=+r.g1||0;g.g2+=+r.g2||0;g.g3+=+r.g3||0;});return{g1:Math.round(g.g1*10)/10,g2:Math.round(g.g2*10)/10,g3:Math.round(g.g3*10)/10};}
 /* 動態任務（每日回報產生，存 localStorage 依日期+田區） */
 function dynKey(idx){return "farm-dyn-"+fmtD(today())+"-"+idx;}
 function getDyn(idx){try{return JSON.parse(localStorage.getItem(dynKey(idx))||"[]");}catch(e){return[];}}
@@ -438,7 +439,7 @@ function renderPlots(){
   // 紀錄歷史
   let recs=(r.records||[]).slice().sort((a,b)=>b.date<a.date?-1:1).map((rc,ri)=>{
     const meta=RTYPES[rc.type]||{t:rc.type,c:"obs"};
-    let extra=rc.type==="ecph"?("EC "+(rc.ec||"?")+" / pH "+(rc.ph||"?")):rc.type==="harv"?(rc.qty+" kg"):rc.type==="spray"?((rc.target?"防"+rc.target+"：":"")+rc.note+(rc.dose?" "+rc.dose:"")+(rc.phi?"（安全期"+rc.phi+"天）":"")):rc.type==="ipm"?((["粉蝨"+rc.wf,"薊馬"+rc.th,"葉蟎"+rc.sm,"蚜蟲"+rc.ap].filter(s=>!/0$/.test(s)).join("・")||"無蟲")+(rc.note?" ｜ "+rc.note:"")):rc.note||"";
+    let extra=rc.type==="ecph"?("EC "+(rc.ec||"?")+" / pH "+(rc.ph||"?")):rc.type==="harv"?(rc.qty+" kg"+((rc.g1!=null&&(rc.g2||rc.g3))?"（特"+rc.g1+"/優"+rc.g2+"/次"+rc.g3+"）":"")):rc.type==="spray"?((rc.target?"防"+rc.target+"：":"")+rc.note+(rc.dose?" "+rc.dose:"")+(rc.phi?"（安全期"+rc.phi+"天）":"")):rc.type==="ipm"?((["粉蝨"+rc.wf,"薊馬"+rc.th,"葉蟎"+rc.sm,"蚜蟲"+rc.ap].filter(s=>!/0$/.test(s)).join("・")||"無蟲")+(rc.note?" ｜ "+rc.note:"")):rc.note||"";
     return '<div class="rec"><span class="rd">'+md(parseD(rc.date))+'</span><span class="rt"><span class="rtag '+meta.c+'">'+meta.t+'</span>'+extra+'</span><button class="del" data-r="'+ri+'">刪</button></div>';}).join("");
   let ecHist=(r.records||[]).filter(x=>x.type==="ecph"&&x.ec).slice(-8);
   let ecChart=ecHist.length>=2?'<div class="res"><h4>EC 趨勢</h4><div class="chart">'+ecHist.map(x=>{const h=Math.min(100,(+x.ec)/4*100);return '<div class="bar" style="height:'+h+'%"><b>'+x.ec+'</b><span>'+md(parseD(x.date))+'</span></div>';}).join("")+'</div></div>':"";
@@ -449,7 +450,8 @@ function renderPlots(){
     '<div class="prog"><i class="'+(age>=c.grow?'h':'g')+'" style="width:'+Math.max(age<0?0:Math.round(age/(c.grow+c.dur)*100),2)+'%"></i></div>'+
     '<div class="prog-l"><span>第 '+Math.max(age,0)+' 天</span><span>'+(age>=c.grow?"採收期":"距採收 "+(c.grow-age)+" 天")+'</span></div>'+
     (phi?'<span class="pill">⚠ 用藥安全期至 '+md(phi)+' 禁止採收</span>':'')+
-    (ht?'<span class="pill ok">累計採收 '+ht+' kg</span>':'')+
+    (ht?'<span class="pill ok">累計採收 '+(Math.round(ht*10)/10)+' kg</span>':'')+
+    ((()=>{const g=harvestGrades(r);return (g.g2||g.g3)?'<span class="pill ok" style="background:var(--accent-soft);color:var(--accent)">特'+g.g1+'/優'+g.g2+'/次'+g.g3+' kg</span>':'';})())+
     ipmWarn+'</div>'+
     dynHtml+
     (tasks?'<div class="card"><h3 style="margin:0 0 4px;font-size:1rem">今日待辦</h3>'+tasks+soon+'</div>':'')+
@@ -483,7 +485,12 @@ function logModal(type){
     fields+='<div class="info" style="margin-bottom:8px">目標 EC <b>'+(stTarget||"2.0–3.0")+'</b> dS/m　· pH 目標 <b>6.0–6.8</b>'+(ecTarget?'<br><small style="color:var(--ink-soft)">'+ecTarget+'</small>':'')+'</div>'+
     '<div class="row2"><div><label class="f">EC 實測值 (dS/m)</label><input class="t" id="m-ec" type="number" step="0.1" placeholder="2.5"></div><div><label class="f">pH 實測值</label><input class="t" id="m-ph" type="number" step="0.1" placeholder="6.5"></div></div>';
   }
-  else if(type==="harv")fields+='<label class="f">採收量 (kg)</label><input class="t" id="m-qty" type="number" step="0.1" placeholder="15">';
+  else if(type==="harv")fields+=
+    '<p style="font-size:.8rem;color:var(--ink-soft);margin:4px 0 8px">分級記錄，方便對應契作規格與計價。若不分級，全填在特級即可。</p>'+
+    '<div class="row2"><div><label class="f">特級 (kg)</label><input class="t" id="m-g1" type="number" step="0.1" placeholder="0"></div>'+
+    '<div><label class="f">優級 (kg)</label><input class="t" id="m-g2" type="number" step="0.1" placeholder="0"></div></div>'+
+    '<label class="f">次級／處理果 (kg)</label><input class="t" id="m-g3" type="number" step="0.1" placeholder="0">'+
+    '<div class="info" style="margin-top:8px">合計：<b id="m-gtot">0</b> kg</div>';
   else if(type==="fert"){
     const crop=load()[CUR]?load()[CUR].crop:"";
     const fertOpts=FERTDB.filter(f=>!crop||f.crop.includes(crop.replace(/牛|玉女/,"").trim())||f.crop==="番茄/彩椒");
@@ -522,6 +529,10 @@ function logModal(type){
   mr.innerHTML='<div class="modal-bg" id="mbg"><div class="modal"><h3>登錄'+meta.t+'</h3><p class="note">'+load()[CUR].plot+' · '+load()[CUR].crop+'</p>'+fields+'<button class="btn" id="m-save">儲存</button><button class="btn sec" id="m-cancel">取消</button></div></div>';
   document.getElementById("m-cancel").onclick=()=>mr.innerHTML="";
   document.getElementById("mbg").onclick=e=>{if(e.target.id==="mbg")mr.innerHTML="";};
+  if(type==="harv"){
+    const upd=()=>{const s=["m-g1","m-g2","m-g3"].reduce((a,id)=>a+(+document.getElementById(id).value||0),0);document.getElementById("m-gtot").textContent=Math.round(s*10)/10;};
+    ["m-g1","m-g2","m-g3"].forEach(id=>document.getElementById(id).oninput=upd);
+  }
   if(type==="fert"){
     const fq=document.getElementById("m-fq");
     if(fq)fq.onchange=function(){
@@ -543,7 +554,7 @@ function logModal(type){
   document.getElementById("m-save").onclick=()=>{
     const p=load();const rec={type,date:document.getElementById("m-date").value};
     if(type==="ecph"){rec.ec=document.getElementById("m-ec").value;rec.ph=document.getElementById("m-ph").value;}
-    else if(type==="harv")rec.qty=document.getElementById("m-qty").value;
+    else if(type==="harv"){rec.g1=+document.getElementById("m-g1").value||0;rec.g2=+document.getElementById("m-g2").value||0;rec.g3=+document.getElementById("m-g3").value||0;rec.qty=Math.round((rec.g1+rec.g2+rec.g3)*10)/10;}
     else if(type==="spray"){rec.note=document.getElementById("m-note").value;rec.phi=document.getElementById("m-phi").value;rec.target=document.getElementById("m-target").value;rec.dose=document.getElementById("m-dose").value;}
     else if(type==="ipm"){rec.wf=document.getElementById("m-wf").value||"0";rec.th=document.getElementById("m-th").value||"0";rec.sm=document.getElementById("m-sm").value||"0";rec.ap=document.getElementById("m-ap").value||"0";rec.note=document.getElementById("m-note").value;}
     else rec.note=document.getElementById("m-note").value;
@@ -601,7 +612,8 @@ function renderTools(){
       const ty={spray:"用藥",fert:"施肥",harv:"採收",work:"作業"}[rc.type];
       const mat=rc.type==="harv"?"":(rc.note||"");
       const dose=rc.type==="harv"?(rc.qty+"kg"):(rc.dose||"");
-      csv+=[rc.date,r.plot,r.crop,ty,rc.target||"",mat,dose,rc.phi||"",rc.type==="harv"?"產量":""].map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(",")+"\n";});});
+      const gradeNote=rc.type==="harv"?((rc.g2||rc.g3)?"分級 特"+(rc.g1||0)+"/優"+(rc.g2||0)+"/次"+(rc.g3||0)+"kg":"產量"):"";
+      csv+=[rc.date,r.plot,r.crop,ty,rc.target||"",mat,dose,rc.phi||"",gradeNote].map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(",")+"\n";});});
     v.querySelector("#rb-res").innerHTML=n?'<div class="res"><h4>紀錄簿（'+n+' 筆，CSV）</h4><textarea class="t" style="min-height:180px;font-size:.72rem" readonly id="rb-t">'+csv.replace(/</g,"&lt;")+'</textarea><button class="btn" id="rb-copy">複製 CSV</button><div class="foot" style="text-align:left">可貼進 Excel 或匯入產銷履歷系統。用藥紀錄請確認符合植保系統登記藥、稀釋倍數與安全採收期。</div></div>':'<div class="info">尚無用藥/施肥/採收紀錄。到田區登錄後即可匯出。</div>';
     const cp=v.querySelector("#rb-copy");if(cp)cp.onclick=()=>{const ta=v.querySelector("#rb-t");ta.select();try{document.execCommand("copy");cp.textContent="已複製 ✓";}catch(e){}};
   };
@@ -635,10 +647,12 @@ function renderTools(){
 }
 
 /* ---------- 契作管理 ---------- */
-// 累計某作物在區間內的實際採收量（kg），跨全部田區
+// 累計某作物在區間內可交貨量（kg），跨全部田區。有分級時只計特+優（次級不供契作）
 function harvestOfCrop(crop,from,to){
   let sum=0;load().forEach(r=>{if(r.crop!==crop)return;(r.records||[]).forEach(x=>{
-    if(x.type!=="harv"||!x.qty)return;const d=x.date;if(d>=from&&d<=to)sum+=(+x.qty||0);});});
+    if(x.type!=="harv")return;const d=x.date;if(d<from||d>to)return;
+    const deliver=(x.g1!=null||x.g2!=null)?((+x.g1||0)+(+x.g2||0)):(+x.qty||0);
+    sum+=deliver;});});
   return Math.round(sum*10)/10;
 }
 function renderContract(){
@@ -692,7 +706,7 @@ function renderContract(){
         (c.grade?'<div style="font-size:.8rem;color:var(--ink-soft);margin:2px 0">規格：'+c.grade+'</div>':'')+
         (c.cert?'<div style="font-size:.8rem;color:var(--ink-soft)">認證：'+c.cert+(c.pay?'　·　付款：'+c.pay:'')+'</div>':(c.pay?'<div style="font-size:.8rem;color:var(--ink-soft)">付款：'+c.pay+'</div>':''))+
         '<div style="margin-top:10px"><div class="prog"><i class="'+barCls+'" style="width:'+Math.min(rate,100)+'%"></i></div>'+
-        '<div class="prog-l"><span>本期供貨 '+got+' / 應供 '+need+' kg</span><span>'+rate+'%</span></div></div>'+
+        '<div class="prog-l"><span>可交貨(特+優) '+got+' / 應供 '+need+' kg</span><span>'+rate+'%</span></div></div>'+
         gapTxt+'<br><span class="pill '+mkt[0]+'" style="margin-top:6px">'+mkt[1]+'</span>'+
         cap+
         (c.note?'<div style="font-size:.78rem;color:var(--ink-soft);margin-top:8px">備註：'+c.note+'</div>':'')+
