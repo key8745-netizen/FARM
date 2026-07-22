@@ -134,11 +134,13 @@ nav button.on{color:var(--accent);}
   </header>
   <main id="view-dash"></main>
   <main id="view-plots" class="hidden"></main>
+  <main id="view-contract" class="hidden"></main>
   <main id="view-diag" class="hidden"></main>
   <main id="view-tools" class="hidden"></main>
   <nav>
     <button data-v="dash" class="on"><span class="ic">📊</span>總覽</button>
     <button data-v="plots"><span class="ic">🌱</span>田區</button>
+    <button data-v="contract"><span class="ic">🤝</span>契作</button>
     <button data-v="diag"><span class="ic">🔍</span>診斷</button>
     <button data-v="tools"><span class="ic">🧮</span>工具</button>
   </nav>
@@ -224,6 +226,8 @@ const md=dt=>String(dt.getMonth()+1).padStart(2,"0")+"/"+String(dt.getDate()).pa
 const addD=(dt,n)=>new Date(dt.getTime()+n*DAY);
 const load=()=>{try{return JSON.parse(localStorage.getItem("farm-plots-v2")||"[]");}catch(e){return[];}};
 const save=p=>localStorage.setItem("farm-plots-v2",JSON.stringify(p));
+const loadC=()=>{try{return JSON.parse(localStorage.getItem("farm-contracts-v1")||"[]");}catch(e){return[];}};
+const saveC=c=>localStorage.setItem("farm-contracts-v1",JSON.stringify(c));
 let CUR=null; // current plot id in detail
 
 function ecStage(c,age){const ks=Object.keys(c.ec);let f=age<=0?0:age>=c.grow?.999:age/c.grow;let i=Math.min(Math.floor(f*ks.length),ks.length-1);return[ks[i],c.ec[ks[i]]];}
@@ -603,7 +607,7 @@ function renderTools(){
   };
   // 備份：下載 JSON
   v.querySelector("#bk-exp").onclick=()=>{
-    const data={version:2,exported:fmtD(today()),plots:load()};
+    const data={version:2,exported:fmtD(today()),plots:load(),contracts:loadC()};
     const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
     const url=URL.createObjectURL(blob);const a=document.createElement("a");
     a.href=url;a.download="農務小幫手備份_"+fmtD(today())+".json";a.click();
@@ -622,19 +626,100 @@ function renderTools(){
         if(!Array.isArray(plots))throw new Error("格式不符");
         if(!confirm("將以備份檔覆蓋現有所有田區資料（共"+plots.length+"筆田區），確定還原？"))return;
         save(plots);
-        v.querySelector("#bk-res").innerHTML='<div class="info">✓ 還原成功，已載入 '+plots.length+' 個田區。</div>';
+        if(Array.isArray(data.contracts))saveC(data.contracts);
+        v.querySelector("#bk-res").innerHTML='<div class="info">✓ 還原成功，已載入 '+plots.length+' 個田區'+(data.contracts?'、'+data.contracts.length+' 筆契約':'')+'。</div>';
       }catch(err){v.querySelector("#bk-res").innerHTML='<div class="info" style="color:var(--warn)">檔案格式錯誤：'+err.message+'</div>';}
     };
     reader.readAsText(file);
   };
 }
 
+/* ---------- 契作管理 ---------- */
+// 累計某作物在區間內的實際採收量（kg），跨全部田區
+function harvestOfCrop(crop,from,to){
+  let sum=0;load().forEach(r=>{if(r.crop!==crop)return;(r.records||[]).forEach(x=>{
+    if(x.type!=="harv"||!x.qty)return;const d=x.date;if(d>=from&&d<=to)sum+=(+x.qty||0);});});
+  return Math.round(sum*10)/10;
+}
+function renderContract(){
+  const v=document.getElementById("view-contract");
+  const cs=loadC();const t=fmtD(today());
+  let cropOpts=Object.keys(CROPS).map(n=>'<option>'+n+'</option>').join("");
+  // 新增表單
+  let form='<div class="card"><h3 style="margin:0 0 6px;font-size:1rem">＋ 新增契約</h3>'+
+    '<div class="row2"><div><label class="f">買方（通路/合作社）</label><input class="t" id="ct-buyer" placeholder="例如 全聯／有機店"></div>'+
+    '<div><label class="f">作物</label><select class="t" id="ct-crop">'+cropOpts+'</select></div></div>'+
+    '<div class="row2"><div><label class="f">保底價（元/kg）</label><input class="t" id="ct-price" type="number" placeholder="45"></div>'+
+    '<div><label class="f">每週供應量（kg）</label><input class="t" id="ct-week" type="number" placeholder="100"></div></div>'+
+    '<div class="row2"><div><label class="f">起始日</label><input class="t" id="ct-start" type="date" value="'+t+'"></div>'+
+    '<div><label class="f">結束日</label><input class="t" id="ct-end" type="date"></div></div>'+
+    '<label class="f">分級規格</label><input class="t" id="ct-grade" placeholder="例如 單果150g以上、色澤均勻、無日燒裂果">'+
+    '<div class="row2"><div><label class="f">認證要求</label><input class="t" id="ct-cert" placeholder="產銷履歷/有機"></div>'+
+    '<div><label class="f">付款週期</label><input class="t" id="ct-pay" placeholder="月結30天"></div></div>'+
+    '<label class="f">備註</label><input class="t" id="ct-note" placeholder="計價方式、拒收處理、不可抗力…">'+
+    '<button class="btn" id="ct-add">新增契約</button></div>';
+  // 契約清單
+  let list="";
+  if(!cs.length){list='<div class="empty" style="padding:22px">尚無契約。<br>新增契約後，系統會依採收紀錄自動追蹤供貨進度，並提示契作或走市場。</div>';}
+  else{
+    cs.forEach((c,i)=>{
+      const cr=CROPS[c.crop];
+      // 本期供貨進度：起始~今日，週數×週量 = 應供；實際採收累計
+      const start=c.start,end=c.end||t,upto=(t<end?t:end);
+      const weeks=Math.max(0,Math.floor((parseD(upto)-parseD(start))/(7*DAY)))+1;
+      const need=(+c.week||0)*weeks;
+      const got=harvestOfCrop(c.crop,start,upto);
+      const rate=need>0?Math.round(got/need*100):0;
+      const gap=Math.round((got-need)*10)/10;
+      const barCls=rate>=100?"h":"g";
+      const gapTxt=gap>=0?'<span class="pill ok">達標，餘 '+gap+' kg 可走市場</span>':'<span class="pill">缺口 '+(-gap)+' kg，注意履約</span>';
+      // 契作 vs 市場：用當月價指數判斷
+      const mIdx=cr?cr.idx[new Date().getMonth()]:1;
+      let mkt=mIdx<=0.9?['ok','🟢 目前市場爛價（指數'+mIdx.toFixed(2)+'）→ 契作保底最划算']:
+              mIdx>=1.15?['','🔴 目前市場旺季（指數'+mIdx.toFixed(2)+'）→ 超出承諾量可考慮留量走市場']:
+              ['','🟡 市場平盤（指數'+mIdx.toFixed(2)+'）→ 依承諾穩定供貨'];
+      // 量力而為：近4週實際週均 vs 承諾週量
+      const from4=fmtD(addD(today(),-28));
+      const got4=harvestOfCrop(c.crop,from4,t);
+      const wk4=Math.round(got4/4*10)/10;
+      let cap=wk4>0?(wk4< (+c.week||0)?'<div class="info" style="margin-top:8px;background:var(--warn-bg);color:var(--warn)">⚠️ 近4週實際週均僅 '+wk4+' kg，低於承諾 '+c.week+' kg／週。承諾量宜 ≤ 穩定產能 70–80%，避免違約。</div>':'<div class="info" style="margin-top:8px">近4週週均 '+wk4+' kg，高於承諾，產能充足。</div>'):'';
+      const expired=c.end&&t>c.end;
+      const soon=c.end&&!expired&&(parseD(c.end)-today())<=14*DAY;
+      list+='<div class="card"'+(expired?' style="opacity:.6"':'')+'>'+
+        '<div class="card-top"><h3>'+c.buyer+'　<span class="crop">'+c.crop+'</span></h3>'+
+        (expired?'<span class="stage pre">已到期</span>':soon?'<span class="stage grow">將到期</span>':'<span class="stage harv">履約中</span>')+'</div>'+
+        '<div class="sub">保底 '+(c.price||"?")+' 元/kg　·　每週 '+(c.week||"?")+' kg　·　'+c.start+' ~ '+(c.end||"未定")+'</div>'+
+        (c.grade?'<div style="font-size:.8rem;color:var(--ink-soft);margin:2px 0">規格：'+c.grade+'</div>':'')+
+        (c.cert?'<div style="font-size:.8rem;color:var(--ink-soft)">認證：'+c.cert+(c.pay?'　·　付款：'+c.pay:'')+'</div>':(c.pay?'<div style="font-size:.8rem;color:var(--ink-soft)">付款：'+c.pay+'</div>':''))+
+        '<div style="margin-top:10px"><div class="prog"><i class="'+barCls+'" style="width:'+Math.min(rate,100)+'%"></i></div>'+
+        '<div class="prog-l"><span>本期供貨 '+got+' / 應供 '+need+' kg</span><span>'+rate+'%</span></div></div>'+
+        gapTxt+'<br><span class="pill '+mkt[0]+'" style="margin-top:6px">'+mkt[1]+'</span>'+
+        cap+
+        (c.note?'<div style="font-size:.78rem;color:var(--ink-soft);margin-top:8px">備註：'+c.note+'</div>':'')+
+        '<button class="del" data-cd="'+i+'" style="margin-top:8px">刪除契約</button></div>';
+    });
+  }
+  v.innerHTML='<h2>契作管理</h2><p class="note">登錄契約後，系統依採收紀錄追蹤供貨達標率，並提示「契作保底 vs 走市場」與量力而為。契約低價的意義是保住爛價期不虧本。</p>'+
+    list+form+
+    '<div class="foot" style="text-align:left">簽約前確認：所有權移轉時點、計價方式、天災/拒收風險由誰負擔、分級與驗收標準。承諾量建議 ≤ 穩定產能 70–80%，保留緩衝分散風險。</div>';
+  const add=v.querySelector("#ct-add");
+  add.onclick=()=>{
+    const c={buyer:v.querySelector("#ct-buyer").value.trim()||"未命名買方",crop:v.querySelector("#ct-crop").value,
+      price:v.querySelector("#ct-price").value,week:v.querySelector("#ct-week").value,
+      start:v.querySelector("#ct-start").value,end:v.querySelector("#ct-end").value,
+      grade:v.querySelector("#ct-grade").value.trim(),cert:v.querySelector("#ct-cert").value.trim(),
+      pay:v.querySelector("#ct-pay").value.trim(),note:v.querySelector("#ct-note").value.trim()};
+    const cs2=loadC();cs2.push(c);saveC(cs2);renderContract();
+  };
+  v.querySelectorAll(".del[data-cd]").forEach(b=>b.onclick=()=>{if(confirm("刪除此契約？")){const cs2=loadC();cs2.splice(+b.dataset.cd,1);saveC(cs2);renderContract();}});
+}
+
 /* ---------- 導覽 ---------- */
 function go(v){
   document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("on",x.dataset.v===v));
-  ["dash","plots","diag","tools"].forEach(id=>document.getElementById("view-"+id).classList.toggle("hidden",id!==v));
-  const T={dash:"經營總覽",plots:"我的田區",diag:"診斷",tools:"工具"};document.getElementById("title").textContent=T[v];
-  if(v==="dash")renderDash();if(v==="plots")renderPlots();if(v==="diag")renderDiag();if(v==="tools")renderTools();
+  ["dash","plots","contract","diag","tools"].forEach(id=>document.getElementById("view-"+id).classList.toggle("hidden",id!==v));
+  const T={dash:"經營總覽",plots:"我的田區",contract:"契作管理",diag:"診斷",tools:"工具"};document.getElementById("title").textContent=T[v];
+  if(v==="dash")renderDash();if(v==="plots")renderPlots();if(v==="contract")renderContract();if(v==="diag")renderDiag();if(v==="tools")renderTools();
 }
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{if(b.dataset.v==="plots")CUR=null;go(b.dataset.v);});
 const t=today();document.getElementById("hd-date").innerHTML=fmtD(t)+"<br>星期"+["日","一","二","三","四","五","六"][t.getDay()];
