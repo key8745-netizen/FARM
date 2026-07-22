@@ -44,8 +44,20 @@ python3 -m http.server 8000
 ```
 
 免費上線（擇一）：
-- **GitHub Pages**：把 `app/` 內容推到 Pages，取得 https 網址
-- **Netlify / Cloudflare Pages**：拖曳 `app/` 資料夾即部署
+- **Netlify（建議）**：連結整個 repo 部署。根目錄 `netlify.toml` 已設定：靜態站 = `app/`，
+  並附 **AMIS 行情代理函式** `netlify/functions/amis.js`。部署後「工具 → 市場行情比價」
+  即可即時抓各批發市場上/中/下價，判斷上貨/下貨送哪個市場。
+- **GitHub Pages / Cloudflare Pages**：也可只放 `app/`，但**無 serverless 函式**，
+  市場行情比價需另接代理（見下）。
+
+### 市場行情比價（送哪個市場）
+
+「工具」分頁的「市場行情比價」會 `POST /.netlify/functions/amis`，由 Netlify 伺服器端
+代理農業部 AMIS 開放資料（繞過瀏覽器跨域、借用開放網路）。輸入作物與天數，回傳各市場
+交易量加權的**上/中/下/均價**，並標出：**上貨送上價最高的市場、下貨送下價最高的市場**。
+
+> 為什麼要 serverless 代理：`data.moa.gov.tw` 不支援瀏覽器跨域直連，且部分開發/雲端環境
+> 對外連有政策限制。把抓取放到伺服器端函式即可解決（與 group-meal 專案同一模式）。
 
 開啟後：
 - iPhone Safari：分享 → 加入主畫面

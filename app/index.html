@@ -582,6 +582,10 @@ function renderTools(){
     '<button class="btn" id="c-go">計算</button><div id="c-res"></div></div>'+
     '<h2 style="margin-top:22px">年度輪種規劃</h2><p class="note">從起始月排全年輪種，收成卡高價月＋輪作。</p>'+
     '<div class="card"><label class="f">起始月</label><input class="t" id="p-start" type="month" value="'+nowM.getFullYear()+"-"+String(nowM.getMonth()+1).padStart(2,"0")+'"><button class="btn" id="p-go">產生規劃</button><div id="p-res"></div></div>'+
+    '<h2 style="margin-top:22px">市場行情比價（送哪個市場）</h2><p class="note">抓 AMIS 各批發市場的上/中/下/均價，判斷上貨、下貨分別送哪裡最划算。需部署到 Netlify 才能即時抓取。</p>'+
+    '<div class="card"><div class="row2"><div><label class="f">作物</label><select class="t" id="mk-crop"><option>番茄</option><option>甜椒</option><option>小番茄</option><option>牛番茄</option></select></div>'+
+    '<div><label class="f">查詢天數</label><select class="t" id="mk-days"><option value="7">近 7 天</option><option value="14">近 14 天</option><option value="30">近 30 天</option><option value="3">近 3 天</option></select></div></div>'+
+    '<button class="btn" id="mk-go">抓取市場行情</button><div id="mk-res"></div></div>'+
     '<h2 style="margin-top:22px">產銷履歷紀錄簿</h2><p class="note">依台灣安全農業（TGAP）匯出用藥/施肥/採收紀錄，供驗證稽核與追溯。</p>'+
     '<div class="card"><button class="btn" id="rb-go">匯出履歷紀錄簿 CSV</button><div id="rb-res"></div></div>'+
     '<h2 style="margin-top:22px">資料備份 / 還原</h2><p class="note">App 資料存在瀏覽器，清除快取會消失。定期備份 JSON 檔到手機相簿或雲端，需要時可還原。</p>'+
@@ -604,6 +608,36 @@ function renderTools(){
     while(pos<end){let best=null;for(const[nm,c]of Object.entries(CROPS)){if(c.科===prev)continue;for(let dl=0;dl<=45;dl+=15){const pl=addD(pos,dl);const sc=avgIdx(c,pl);const adj=sc-dl*.001;if(!best||adj>best.adj)best={adj,sc,nm,c,pl};}}if(!best)break;const hs=addD(best.pl,best.c.grow),he=addD(hs,best.c.dur);out.push({nm:best.nm,fam:best.c.科,pl:best.pl,hs,he,sc:best.sc});prev=best.c.科;pos=addD(he,20);}
     const avg=out.reduce((a,r)=>a+r.sc,0)/out.length;
     v.querySelector("#p-res").innerHTML='<div class="res"><b>平均價位分數 '+avg.toFixed(2)+'</b> '+(avg>=1.15?"多數卡高價 🟢":"中上")+'</div>'+out.map((r,i)=>{const[cl,lb]=light(r.sc);return '<div class="rec"><span class="rd">輪'+(i+1)+'</span><span class="rt"><b>'+r.nm+'</b> 定植'+md(r.pl)+' → 採收'+md(r.hs)+'–'+md(r.he)+'　<span class="badge '+cl+'">'+lb+' '+r.sc.toFixed(2)+'</span></span></div>';}).join("");
+  };
+  v.querySelector("#mk-go").onclick=async()=>{
+    const crop=v.querySelector("#mk-crop").value;const days=+v.querySelector("#mk-days").value;
+    const end=today();const start=addD(end,-(days-1));
+    const res=v.querySelector("#mk-res");
+    res.innerHTML='<div class="info" style="margin-top:12px">查詢中…（'+fmtD(start)+' ~ '+fmtD(end)+'）</div>';
+    try{
+      const r=await fetch("/.netlify/functions/amis",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({crop:crop,start:fmtD(start),end:fmtD(end)})});
+      if(!r.ok){const tx=await r.text();throw new Error("伺服器回應 "+r.status+"："+tx.slice(0,80));}
+      const d=await r.json();
+      if(!d.markets||!d.markets.length){res.innerHTML='<div class="info" style="margin-top:12px;color:var(--warn)">'+(d.warnings&&d.warnings[0]||"查無資料")+'</div>';return;}
+      // 依均價排序
+      const ms=d.markets.slice().sort((a,b)=>b.avg-a.avg);
+      const bU=d.best.upper,bL=d.best.lower;
+      let rows=ms.map(m=>{
+        const upHi=m.market===bU,loHi=m.market===bL;
+        return '<div class="rec"><span class="rt"><b>'+m.market+'</b>'+
+          '<div style="font-size:.8rem;color:var(--ink-soft);margin-top:2px">'+
+          '<span'+(upHi?' style="color:var(--harv);font-weight:700"':'')+'>上 '+m.upper+(upHi?' ⭐':'')+'</span>　'+
+          '中 '+m.middle+'　'+
+          '<span'+(loHi?' style="color:var(--harv);font-weight:700"':'')+'>下 '+m.lower+(loHi?' ⭐':'')+'</span>　'+
+          '均 '+m.avg+'　·　量 '+m.totalQty.toLocaleString()+' kg</div></span></div>';
+      }).join("");
+      res.innerHTML='<div class="res" style="margin-top:12px"><h4>📊 '+d.crop+'　各市場行情（元/kg）</h4>'+
+        '<div class="info" style="margin:0 0 10px">🔼 <b>上貨</b>送 <b>'+bU+'</b>（上價最高）　🔽 <b>下貨</b>送 <b>'+bL+'</b>（下價最高）</div>'+
+        rows+'<div class="foot" style="text-align:left">依 '+fmtD(start)+' ~ '+fmtD(end)+' 交易量加權平均。⭐ 為該價位最高市場。資料來源：農業部 AMIS。</div></div>';
+    }catch(e){
+      res.innerHTML='<div class="info" style="margin-top:12px;color:var(--warn)">抓取失敗：'+e.message+'<br><br>此功能需<b>部署到 Netlify</b>（含 /.netlify/functions/amis 代理）才能即時抓取。本機以 file:// 或純靜態開啟時無法連上。</div>';
+    }
   };
   v.querySelector("#rb-go").onclick=()=>{
     const plots=load();let csv="日期,田區,作物,類型,防治對象,藥劑/資材,稀釋倍數/用量,安全採收期,備註\n";let n=0;
