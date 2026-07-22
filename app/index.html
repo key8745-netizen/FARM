@@ -952,7 +952,12 @@ renderDash();
 setInterval(autoSyncTick,15000);
 window.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")autoSyncTick();});
 
-if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));}
+if("serviceWorker" in navigator){
+  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
+  // 新版 SW 接管時自動重新整理一次（讓更新即時生效），並防重載迴圈
+  let _reloaded=false;
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{if(_reloaded)return;_reloaded=true;location.reload();});
+}
 </script>
 
 </body>
