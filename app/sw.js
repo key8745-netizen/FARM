@@ -1,5 +1,5 @@
 // 農務小幫手 Service Worker — 離線快取（網路優先，確保更新即時生效）
-const CACHE = "farm-assistant-v2";
+const CACHE = "farm-assistant-v3";
 const ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./icon.svg"];
 
 self.addEventListener("install", e => {
