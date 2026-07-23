@@ -414,6 +414,7 @@ const WX_LAT=23.40,WX_LON=120.85; // 信義鄉中心座標
 const WMO_EMOJI={0:'☀️',1:'🌤',2:'⛅',3:'☁️',45:'🌫',48:'🌫',51:'🌦',53:'🌦',55:'🌧',61:'🌦',63:'🌧',65:'🌧',80:'🌦',81:'🌧',82:'⛈',95:'⛈',96:'⛈',99:'⛈',71:'❄️',73:'❄️',75:'❄️',77:'❄️'};
 const WMO_TXT={0:'晴',1:'多雲',2:'局部多雲',3:'陰',45:'霧',48:'霧',51:'毛毛雨',53:'小雨',55:'中雨',61:'小雨',63:'中雨',65:'大雨',80:'陣雨',81:'雷陣雨',82:'暴雨',95:'雷雨',96:'雷雨',99:'大雷雨',71:'小雪',73:'中雪',75:'大雪',77:'冰晶'};
 let _wxCache=null,_wxAt=0;
+let _dailyData=null; // 快取 daily.js 回應，供 AI 診斷病害交叉對照
 async function fetchWeather(){
   if(_wxCache&&Date.now()-_wxAt<1800000)return _wxCache;
   const url='https://api.open-meteo.com/v1/forecast?latitude='+WX_LAT+'&longitude='+WX_LON+
@@ -502,6 +503,7 @@ function loadWx(container){
       });
       if(resp.ok){
         const data=await resp.json();
+        _dailyData=data;
         dr.innerHTML=renderDecisions(data.decisions,data.weather)+
           renderDailyTasks(data.tasks)+
           renderDiseaseRisk(data.risks,data.weather);
@@ -966,25 +968,33 @@ function aiModal(){
     if(!imgs.length&&!obs&&!data.giveEC){res.innerHTML='<div class="info" style="color:var(--warn)">請至少提供照片、觀察或數據其中之一。</div>';return;}
     res.innerHTML='<div class="info" style="margin-top:10px">AI 診斷中…（含照片可能需 10–40 秒）</div>';
     try{
+      // 從快取的 daily.js 回應組出病害風險摘要，讓 AI 可以交叉對照
+      const _dc=(_dailyData?.risks||[]).slice(0,4).map(x=>x.name+'('+x.score+'分)').join('、');
       const rp=await fetch("/.netlify/functions/diagnose",{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({crop:r.crop,stage:st,ageDays:Math.max(age,0),plot:r.plot,data:data,observation:obs,recentTrend:ecs,images:imgs})});
+        body:JSON.stringify({crop:r.crop,stage:st,ageDays:Math.max(age,0),plot:r.plot,data:data,observation:obs,recentTrend:ecs,images:imgs,diseaseContext:_dc||null})});
       const d=await rp.json();
       if(!d.ok){res.innerHTML='<div class="info" style="color:var(--warn);margin-top:10px">'+(d.error||"診斷失敗")+'<br><br>此功能需部署到 Netlify 並設定 ANTHROPIC_API_KEY 才能使用。</div>';return;}
       const g=d.diagnosis;
       if(!g){res.innerHTML='<div class="res" style="margin-top:10px"><h4>AI 回覆</h4><div style="white-space:pre-wrap;font-size:.88rem">'+(d.raw||"").replace(/</g,"&lt;")+'</div></div>';return;}
       const acts=[];if(g.處置){["灌溉","施肥","用藥","其他"].forEach(k=>{if(g.處置[k]&&!/維持|暫不|無/.test(g.處置[k]))acts.push(k+"："+g.處置[k]);});}
-      res.innerHTML='<div class="res" style="margin-top:10px"><h4>🤖 診斷（信心：'+(g.信心||"?")+'）</h4>'+
+      res.innerHTML='<div class="res" style="margin-top:10px"><h4>🤖 AI 診斷（信心：'+(g.信心||"?")+'）</h4>'+
         '<div class="info" style="margin:0 0 8px"><b>'+(g.狀態||"")+'</b></div>'+
-        (g.問題&&g.問題.length?'<div style="font-size:.86rem;margin-bottom:6px"><b>問題：</b><br>'+g.問題.map(x=>"· "+x).join("<br>")+'</div>':'')+
-        '<div style="font-size:.86rem;margin-bottom:6px"><b>立即處置：</b><br>'+["灌溉","施肥","用藥","其他"].map(k=>g.處置&&g.處置[k]?"· <b>"+k+"</b>："+g.處置[k]:"").filter(Boolean).join("<br>")+'</div>'+
-        (g.資料缺口&&g.資料缺口.length?'<div style="font-size:.8rem;color:var(--ink-soft)">補充資料：'+g.資料缺口.join("、")+'</div>':'')+
-        (g.追蹤?'<div style="font-size:.8rem;color:var(--ink-soft);margin-top:4px">追蹤：'+g.追蹤+'</div>':'')+
+        (g.今日優先&&g.今日優先.length?'<div style="font-size:.86rem;margin-bottom:8px;padding:8px 10px;background:var(--warn-bg);border-radius:8px;color:var(--warn)"><b>⚡ 今日優先行動：</b><br>'+g.今日優先.map((x,i)=>'<b>'+(i+1)+'.</b> '+x).join("<br>")+'</div>':'')+
+        (g.問題&&g.問題.length?'<div style="font-size:.86rem;margin-bottom:6px"><b>發現問題：</b><br>'+g.問題.map(x=>"· "+x).join("<br>")+'</div>':'')+
+        (g.病害風險?'<div style="font-size:.82rem;color:var(--blue);margin-bottom:6px;padding:6px 8px;background:var(--card2);border-radius:6px">🦠 '+g.病害風險+'</div>':'')+
+        '<div style="font-size:.86rem;margin-bottom:6px"><b>處置建議：</b><br>'+["灌溉","施肥","用藥","其他"].map(k=>g.處置&&g.處置[k]?"· <b>"+k+"</b>："+g.處置[k]:"").filter(Boolean).join("<br>")+'</div>'+
+        (g.採收建議?'<div style="font-size:.82rem;color:var(--harv);margin-bottom:6px;padding:6px 8px;background:var(--harv-bg);border-radius:6px">🧺 '+g.採收建議+'</div>':'')+
+        (g.資料缺口&&g.資料缺口.length?'<div style="font-size:.8rem;color:var(--ink-soft);margin-bottom:4px">補充資料：'+g.資料缺口.join("、")+'</div>':'')+
+        (g.追蹤?'<div style="font-size:.8rem;color:var(--ink-soft)">追蹤：'+g.追蹤+'</div>':'')+
         '<div class="foot" style="text-align:left">AI 判斷僅供參考，用藥前務必查植保系統登記藥並守安全採收期。</div>'+
         '<button class="btn" id="ai-apply" style="margin-top:6px">套用為今日動態調整並存紀錄</button></div>';
       const ap=document.getElementById("ai-apply");if(ap)ap.onclick=()=>{
-        const cur=getDyn(CUR);acts.forEach(a=>cur.push("🤖 "+a));setDyn(CUR,cur);
+        const cur=getDyn(CUR);
+        if(g.今日優先&&g.今日優先.length){g.今日優先.forEach(a=>cur.push("⚡ "+a));}
+        else{acts.forEach(a=>cur.push("🤖 "+a));}
+        setDyn(CUR,cur);
         const p=load();p[CUR].records=p[CUR].records||[];
-        p[CUR].records.push({type:"obs",date:fmtD(today()),note:"AI診斷："+(g.狀態||"")+(acts.length?"｜處置："+acts.join("；"):"")});
+        p[CUR].records.push({type:"obs",date:fmtD(today()),note:"AI診斷："+(g.狀態||"")+(g.今日優先?.length?"｜優先："+g.今日優先.join("；"):acts.length?"｜處置："+acts.join("；"):"")});
         save(p);mr.innerHTML="";renderPlots();
       };
     }catch(e){res.innerHTML='<div class="info" style="color:var(--warn);margin-top:10px">連線失敗：'+e.message+'<br>需部署到 Netlify 才能使用。</div>';}
