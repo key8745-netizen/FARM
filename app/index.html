@@ -647,6 +647,20 @@ function renderPlots(){
       '<div class="chart-ph"><span class="chart-ph-lbl">pH</span>'+phRow+'</div></div>';
   }
 
+  let harvHist=(r.records||[]).filter(x=>x.type==="harv"&&(+x.qty||0)>0).slice(-10);
+  let harvChart="";
+  if(harvHist.length>=2){
+    const maxQ=Math.max(...harvHist.map(x=>+x.qty||0));
+    const hbars=harvHist.map(x=>{
+      const qty=+x.qty||0;const h=Math.min(100,Math.round(qty/maxQ*100));
+      const col=x.g2||x.g3?'var(--harv)':'var(--accent)';
+      return '<div class="bar" style="height:'+h+'%;background:'+col+'"><b>'+qty+'</b><span>'+md(parseD(x.date))+'</span></div>';
+    }).join('');
+    const htotal=Math.round(harvHist.reduce((a,x)=>a+(+x.qty||0),0)*10)/10;
+    harvChart='<div class="res"><h4>採收量趨勢（近 '+harvHist.length+' 筆，共 '+htotal+' kg）</h4>'+
+      '<div class="chart">'+hbars+'</div></div>';
+  }
+
   v.innerHTML='<button class="back" id="bk">‹ 返回</button>'+
     '<div class="card"><div class="card-top"><h3>'+r.plot+'　<span class="crop">'+r.crop+'</span></h3><span class="stage '+cls+'">'+st+'</span></div>'+
     '<div class="sub">定植 '+r.date+'　·　'+(r.plants||"?")+' 株　·　'+c.科+'</div>'+
@@ -668,6 +682,7 @@ function renderPlots(){
       '<button data-log="ipm"><span class="qi">🪤</span>黏板巡查</button>'+
       '<button data-log="ai" style="grid-column:1/-1;background:var(--accent);color:#fff;border:none"><span class="qi">📸</span>每日拍照 + AI 診斷</button></div></div>'+
     ecChart+
+    harvChart+
     '<div class="card"><h3 style="margin:0 0 6px;font-size:1rem">紀錄歷史 <span style="color:var(--ink-soft);font-weight:400;font-size:.8rem">('+((r.records||[]).length)+' 筆)</span></h3>'+(recs||'<div class="empty" style="padding:16px">尚無紀錄，用上方按鈕登錄。</div>')+'</div>'+
     '<button class="btn sec" id="delp">刪除此田區</button>';
   v.querySelector("#bk").onclick=()=>{CUR=null;renderPlots();};
@@ -792,6 +807,17 @@ function aiModal(){
     '<button class="btn sec" id="ai-x">關閉</button></div></div>';
   document.getElementById("ai-x").onclick=()=>mr.innerHTML="";
   document.getElementById("mbg").onclick=e=>{if(e.target.id==="mbg")mr.innerHTML="";};
+  // 自動帶入今日高低溫
+  (async()=>{
+    try{
+      const wx=await fetchWeather();const d=wx.daily||{};
+      const hi=d.temperature_2m_max?Math.round(d.temperature_2m_max[0]):null;
+      const lo=d.temperature_2m_min?Math.round(d.temperature_2m_min[0]):null;
+      const th=document.getElementById('ai-th');const tl=document.getElementById('ai-tl');
+      if(th&&hi!=null&&!th.value)th.value=hi;
+      if(tl&&lo!=null&&!tl.value)tl.value=lo;
+    }catch(e){}
+  })();
   const thumbs=document.getElementById("ai-thumbs");
   document.getElementById("ai-file").onchange=async function(){
     for(const f of Array.from(this.files).slice(0,5-imgs.length)){
