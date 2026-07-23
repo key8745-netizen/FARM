@@ -115,6 +115,28 @@ button{font-family:inherit;cursor:pointer;border:none;border-radius:12px;font-we
 .diag-q:active{background:var(--card2);}
 .diag-a{background:var(--warn-bg);border-radius:11px;padding:12px 14px;margin:-4px 0 9px;font-size:.9rem;}
 .diag-a b{color:var(--warn);}
+/* 診斷頁升級 */
+.diag-risk-card{background:var(--warn-bg);border:1.5px solid var(--warn);border-radius:13px;padding:12px 15px;margin-bottom:14px;}
+.diag-risk-hd{font-size:.88rem;font-weight:800;color:var(--warn);margin-bottom:7px;}
+.diag-risk-item{font-size:.8rem;color:var(--ink);line-height:1.6;padding:3px 0;display:flex;gap:6px;}
+.diag-risk-item::before{content:"⚠️";flex:none;}
+.diag-safe-card{background:var(--harv-bg);border:1.5px solid var(--harv);border-radius:13px;padding:10px 14px;margin-bottom:14px;font-size:.85rem;color:var(--harv);font-weight:700;display:flex;align-items:center;gap:8px;}
+.diag-part-hd{background:var(--card);border:1.5px solid var(--line);border-radius:11px;padding:12px 15px;margin-bottom:6px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:1rem;font-weight:700;}
+.diag-part-hd.open{border-color:var(--accent);border-bottom-left-radius:0;border-bottom-right-radius:0;margin-bottom:0;}
+.diag-part-body{border:1.5px solid var(--accent);border-top:none;border-bottom-left-radius:11px;border-bottom-right-radius:11px;margin-bottom:10px;display:none;}
+.diag-part-body.open{display:block;}
+.diag-swrap{border-bottom:1px solid var(--line);}
+.diag-swrap:last-child{border-bottom:none;}
+.diag-symptom{padding:11px 14px;cursor:pointer;}
+.diag-symptom:active{background:var(--card2);}
+.diag-symptom-q{font-size:.92rem;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:6px;}
+.diag-hint{font-size:.75rem;color:var(--ink-soft);margin-top:3px;line-height:1.5;}
+.diag-symptom-a{font-size:.82rem;line-height:1.65;padding:11px 14px;background:var(--warn-bg);border-top:1px solid var(--line);display:none;}
+.diag-symptom-a.open{display:block;}
+.diag-symptom-a b{color:var(--warn);display:block;margin-bottom:6px;}
+.diag-cta{background:var(--accent-soft);border:1.5px solid var(--accent);border-radius:14px;padding:14px 15px;text-align:center;margin-top:4px;}
+.diag-cta-t{font-weight:800;font-size:.95rem;color:var(--accent-d);margin-bottom:5px;}
+.diag-cta-s{font-size:.79rem;color:var(--ink-soft);line-height:1.6;}
 .chart{display:flex;align-items:flex-end;gap:4px;height:110px;padding:8px 0 18px;}
 .chart .bar{flex:1;border-radius:5px 5px 0 0;min-height:3px;position:relative;}
 .chart .bar span{position:absolute;bottom:-18px;left:0;right:0;text-align:center;font-size:.6rem;color:var(--ink-soft);}
@@ -277,6 +299,34 @@ const DIAG=[
  {q:"葉片捲曲叢生、畸形、矮化",c:"疑病毒病",a:"拔除病株、防治媒介昆蟲（粉蝨/蚜蟲）；病毒無藥重預防。"},
  {q:"葉背小蟲、黏板誘到白色小蟲",c:"粉蝨/薊馬/蟎",a:"達門檻才查植保系統合法用藥並鎖安全採收期；可用天敵。"},
  {q:"介質偏鹹、植株萎凋生長慢",c:"鹽類累積(EC過高)",a:"減少施肥、澆清水淋洗鹽分、增加有機質。"}
+];
+/* ────── 症狀資料庫（依植株部位分類） ────── */
+const SYMPTOM_DB=[
+ {part:"🍃 葉片",items:[
+  {q:"下位老葉黃化，上位嫩葉仍綠",hint:"從最靠近地面的老葉開始變黃，頂部嫩芽顏色正常",c:"缺氮，或正常老化代謝",a:"▸ 缺氮判斷：同時出現植株矮小、生長緩慢才算真正缺氮。\n\n處置步驟：\n① 滴灌施入硝酸鈣或硫酸銨，提高配方EC 0.3–0.5\n② 一週後觀察新葉顏色，若恢復深綠代表有效\n③ 若只是少數最下位老葉黃落，屬正常代謝可直接摘除"},
+  {q:"葉緣焦枯，像燒焦的邊框",hint:"葉片邊緣從老葉開始出現乾燥焦褐色，焦枯從邊緣向內延伸",c:"缺鉀，結果期高需求量",a:"▸ 結果期植株大量消耗鉀肥，最易出現缺鉀。\n\n處置步驟：\n① 葉面噴施 0.3% 磷酸二氫鉀（即時補充）\n② 根部追施硫酸鉀或硝酸鉀（長期改善）\n③ 嚴重葉片可摘除，不影響採收"},
+  {q:"葉脈間黃化，葉脈本身仍綠（網狀花紋）",hint:"葉片像顏色被抽走，綠色葉脈清晰可見，格格之間全黃",c:"缺鎂（老葉先發）或缺鐵（嫩葉先發）",a:"▸ 缺鎂：老葉葉脈間黃化（從中位葉往下）\n  → 葉面噴施 0.5% 硫酸鎂，根部配方加鎂\n\n▸ 缺鐵：嫩葉/新芽葉脈間黃化\n  → pH 過高（大於 7.0）時鐵被鎖住，先調整 pH 至 6.0–6.8\n  → 葉面補施螯合鐵（EDTA-Fe）"},
+  {q:"葉片上有白色粉末狀物，擦不掉",hint:"葉表面像撒了麵粉一樣，白色粉末主要在上表面，嚴重時葉片捲曲",c:"白粉病（真菌）",a:"▸ 白粉病最愛乾冷且不通風的環境。\n\n處置步驟：\n① 立即增加通風（開側窗、天窗）\n② 查植保系統選用白粉病登記藥（如碳酸氫鉀）\n③ 嚴重葉片先摘除，移出溫室銷毀（勿留在田間）\n④ 噴藥須正反兩面噴透，7 天一次連噴 2–3 次"},
+  {q:"葉片有褐色斑點，外圍有黃暈，雨後更嚴重",hint:"斑點不規則，外圍常有黃色暈圈，濕天或霧大時迅速擴大蔓延",c:"疫病或早疫病（真菌性）",a:"▸ 下雨前後是噴藥黃金期（雨前預防效果最好）。\n\n處置步驟：\n① 查 App 首頁病害風險確認病名\n② 查植保系統選對應登記藥（疫病選保護性殺菌劑）\n③ 雨前 2–4 小時噴完，雨後若被沖掉再補噴\n④ 排除積水，加強通風降低葉面濕度"}
+ ]},
+ {part:"🍅 果實",items:[
+  {q:"果頂（蒂頭對面那端）出現褐色凹陷",hint:"果實底部出現棕褐色或黑色下凹圓形斑塊，像是從內部乾縮，果肉仍硬",c:"缺鈣＋灌溉不均（尻腐病）",a:"▸ 尻腐病是生理障礙，不是病菌，不傳染，但會大量損失。\n\n處置步驟：\n① 病果立即摘除，不要留在植株上消耗養分\n② 根部澆灌硝酸鈣（每 100L 水加 300–500g），每週一次\n③ 葉面補噴 0.3% 氯化鈣\n④ 關鍵：穩定灌溉！忌乾濕交替（乾旱後大量給水 → 鈣吸收受阻）\n⑤ 高溫蒸散大時增加給液頻率"},
+  {q:"果實表面裂開，從蒂頭往下縱裂",hint:"果皮出現一條或多條裂縫，主要在果肩縱向裂開",c:"水分忽乾忽濕，果皮與果肉生長速度不同步",a:"▸ 最常發生在乾旱後突然下大雨或大量給水。\n\n處置步驟：\n① 穩定每日給液量，避免落差超過 30%\n② 已裂果立即採收（可降等出售、自用），留著只會腐爛\n③ 果期改為少量多次給液，避免單次大量灌溉\n④ 日夜溫差過大也是誘因，夜間注意保溫"},
+  {q:"果實出現灰色霉毛或褐色軟爛",hint:"果實表面出現灰白色絨毛狀霉菌，或從果蒂附近開始軟爛，觸感水水的",c:"灰黴病（Botrytis）",a:"▸ 灰黴病最愛低溫高濕，早春和晚秋最常見。\n\n處置步驟：\n① 立即摘除病果裝袋帶出溫室，不可丟在田內\n② 加強通風，使葉面和果面乾燥（濕度低於 85%）\n③ 查植保系統選登記殺菌劑（如腐絕、硫磺水懸劑）\n④ 噴藥時間選早上（讓藥水在白天自然乾燥）"},
+  {q:"果肩（上半部）不轉色，呈黃綠色",hint:"果實下半部紅了/轉色了，但靠近蒂頭的上半部仍是黃綠色，轉色不均勻",c:"缺鉀 或 高溫障礙（高於 32℃）",a:"▸ 先判斷溫度再行動：\n\n① 量測白天溫室溫度——若超過 32℃：加強通風、拉遮光網\n② 同時補充鉀肥（硫酸鉀或硝酸鉀），提高配方鉀濃度\n③ 果期 EC 維持在 2.5–3.5 dS/m\n④ 轉色期果實稍微減少給水，有助均勻著色"}
+ ]},
+ {part:"🌿 莖根整株",items:[
+  {q:"植株突然萎凋，澆水後仍不恢復",hint:"明明澆了水，植株還是軟趴趴、葉片下垂，甚至介質看起來是濕的",c:"根系腐爛（根腐病）/ 鹽害（EC過高）",a:"▸ 立即確認原因：\n\n① 拔出一株觀察根系：\n  根白色有彈性 → 根系正常 → 查 EC（可能鹽害）\n  根變褐色或黑色 → 根腐病\n② 根腐處置：減少給水頻率；查植保選殺菌劑（如普拔克）\n③ EC 過高（大於 4.0）處置：立即改澆清水，不施肥，等 EC 降回 3.0 以下\n④ 嚴重病株拔除，清除介質，預防擴散"},
+  {q:"植株矮化、葉片捲曲、葉形畸形",hint:"新長出的葉片就不正常，葉緣向內捲曲，葉片比正常小，有時呈鞋拔狀",c:"病毒病（TSWV、CMV等）",a:"▸ 病毒病無法治療，重點是預防擴散。\n\n處置步驟：\n① 確認後立即拔除整株（連根帶走，裝袋焚燒或深埋）\n② 穿一次性手套操作，觸碰病株後立即洗手\n③ 消滅傳播媒介：薊馬、蚜蟲、粉蝨（查植保選殺蟲劑）\n④ 修剪工具使用後浸 70% 酒精消毒\n⑤ 增設防蟲網（40–60 mesh），阻隔媒介昆蟲"},
+  {q:"整批植株生長緩慢，老葉偏黃偏薄",hint:"不是某幾株，是整批植株都比預期矮小、葉色淡、長得慢，像是肥力不足",c:"配方 EC 過低 / pH 偏離 / 根系環境不良",a:"▸ 三個可能原因，依序確認：\n\n① 測 EC：若低於 1.5 → 提高配方濃度\n② 測 pH：若低於 5.5 或高於 7.2 → 調整（偏酸加石灰，偏鹼加磷酸）\n③ 觀察排液：每天澆水後有沒有液體從袋底排出（目標 20–30% 排液率）\n  → 若無排液 → 積水 → 根系缺氧 → 增加排水孔或降低給液量"},
+  {q:"莖部出現褐色凹陷斑塊，由下往上蔓延",hint:"莖基部或中段的莖皮出現深褐色、凹陷的病斑，嚴重時莖皮剝離或腐爛",c:"莖腐病 / 灰黴病莖部感染",a:"▸ 莖腐是嚴重病症，需快速處置：\n\n① 立即用刀片削除病斑（切至健康組織），工具用酒精消毒\n② 在切口塗抹殺菌藥（如鋅錳乃浦糊劑）\n③ 降低棚內濕度，增加通風\n④ 若病斑環繞莖一圈，植株無法救，立即拔除"}
+ ]},
+ {part:"🪲 蟲害",items:[
+  {q:"葉背有很多白色小點，葉片摸起來粗糙",hint:"翻開葉背可見密集的細小白點或微小移動的紅/白蟲，葉表面有砂紙質感",c:"葉蟎（紅蜘蛛）",a:"▸ 葉蟎在乾熱低濕環境大爆發，擴散速度極快。\n\n確認方式：\n用手機相機拉近拍葉背，看到小於 1mm 的紅色或黃色小蟲即是。\n\n處置：\n① 開始葉面噴清水可部分抑制（提高濕度）\n② 達門檻（10 隻/葉）：查植保選合法殺蟎劑\n③ 注意安全採收期（殺蟎劑 PHI 通常 7–14 天）\n④ 生物防治：可引入捕食性天敵蟎（智利小植綏蟎）"},
+  {q:"葉片有白色蜿蜒曲線，像隧道或地圖",hint:"白色或米黃色的細長曲線從葉片表層穿過，形狀不規則如迷宮，隧道內可見小黑點（蟲糞）",c:"潛葉蠅（斑潛蠅）",a:"▸ 蒼蠅幼蟲在葉片內挖隧道，嚴重影響光合作用。\n\n處置步驟：\n① 輕微感染（少數葉片）：直接摘除受害葉片帶出溫室\n② 嚴重感染：查植保選登記殺蟲劑\n③ 黃色黏板誘殺成蟲\n④ 做好防蟲網，阻絕成蟲進入"},
+  {q:"嫩葉或花苞有密集小蟲，手摸有黏感",hint:"叢集在生長點、嫩葉背面，肉眼可見的黃色、綠色或黑色小蟲，摸了手上有黏黏的蜜露",c:"蚜蟲",a:"▸ 蚜蟲是病毒病最重要的傳播媒介，發現立即處置。\n\n處置步驟：\n① 少量蚜蟲：直接用布抹除，帶走後洗手\n② 用苦楝油或 0.3% 肥皂水噴葉背（有機農業也可用）\n③ 大量發生：查植保選合法殺蚜劑\n④ 黃色黏板監測族群數量\n⑤ 天敵：出現瓢蟲、草蛉幼蟲時請勿噴藥"},
+  {q:"黏板上有橙紅色或黑色微小細長蟲",hint:"黏板（尤其近花的位置）黏到很多比芝麻還小的橙色或黑色長形蟲，花瓣或嫩葉有銀色光澤痕跡",c:"薊馬（花薊馬/西方花薊馬）",a:"▸ 薊馬傳播病毒（如 TSWV 番茄斑萎病毒），需積極管理。\n\n門檻判斷：\n每張黏板每 3 天 25 隻以上 → 達防治門檻\n\n處置步驟：\n① 換新黏板（每 7–10 天換一次，舊板效果大幅下降）\n② 查植保選薊馬登記藥（注意：薊馬抗藥性強，需輪換不同作用機制藥劑）\n③ 噴藥重點：花器內部與嫩葉背面\n④ 清除溫室周圍雜草，減少蟲源"}
+ ]}
 ];
 /* ────── 新手全程學習指引（從準備到採收） ────── */
 const GROW_GUIDE={
@@ -1226,10 +1276,45 @@ function v(id){const el=document.getElementById(id);return el?el.value.trim():""
 /* ---------- 診斷 ---------- */
 function renderDiag(){
   const v=document.getElementById("view-diag");
-  v.innerHTML='<h2>病蟲害・生理障礙診斷</h2><p class="note">點選你觀察到的徵狀，看可能原因與處置。診斷僅供初判，確診請洽台中區農業改良場。</p>'+
-    DIAG.map((d,i)=>'<div class="diag-q" data-i="'+i+'"><span>'+d.q+'</span><span style="color:var(--ink-soft)">›</span></div><div class="diag-a hidden" id="da-'+i+'"><b>可能原因：'+d.c+'</b><br>處置：'+d.a+'</div>').join("")+
-    '<div class="foot">用藥一律查植保系統合法登記藥並嚴守安全採收期。</div>';
-  v.querySelectorAll(".diag-q").forEach(q=>q.onclick=()=>document.getElementById("da-"+q.dataset.i).classList.toggle("hidden"));
+  // 天氣病害風險卡（若今日已載入天氣）
+  let riskHtml='';
+  const risks=(_dailyData?.risks||[]).filter(r=>(r.score||0)>=30);
+  if(_dailyData&&risks.length){
+    riskHtml='<div class="diag-risk-card"><div class="diag-risk-hd">今日天氣病害風險</div>'+
+      risks.map(r=>'<div class="diag-risk-item"><span><b>'+(r.dis||'')+'</b>'+(r.crop?' ('+r.crop+')':'')+
+        (r.adv?'：'+r.adv.replace(/&/g,'&amp;').replace(/</g,'&lt;'):'')+'</span></div>').join('')+
+      '<p style="font-size:.72rem;color:var(--ink-soft);margin:8px 0 0">依天氣分析，以上病害今日發生條件符合，請提高警覺。</p></div>';
+  }else if(_dailyData){
+    riskHtml='<div class="diag-safe-card">✅ 今日天氣條件下，主要病害風險低，繼續保持良好通風。</div>';
+  }
+  // 症狀分類區
+  const partHtml=SYMPTOM_DB.map((pt,pi)=>{
+    const pid='dp-'+pi;
+    const items=pt.items.map((s,si)=>{
+      const uid='ds-'+pi+'-'+si;
+      const esc=t=>t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      return '<div class="diag-swrap">'+
+        '<div class="diag-symptom" onclick="document.getElementById(\''+uid+'\').classList.toggle(\'open\')">'+
+          '<div class="diag-symptom-q"><span>'+esc(s.q)+'</span><span style="color:var(--ink-soft);flex:none">›</span></div>'+
+          '<div class="diag-hint">'+esc(s.hint)+'</div>'+
+        '</div>'+
+        '<div class="diag-symptom-a" id="'+uid+'"><b>可能原因：'+esc(s.c)+'</b>'+esc(s.a).replace(/\n/g,'<br>')+'</div>'+
+        '</div>';
+    }).join('');
+    return '<div class="diag-part-hd" onclick="var b=document.getElementById(\''+pid+'-b\');b.classList.toggle(\'open\');this.classList.toggle(\'open\')">'+
+      '<span>'+pt.part+'</span><span style="color:var(--ink-soft)">›</span></div>'+
+      '<div class="diag-part-body" id="'+pid+'-b">'+items+'</div>';
+  }).join('');
+  v.innerHTML='<h2>病蟲害・診斷</h2>'+
+    '<p class="note">先看今日天氣風險，再點選你觀察到的徵狀找可能原因與處置方法。</p>'+
+    riskHtml+
+    '<div class="sec-h" style="margin-top:10px"><h3>🔍 依徵狀找問題</h3><span>點選分類展開</span></div>'+
+    partHtml+
+    '<div class="diag-cta">'+
+      '<div class="diag-cta-t">📸 找不到符合的徵狀？</div>'+
+      '<div class="diag-cta-s">到「我的田區」頁面，進入田區後點「📸 拍照 AI 診斷」，讓 AI 幫你分析照片中的病症。<br><br>'+
+      '⚠️ 所有用藥請先查詢農業部「植物保護資訊系統」確認為合法登記藥，並嚴守農藥安全採收期（PHI）。</div>'+
+    '</div>';
 }
 
 /* ---------- 工具：計算 + 規劃 ---------- */
