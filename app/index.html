@@ -606,6 +606,9 @@ function loadWx(container){
         dr.innerHTML=renderDecisions(data.decisions,data.weather)+
           renderDailyTasks(data.tasks)+
           renderDiseaseRisk(data.risks,data.weather);
+        // 採收期田區自動抓 AMIS 行情
+        const harvCrops=plots.filter(rec=>{const[,,age]=stageOf(rec);return age>=0&&age>=CROPS[rec.crop].grow;}).map(rec=>rec.crop);
+        if(harvCrops.length)loadAmisWidget(container,harvCrops);
       }
     }catch(e){/* 離線 / 本機開發時靜默忽略 */}
   })();
@@ -692,6 +695,74 @@ function renderStageGuide(r,c,age){
     '<div class="guide-tip">'+g.tip+'</div></div>';
 }
 
+/* 田區詳情頁：顯示 daily.js 針對本田區的智慧任務 */
+function renderPlotDailyTasks(plotName){
+  const tasks=(_dailyData?.tasks||[]).filter(t=>t.plot===plotName);
+  if(!tasks.length)return'';
+  const urgent=tasks.filter(t=>t.priority==='urgent').length;
+  const hd=urgent
+    ?'📋 今日 AI 行動建議 <span style="font-size:.65rem;color:var(--warn);font-weight:700">⚠ '+urgent+' 項緊急</span>'
+    :'📋 今日 AI 行動建議';
+  const rows=tasks.map(t=>{
+    const badge=t.priority==='urgent'
+      ?'<span class="daily-badge urgent">緊急</span>'
+      :'<span class="daily-badge today">今日</span>';
+    const detail=t.detail
+      ?'<div class="daily-detail">'+t.detail.replace(/\n/g,'<br>')+'</div>':'';
+    return'<div class="daily-row">'+
+      '<div class="daily-icon">'+t.icon+'</div>'+
+      '<div class="daily-body">'+
+        '<div class="daily-task '+t.priority+'">'+t.task+'</div>'+detail+
+      '</div>'+badge+'</div>';
+  }).join('');
+  return'<div class="daily-card"><div class="daily-hd">'+hd+'</div>'+rows+'</div>';
+}
+
+/* AMIS 行情迷你小工具（儀表板用，每天只抓一次） */
+let _amisWidgetCache={date:null,data:null};
+function renderAmisWidget(results){
+  if(!results||!results.length)return'';
+  const rows=results.map(item=>{
+    const ms=item.markets;if(!ms||!ms.length)return'';
+    const bU=ms.reduce((a,b)=>b.upper>a.upper?b:a);
+    const bL=ms.reduce((a,b)=>b.lower>a.lower?b:a);
+    return'<div class="dec-row">'+
+      '<span class="dec-cat ok" style="width:3em;font-size:.73rem">'+item.appCrop+'</span>'+
+      '<span class="dec-msg">上貨→ <b>'+bU.market+'</b> <b style="color:var(--harv)">'+bU.upper+'</b> 元/kg　'+
+      '下貨→ <b>'+bL.market+'</b> <b style="color:var(--grow)">'+bL.lower+'</b> 元/kg</span></div>';
+  }).join('');
+  if(!rows.trim())return'';
+  return'<div class="dec-card">'+
+    '<div class="dec-hd">🏷️ 今日市場行情快報（AMIS 近7天）'+
+    '<button onclick="go(\'tools\')" style="border:none;background:var(--accent-soft);color:var(--accent);font-size:.65rem;font-weight:700;padding:2px 9px;border-radius:20px;cursor:pointer;margin-left:auto">→ 完整比價</button></div>'+
+    rows+
+    '<div style="font-size:.62rem;color:var(--done);margin-top:4px">交易量加權平均價。上貨送上價最高市場，下貨送下價最高市場。</div></div>';
+}
+async function loadAmisWidget(container,harvestingCrops){
+  const el=container.querySelector('#amis-widget');if(!el||!harvestingCrops.length)return;
+  const dateKey=fmtD(today());
+  if(_amisWidgetCache.date===dateKey&&_amisWidgetCache.data){
+    el.innerHTML=renderAmisWidget(_amisWidgetCache.data);return;
+  }
+  const uniqueApp=[...new Set(harvestingCrops)];
+  const results=[];
+  for(const appCrop of uniqueApp){
+    const crop=AMIS_NAME[appCrop]||appCrop;
+    try{
+      const end=today();const start=addD(end,-6);
+      const r=await fetch('/.netlify/functions/amis',{method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({crop,start:fmtD(start),end:fmtD(end)})});
+      if(!r.ok)continue;
+      const d=await r.json();
+      if(d.markets&&d.markets.length)results.push({appCrop,markets:d.markets});
+    }catch(e){continue;}
+  }
+  if(!results.length)return;
+  _amisWidgetCache={date:dateKey,data:results};
+  el.innerHTML=renderAmisWidget(results);
+}
+
 /* ---------- 總覽 ---------- */
 function renderDash(){
   const plots=load();const v=document.getElementById("view-dash");const tdy=today();
@@ -728,7 +799,8 @@ function renderDash(){
     '<div class="kpi"><b>'+taskCount+'</b><small>今日任務</small></div>'+
     '<div class="kpi"><b>'+harvSoon+'</b><small>近採收</small></div>'+
     '<div class="kpi '+(phiWarn?'warn':'')+'"><b>'+phiWarn+'</b><small>用藥管制</small></div>'+
-    '<div class="kpi '+(ipmAlert?'warn':'')+'"><b>'+ipmAlert+'</b><small>黏板超標</small></div></div>';
+    '<div class="kpi '+(ipmAlert?'warn':'')+'"><b>'+ipmAlert+'</b><small>黏板超標</small></div></div>'+
+    '<div id="amis-widget"></div>';
 
   // 生育進度卡
   let cards="";
@@ -948,6 +1020,7 @@ function renderPlots(){
     ((()=>{const costs=(r.records||[]).filter(x=>x.type==='cost'&&x.amount);if(!costs.length)return'';const tot=costs.reduce((a,x)=>a+(+x.amount||0),0);return '<span class="pill" style="background:var(--grow-bg);color:var(--grow)">💰 累計成本 NT$'+Math.round(tot).toLocaleString()+'</span>';})())+
     ipmWarn+'</div>'+
     renderStageGuide(r,c,age)+
+    renderPlotDailyTasks(r.plot)+
     dynHtml+
     (tasks?'<div class="card"><h3 style="margin:0 0 4px;font-size:1rem">今日待辦</h3>'+tasks+soon+'</div>':'')+
     '<div class="card"><h3 style="margin:0 0 8px;font-size:1rem">快速登錄紀錄</h3><div class="qlog">'+
