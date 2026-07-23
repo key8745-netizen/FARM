@@ -490,6 +490,7 @@ function checkinModal(){
   let symp='<option>無</option>'+DIAG.map(d=>'<option>'+d.q+'</option>').join("");
   mr.innerHTML='<div class="modal-bg" id="mbg"><div class="modal"><h3>📝 今日回報</h3>'+
     '<p class="note">回答現況，系統立即判斷要不要給肥/給水/給藥並調整今日待辦。</p>'+
+    '<div id="wx-sum"></div>'+
     '<label class="f">哪個田區？</label><select class="t" id="k-plot">'+opts+'</select>'+
     '<label class="f">植株狀態（觀察到的徵狀）</label><select class="t" id="k-symp">'+symp+'</select>'+
     '<div class="row2"><div><label class="f">介質 EC (dS/m)</label><input class="t" id="k-ec" type="number" step="0.1" placeholder="如 2.5"></div>'+
@@ -501,6 +502,34 @@ function checkinModal(){
     '<div id="k-res"></div></div></div>';
   document.getElementById("k-cancel").onclick=()=>mr.innerHTML="";
   document.getElementById("mbg").onclick=e=>{if(e.target.id==="mbg")mr.innerHTML="";};
+  // 自動帶入今日天氣
+  (async()=>{
+    try{
+      const wx=await fetchWeather();const d=wx.daily||{};
+      const code=d.weathercode?d.weathercode[0]:0;
+      const hi=d.temperature_2m_max?Math.round(d.temperature_2m_max[0]):'?';
+      const lo=d.temperature_2m_min?Math.round(d.temperature_2m_min[0]):'?';
+      const rain0=d.precipitation_probability_max?d.precipitation_probability_max[0]:0;
+      const rain1=d.precipitation_probability_max?d.precipitation_probability_max[1]:0;
+      const ws=document.getElementById('wx-sum');
+      if(ws){
+        const note=rain1>=60?'<div class="info" style="margin-top:4px;background:var(--warn-bg);color:var(--warn)">☔ 明日降雨機率 '+rain1+'%：<b>今日宜完成施藥/施肥</b></div>':'';
+        ws.innerHTML='<div class="info" style="margin-bottom:4px;display:flex;align-items:center;gap:8px">'+
+          '<span style="font-size:1.2rem">'+(WMO_EMOJI[code]||'🌡')+'</span>'+
+          '<span>今日 <b>'+(WMO_TXT[code]||'')+'</b>　高 '+hi+'°C / 低 '+lo+'°C　降雨機率 '+rain0+'%</span></div>'+note;
+      }
+      const wxSel=document.getElementById('k-wx');
+      if(wxSel){
+        const tmin=d.temperature_2m_min?d.temperature_2m_min[0]:20;
+        const tmax=d.temperature_2m_max?d.temperature_2m_max[0]:25;
+        let wxVal='正常';
+        if(tmin<10)wxVal='低溫寒流';
+        else if(rain0>=60||[61,63,65,80,81,82,95,96,99].includes(code))wxVal='豪雨/颱風';
+        else if(tmax>=32)wxVal='高溫乾燥';
+        for(const opt of wxSel.options){if(opt.value===wxVal){opt.selected=true;break;}}
+      }
+    }catch(e){}
+  })();
   document.getElementById("k-go").onclick=()=>{
     const idx=+document.getElementById("k-plot").value;const rec=load()[idx];
     const inp={ec:document.getElementById("k-ec").value,ph:document.getElementById("k-ph").value,
