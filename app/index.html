@@ -243,6 +243,7 @@ nav button.on{color:var(--accent);}
 .guide-how-lbl{font-size:.73rem;font-weight:700;color:var(--accent-d);margin-bottom:5px;}
 .guide-how-item{margin-bottom:5px;}
 .guide-how-q{font-size:.8rem;font-weight:700;cursor:pointer;color:var(--accent);display:flex;align-items:center;gap:5px;padding:4px 6px;border-radius:7px;background:var(--accent-soft);}
+.guide-how-q::before{content:"▸ ";flex:none;}.guide-how-q.open::before{content:"▾ ";}
 .guide-how-q:active{opacity:.8;}
 .guide-how-a{font-size:.77rem;color:var(--ink);line-height:1.65;padding:7px 9px;background:var(--card2);border-radius:7px;margin-top:4px;white-space:pre-line;display:none;}
 .guide-how-a.open{display:block;}
@@ -730,7 +731,7 @@ function renderStageGuide(r,c,age){
   const howHtml=g.howTo.map((h,i)=>{
     const uid='gh-'+CUR+'-'+i;
     return'<div class="guide-how-item">'+
-      '<div class="guide-how-q" onclick="var a=document.getElementById(\''+uid+'\');a.classList.toggle(\'open\');this.textContent=(a.classList.contains(\'open\'))?\'▾ '+h.q.replace(/'/g,"&#39;"):\'▸ '+h.q.replace(/'/g,"&#39;")+'\'">▸ '+h.q+'</div>'+
+      '<div class="guide-how-q" onclick="var a=document.getElementById(\''+uid+'\');a.classList.toggle(\'open\');this.classList.toggle(\'open\')">'+h.q+'</div>'+
       '<div class="guide-how-a" id="'+uid+'">'+h.a.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>')+'</div></div>';
   }).join('');
   return'<div class="guide-card">'+
