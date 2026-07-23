@@ -253,6 +253,20 @@ nav button.on{color:var(--accent);}
 .guide-how-a{font-size:.77rem;color:var(--ink);line-height:1.65;padding:7px 9px;background:var(--card2);border-radius:7px;margin-top:4px;white-space:pre-line;display:none;}
 .guide-how-a.open{display:block;}
 .guide-tip{font-size:.76rem;background:var(--accent-soft);border-radius:8px;padding:7px 10px;color:var(--accent-d);margin-top:8px;line-height:1.5;position:relative;}
+/* 本週重點卡片 */
+.week-plan-card{background:var(--card);border:1.5px solid var(--blue);border-radius:14px;padding:13px 15px;margin-bottom:12px;}
+.wpc-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
+.wpc-hd>span:first-child{font-weight:800;font-size:.95rem;color:var(--blue);}
+.wpc-badge{font-size:.65rem;font-weight:700;background:var(--blue);color:#fff;padding:2px 9px;border-radius:20px;}
+.wpc-stage{font-size:.78rem;color:var(--ink-soft);margin-bottom:9px;padding-bottom:7px;border-bottom:1px solid var(--line);}
+.wpc-list{margin:0;padding:0;list-style:none;}
+.wpc-list li{display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--line);font-size:.83rem;line-height:1.5;align-items:flex-start;}
+.wpc-list li:last-child{border-bottom:none;}
+.wpc-num{min-width:20px;height:20px;background:var(--blue);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:800;flex:none;margin-top:.15em;}
+.wpc-watch{background:var(--warn-bg);border-radius:9px;padding:8px 11px;margin-top:9px;}
+.wpc-watch-hd{font-size:.76rem;font-weight:800;color:var(--warn);margin-bottom:5px;}
+.wpc-watch ul{margin:0;padding:0 0 0 14px;}
+.wpc-watch li{font-size:.78rem;color:var(--ink);line-height:1.55;padding:2px 0;}
 /* 新手入門清單 */
 .onboard-card{background:var(--card);border:1.5px solid var(--accent);border-radius:16px;padding:15px;margin-bottom:14px;}
 .onboard-hd{font-size:1.05rem;font-weight:800;color:var(--accent);margin-bottom:4px;display:flex;align-items:center;gap:8px;}
@@ -753,6 +767,92 @@ function renderStageGuide(r,c,age){
     '<div class="guide-tip">'+g.tip+'</div></div>';
 }
 
+/* 本週重點卡 — 依生長天數給本週具體行動清單 */
+function renderWeekPlan(r,c,age){
+  if(age<0)return'';
+  const weekNum=Math.floor(age/7)+1;
+  const totalWeeks=Math.ceil((c.grow+c.dur)/7);
+  const key=stageGuideKey(c,age);
+  const[,ecTarget]=ecStage(c,age);
+  let doItems=[],watchItems=[];
+  if(key==='苗期'){
+    doItems=[
+      '每天清晨量 EC/pH，目標 EC '+ecTarget+' dS/m（苗期低肥，根系才在適應）',
+      age<=7?'輕拉每株基部：有阻力＝根系活著。死苗 7 天內補植，超過更難整齊':'觀察新葉是否正常展開（葉色嫩綠、葉形正常＝適應良好）',
+      '保持夜溫 15°C 以上（低於 15°C 易落花、發育緩慢）',
+      '遮光 30–40%，減少強日曬蒸散，讓植株慢慢站穩',
+    ];
+    watchItems=[
+      '葉緣焦枯（從老葉開始）→ EC 偏高，立刻澆清水淋洗降鹽',
+      '植株澆水後仍萎軟不恢復 → 疑根腐，拔一株查根色（褐色=壞死）',
+    ];
+  }else if(key==='生長期'){
+    const early=age<c.grow*0.3;
+    doItems=early?[
+      '確認每株都有誘引繩往上伸展，主枝保持垂直不彎折',
+      '打掉所有側芽（叉芽）：葉腋長出的小芽，趁 3cm 以下用手摘除',
+      'EC 逐漸提高到 '+ecTarget+' dS/m（每次調整不超過 +0.3）',
+      '每 7 天巡查黏板一次（記錄蟲數到 App）',
+    ]:[
+      '花苞出現前 2 週開始追施鈣肥（硝酸鈣），預防尻腐病',
+      '每週追施一次鉀肥（硝酸鉀或硫酸鉀），防止葉緣焦枯',
+      '觀察第一穗花苞位置，拍照標記，準備人工輔助授粉',
+      'EC 維持 '+ecTarget+' dS/m，不要大幅波動',
+    ];
+    watchItems=early?[
+      '葉片明顯向下捲（湯匙狀）→ EC 過高或高溫，先測 EC 確認再處理',
+      '側芽長超過 5cm 還沒摘 → 養分會分流，果期產量受影響',
+    ]:[
+      '連續陰天 3 天以上 → 加強通風，白粉病/疫病風險上升',
+      '整批植株葉色偏黃且生長停滯 → 測 EC 和 pH 是否偏離目標',
+    ];
+  }else if(key==='花期'){
+    doItems=[
+      '每天上午 9–11 點輕搖花串（人工輔助授粉，提高坐果率）',
+      '每週追施硝酸鈣一次（每 100L 水加 200–300g），預防尻腐病',
+      '保持夜溫 15–22°C（低於 15°C 落花，花粉在 35°C 以上失活）',
+      '灌溉穩定、少量多次，忌驟乾驟濕（果期裂果/尻腐的根源）',
+    ];
+    watchItems=[
+      '大量落花落蕾 → 先確認日夜溫度，再查是否有病毒病（捲葉/畸形）',
+      '果頂出現褐色凹陷（尻腐病）→ 立刻補鈣並穩定灌溉，病果摘除',
+      '花朵畸形或顏色很淡 → 疑病毒，立刻拔除病株、防媒介昆蟲',
+    ];
+  }else if(key==='果期'){
+    doItems=[
+      'EC 提高至 '+ecTarget+' dS/m，適當水逼可提升糖度與轉色均勻度',
+      '持續補施鉀肥，轉色不均勻最常見原因就是缺鉀',
+      '準備採收工具（剪刀、果箱、手套），聯繫收購商確認採收標準',
+      '每天巡視是否有裂果，立即採下降等處理，避免蔓延',
+    ];
+    watchItems=[
+      '大量裂果 → 單次給水量太大；改為少量多次，避免水分劇烈落差',
+      '果肩（靠蒂頭那端）不轉色 → 溫度過高（>32°C）或缺鉀，兩個都確認',
+      '灰黴病（果實長灰霉）→ 摘除病果帶出溫室，加強通風，查植保選藥',
+    ];
+  }else if(key==='採收期'){
+    const hDay=age-c.grow;
+    doItems=[
+      '每天早晨採收 8–9 分熟果（轉色約 80%，觸感微硬、有彈性）',
+      '用剪刀帶短果梗（約 1cm）剪取，避免徒手扭傷植株傷口感染',
+      hDay<=7?'第一次大量採收：記錄每株平均果重，校正後期產量預估':'記錄今日採收：特/優/次 各幾 kg（App → 田區 → 登錄採收）',
+      '採後 2 小時內移入低溫環境（10–12°C），避免田間熱快速後熟',
+    ];
+    watchItems=[
+      '颱風或豪雨預報 → 集中採收，寧可 7 分熟也別讓果在枝上被雨打裂',
+      '採收後期果實空心、皮厚 → 植株老化正常，評估是否繼續或拔除改種',
+    ];
+  }
+  const doHtml=doItems.filter(Boolean).map((t,i)=>'<li><span class="wpc-num">'+(i+1)+'</span>'+t+'</li>').join('');
+  const watchHtml=watchItems.map(t=>'<li>'+t+'</li>').join('');
+  return'<div class="week-plan-card">'+
+    '<div class="wpc-hd"><span>📅 本週重點</span><span class="wpc-badge">第 '+weekNum+' 週 · 共 '+totalWeeks+' 週</span></div>'+
+    '<div class="wpc-stage">'+key+'　目標 EC <b>'+ecTarget+' dS/m</b>　（定植後第 '+age+' 天）</div>'+
+    '<ul class="wpc-list">'+doHtml+'</ul>'+
+    (watchHtml?'<div class="wpc-watch"><div class="wpc-watch-hd">⚠ 本週特別注意</div><ul>'+watchHtml+'</ul></div>':'')+
+    '</div>';
+}
+
 /* 田區詳情頁：顯示 daily.js 針對本田區的智慧任務 */
 function renderPlotDailyTasks(plotName){
   const tasks=(_dailyData?.tasks||[]).filter(t=>t.plot===plotName);
@@ -1134,6 +1234,7 @@ function renderPlots(){
     ((()=>{const costs=(r.records||[]).filter(x=>x.type==='cost'&&x.amount);if(!costs.length)return'';const tot=costs.reduce((a,x)=>a+(+x.amount||0),0);return '<span class="pill" style="background:var(--grow-bg);color:var(--grow)">💰 累計成本 NT$'+Math.round(tot).toLocaleString()+'</span>';})())+
     ipmWarn+'</div>'+
     renderStageGuide(r,c,age)+
+    renderWeekPlan(r,c,age)+
     renderPlotDailyTasks(r.plot)+
     dynHtml+
     (tasks?'<div class="card"><h3 style="margin:0 0 4px;font-size:1rem">今日待辦</h3>'+tasks+soon+'</div>':'')+
