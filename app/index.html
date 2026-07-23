@@ -205,6 +205,36 @@ nav button.on{color:var(--accent);}
 .daily-badge{font-size:.6rem;font-weight:800;padding:2px 7px;border-radius:20px;white-space:nowrap;flex:none;margin-top:3px;}
 .daily-badge.urgent{background:var(--warn-bg);color:var(--warn);}
 .daily-badge.today{background:var(--accent-soft);color:var(--accent);}
+/* 新手學習指引 */
+.guide-card{background:var(--card);border:1.5px solid var(--accent);border-radius:14px;padding:13px 15px;margin-bottom:12px;position:relative;overflow:hidden;}
+.guide-card::before{content:"";position:absolute;inset:0;background:linear-gradient(135deg,var(--accent-soft) 0%,transparent 60%);opacity:.45;pointer-events:none;}
+.guide-hd{display:flex;align-items:center;gap:9px;margin-bottom:8px;position:relative;}
+.guide-icon{font-size:1.4rem;flex:none;}
+.guide-title{font-weight:800;font-size:.93rem;color:var(--accent-d);flex:1;}
+.guide-stage-badge{font-size:.62rem;font-weight:700;background:var(--accent);color:#fff;padding:2px 8px;border-radius:20px;flex:none;}
+.guide-what{font-size:.82rem;color:var(--ink);line-height:1.58;margin-bottom:8px;position:relative;}
+.guide-focus-hd{font-size:.75rem;font-weight:700;color:var(--ink);margin-bottom:4px;position:relative;}
+.guide-focus{margin:0 0 8px;padding:0;list-style:none;position:relative;}
+.guide-focus li{font-size:.78rem;padding:2px 0;color:var(--ink-soft);display:flex;gap:5px;}
+.guide-focus li::before{content:"→";color:var(--accent);flex:none;}
+.guide-howto{border-top:1px solid var(--line);margin-top:9px;padding-top:9px;position:relative;}
+.guide-how-lbl{font-size:.73rem;font-weight:700;color:var(--accent-d);margin-bottom:5px;}
+.guide-how-item{margin-bottom:5px;}
+.guide-how-q{font-size:.8rem;font-weight:700;cursor:pointer;color:var(--accent);display:flex;align-items:center;gap:5px;padding:4px 6px;border-radius:7px;background:var(--accent-soft);}
+.guide-how-q:active{opacity:.8;}
+.guide-how-a{font-size:.77rem;color:var(--ink);line-height:1.65;padding:7px 9px;background:var(--card2);border-radius:7px;margin-top:4px;white-space:pre-line;display:none;}
+.guide-how-a.open{display:block;}
+.guide-tip{font-size:.76rem;background:var(--accent-soft);border-radius:8px;padding:7px 10px;color:var(--accent-d);margin-top:8px;line-height:1.5;position:relative;}
+/* 新手入門清單 */
+.onboard-card{background:var(--card);border:1.5px solid var(--accent);border-radius:16px;padding:15px;margin-bottom:14px;}
+.onboard-hd{font-size:1.05rem;font-weight:800;color:var(--accent);margin-bottom:4px;display:flex;align-items:center;gap:8px;}
+.onboard-sub{font-size:.82rem;color:var(--ink-soft);margin-bottom:12px;line-height:1.5;}
+.onboard-step{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:.83rem;line-height:1.45;}
+.onboard-step:last-child{border-bottom:none;}
+.onboard-num{width:22px;height:22px;background:var(--accent);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:800;flex:none;margin-top:.1em;}
+.onboard-body{flex:1;}
+.onboard-body b{display:block;font-size:.88rem;color:var(--ink);margin-bottom:2px;}
+.onboard-body span{font-size:.75rem;color:var(--ink-soft);}
 </style>
 
 </head>
@@ -248,6 +278,75 @@ const DIAG=[
  {q:"葉背小蟲、黏板誘到白色小蟲",c:"粉蝨/薊馬/蟎",a:"達門檻才查植保系統合法用藥並鎖安全採收期；可用天敵。"},
  {q:"介質偏鹹、植株萎凋生長慢",c:"鹽類累積(EC過高)",a:"減少施肥、澆清水淋洗鹽分、增加有機質。"}
 ];
+/* ────── 新手全程學習指引（從準備到採收） ────── */
+const GROW_GUIDE={
+ "定植前":{
+  icon:"🏗️",title:"定植前準備",badge:"準備中",
+  what:"種苗還未入土。這段時間要把溫室、介質、滴灌全部備齊。準備好才能讓植株一進來就舒適生長。",
+  focus:["溫室薄膜/防蟲網完整，無破口","栽培介質準備好（椰纖:珍珠石 ≈ 1:1）","每株1滴頭，確認出水順暢","誘引鐵線拉好（高約 2m）","EC 計與 pH 計備妥"],
+  howTo:[
+   {q:"介質怎麼準備？",a:"椰纖塊先泡水膨脹，與珍珠石約1:1混合後填入栽培袋（每袋10–15L）。\n袋底剪2–3個小排水孔（直徑約 1cm）。\n填完後先澆水 2–3 次，測排液 EC 應 < 1.0 dS/m；若 EC 偏高代表介質帶鹽，需繼續淋洗至 < 1.0 才能定植。"},
+   {q:"EC計/pH計怎麼買、怎麼用？",a:"▸ 購買：農業資材行或網購，EC計+pH計組合約 NT$500–1500。\n▸ 使用步驟：\n① 插入介質中，或用小杯收集滴灌排液\n② 等數字穩定（約5秒）讀取\n③ 使用後用清水沖洗探針，延長壽命\n▸ 每天早上灌溉前各量一次，記錄到 App →「EC/pH」。"},
+   {q:"滴灌怎麼設置？",a:"主管：選用 16mm PE 管沿栽培袋行鋪設。\n支管：每株插1個流量穩定的滴頭（0.5–2 L/h）。\n定時器：每天清晨自動開2–4次，每次15–30分鐘。\n確認方式：打開水閥，逐株檢查，每個滴頭都有穩定水滴流出才合格。堵塞的拔出後用細針疏通。"}
+  ],
+  tip:"💡 最常見失誤：定植當天才發現設備不齊。建議定植前 3 天完成所有準備，讓介質充分濕潤穩定。"
+ },
+ "苗期":{
+  icon:"🌱",title:"苗期（定植後 0–14 天）",badge:"苗期",
+  what:"種苗剛移入，根系正在從育苗土適應新介質。植株此時最脆弱，需要低濃度養分、穩定水分，以及溫暖的環境。",
+  focus:["定植後3天內巡查活著率（目標 > 95%，死苗補植）","給液 EC 控制在 1.5–2.0（低濃度，根系還小）","夜溫保持 > 15°C（低於15°C落花風險大）","遮光30–40%（避免強日曬蒸散水分）","水分穩定——每天定時灌溉，不可忘澆"],
+  howTo:[
+   {q:"怎麼判斷植株有沒有活？",a:"定植後2天：輕拉植株，有阻力（根系固定）表示在活。\n定植後5天：仍萎縮且不恢復的就是死苗。連根球一起取出，替換備用苗。\n不要等超過 7 天才補植，否則整體株型會參差不齊，影響採光與管理。"},
+   {q:"什麼是 EC/pH，為什麼要量？",a:"▸ EC（電導度）：水溶液中溶解肥料的濃度，單位 dS/m。\n  EC 太高（> 3.5）：像人喝太鹹的水，根系失水，植株萎凋。\n  EC 太低（< 1.5）：植株缺肥，長得慢且黃弱。\n▸ pH（酸鹼度）：影響植株吸收各種礦物質的效率。\n  pH 目標：6.0–6.8（此範圍內大多數養分可被植株利用）\n  pH < 5.5：偏酸，鐵錳過多，磷鉀難吸收\n  pH > 7.2：偏鹼，鐵鋅缺乏，葉片黃化"},
+   {q:"夜溫不夠怎麼保溫？",a:"信義鄉冬季夜溫可降到 5–8°C，番茄/彩椒低於 15°C 易落花落果。\n\n保溫方法（由便宜到昂貴）：\n① 日落前關閉所有側窗與天窗\n② 溫室內增設一層薄膜（內帳式二層保溫）\n③ 加裝電熱循環風機或燃油暖爐\n\n溫度計：在溫室最冷的角落放一個最低溫溫度計，每天早上記錄昨夜最低溫。"}
+  ],
+  tip:"💡 苗期只需記住一件事：讓植株活著、讓根系長深。少肥、穩水、保溫，其他不急。"
+ },
+ "生長期":{
+  icon:"🌿",title:"生長期（定植後 15–35 天）",badge:"生長期",
+  what:"植株快速長高，這階段最重要的工作是「整枝」——把不必要的側芽摘掉，讓所有養分集中在主幹和花果上，而不是白白長一堆葉片。",
+  focus:["每5–7天摘一次側芽（番茄：單幹；彩椒：2–3幹）","每隔2–3片葉子，將莖幹固定到誘引繩","EC 逐漸提高到 2.0–2.5（每次調整 ≤ 0.3）","觀察葉色：正常為深綠；黃化可能缺氮或缺鎂","巡查黏板，記錄粉蝨/薊馬數量"],
+  howTo:[
+   {q:"摘側芽怎麼做（番茄）？",a:"▸ 什麼是側芽：在每片葉子和主莖之間（腋部）長出的小芽。\n▸ 怎麼摘：用手指捏住側芽基部，往旁邊掰掉（不是往下拉，免得傷到主莖）。\n▸ 最佳時機：長度 < 2cm 時摘，傷口小、不易感染。\n▸ 頻率：每5–7天一次，不能等太久，否則側芽長大後摘掉傷口大、易感病。\n▸ 彩椒例外：第一分叉（Y型分叉）以下的側芽摘掉，Y型以上留2–3支。"},
+   {q:"誘引怎麼做？",a:"工具：誘引夾（專用）或用細繩輕綁。\n步驟：\n① 從栽培袋上方拉一條下垂繩（聯到上方鐵線）\n② 每隔2–3片葉子，用誘引夾把莖固定在垂直繩\n③ 植株長到頂後，將繩子向側方釋放延伸（荷蘭式誘引）\n注意：夾子要夾在葉片下方的莖節位置，不要夾傷莖部。"},
+   {q:"EC 偏高怎麼辦（介質積鹽）？",a:"症狀：排液EC 比給液 EC 高出很多（超過1.8倍以上），植株萎縮或葉緣焦褐。\n\n處理步驟：\n① 今日灌溉改為只給清水（不加肥料）\n② 灌水量加倍（讓鹽分隨排液流出）\n③ 次日再量排液EC，若降至正常範圍再恢復施肥\n④ 長期解法：每週一次清水灌溉（淋洗日），防止鹽分累積。"}
+  ],
+  tip:"💡 最常見失誤：忘記摘側芽。結果植株變成一叢灌木，養分分散，果實小且品質差。建議每週固定一天巡整枝。"
+ },
+ "花期":{
+  icon:"🌸",title:"花期（定植後 35–60 天）",badge:"花期",
+  what:"植株開始開花。溫室密閉環境蜜蜂和風少，需要人工協助授粉，才能讓花朵轉化成果實。這是決定「產量有多少」的關鍵期。",
+  focus:["每天 9–11 點人工輔助授粉（或電動授粉棒）","調整配方：增加磷鉀，減少氮（氮過多→長葉不開花）","維持日溫 22–28°C、夜溫 > 15°C","疏花（番茄每串留4–6朵）、疏果（坐果後摘除多餘小果）","持續補鈣防尻腐病"],
+  howTo:[
+   {q:"授粉怎麼做？",a:"▸ 工具：電動授粉棒（約 NT$200–500）或使用牙刷（輕柔款）。\n▸ 時間：每天 9–11 點（氣溫回升後花粉最活躍）。\n▸ 方法：將授粉棒輕觸花朵中央的雄蕊柱，震動1–2秒讓花粉飛出。聽到嗡嗡聲代表在振動。\n▸ 判斷成功：授粉成功的花，2–3天後花萼下方開始鼓起（小果形成）；未授粉的花會整朵掉落。\n▸ 頻率：每天一次，連續5–7天，直到花序上所有花都開完。"},
+   {q:"疏花疏果怎麼做？",a:"▸ 番茄：每串花留4–6朵，多的摘掉。果實長到比大豆稍大時疏果，每串留4–5顆。\n▸ 彩椒：每株同時在枝上的果留4–6顆，多的抹果（幼果期摘掉）。\n▸ 為什麼要疏：果實越少，每顆分到的養分越多，長得越大、越整齊、品相越好，賣價越高。\n▸ 摘掉的小果可做堆肥。"},
+   {q:"落花是什麼原因？",a:"落花代表花朵未成功授粉或環境不適：\n① 夜溫 < 15°C → 加強保溫\n② 日溫 > 35°C → 遮陰網降溫、加強通風\n③ EC 過高（> 4.0）→ 清水淋洗降 EC\n④ 授粉不足 → 每天早上輔助授粉\n⑤ 氮肥過多（植株徒長）→ 停止高氮肥，改用高磷鉀配方\n\n找出哪個原因最可能，對症下藥。"}
+  ],
+  tip:"💡 花期最重要的是「人工授粉」和「切換配方到高磷鉀」。氮肥過多是新手最常見的開花少原因，要特別注意。"
+ },
+ "果期":{
+  icon:"🍅",title:"果期（坐果後至採收前）",badge:"果期",
+  what:"果實快速膨大，積累糖分與色素，準備轉色採收。這段時間水分穩定最關鍵——忽乾忽濕是裂果的頭號殺手。",
+  focus:["水分供應穩定（每天定時定量，是防裂果的唯一方法）","高鉀配方（促轉色與甜度）","補鈣防尻腐病（果頂褐斑凹陷）","觀察果實顏色：番茄果肩轉橘即可採收；彩椒等到目標色"],
+  howTo:[
+   {q:"裂果怎麼預防？",a:"裂果 = 果皮生長速度跟不上果肉膨脹速度。根本原因：水分忽多忽少。\n\n預防方法：\n① 每天定時灌溉（最好用定時器），寧願少量多次\n② 介質含水量維持在60–70%（捏一把不滴水，但有明顯濕感）\n③ 採收前2天適當減少給水量，讓果皮稍微「緊縮」\n④ 保持穩定的EC（不要突然施大量肥料）\n⑤ 及時採收，不讓果實過熟留在植株上"},
+   {q:"尻腐病（果頂褐斑）怎麼辦？",a:"症狀：果實底部（花萼對面，即果頂）出現水浸狀褐色斑，逐漸凹陷變黑腐爛。\n原因：植株缺鈣，或根系因EC過高/水分不穩而無法正常吸收鈣。\n\n處理：\n① 立即摘除患病果（避免病菌蔓延）\n② 葉面噴施螯合鈣（如 Ca-EDTA）液肥，1000倍\n③ 同時澆施硝酸鈣（每株3–5g溶水）\n④ 若 EC > 3.5，先清水淋洗降鹽，讓根系恢復吸收能力\n⑤ 保持灌溉穩定，防止水分大幅波動"},
+   {q:"怎麼判斷番茄/彩椒熟了？",a:"▸ 牛番茄：\n  果肩（果實上方1/3處）開始轉橘紅色時採收（七分熟）。\n  在通路運輸和儲存過程中會繼續後熟，到消費者手中剛好全紅。\n  過熟才採：皮薄易破、運送損耗大、不受盤商歡迎。\n\n▸ 彩椒：\n  紅椒：全果轉為鮮紅色（通常定植後90–120天）\n  黃椒：全果轉為金黃色\n  橘椒：全果轉橘\n  顏色不夠鮮豔：補鉀（富力鉀/硝酸鉀）+ 增加日照時數（減少遮陰網使用）"}
+  ],
+  tip:"💡 果期最常見錯誤：忘記把施肥配方從「氮主導」換成「鉀主導」。鉀才是甜味和轉色的關鍵，果期要佔施肥量的40–50%。"
+ },
+ "採收期":{
+  icon:"🧺",title:"採收期",badge:"採收期",
+  what:"進入持續採收期。番茄/彩椒會分批結果，好的管理讓同一批植株持續產出2–4個月。不要以為到了採收期就輕鬆——植株仍需持續施肥維持結果能力。",
+  focus:["清晨採收（品質最佳，不易曬傷）","採後立刻分級，好貨快送市場","繼續施高鉀肥維持後期結果力","記錄每批採收量（方便計算是否虧本）","查市場行情，找最划算的市場送貨"],
+  howTo:[
+   {q:"採收技巧？",a:"▸ 工具：鋒利的採果剪或剪刀（不要用手撕，避免撕裂傷口引發感染）。\n▸ 最佳時間：清晨 5–8 點（夜間降溫後果實最緊實、含水量最適）。\n▸ 方法：從果梗處剪下，留約1cm果梗。\n▸ 採後處理：放入有遮蔭的採收容器，避免直接曝曬。\n▸ 一批不要一次全摘，留一部分還在轉色的讓它繼續成熟。"},
+   {q:"分級怎麼做？",a:"▸ 番茄分級：\n  特級：外型整齊、無疤痕、顏色均一、單顆 > 150g\n  優級：輕微疤痕或略不整形，整體外觀仍可接受\n  次級：裂果、尻腐修剪後、顏色不均、果型扁塌\n\n▸ 彩椒分級：\n  特/優級：顏色飽滿均勻、表皮光滑無破損、大小整齊\n  次級：顏色不均、輕微刮傷、果型較小\n\n用 App →「採收」→「分級記錄」分別登記，方便對應契作計價。"},
+   {q:"送哪個市場最划算？",a:"點 App 下方「🧮 工具」→「市場行情比價」→ 輸入作物和查詢天數 → 點「抓取市場行情」。\n\n看「上價」：品相好的果（特級）送上價最高的市場。\n看「下價」：次級果送下價最高的市場，減少損失。\n\n各市場每天價格都不同，建議在採收前一天晚上查，隔天決定送哪裡。\n\n長期建議：對固定市場的盤商建立關係，穩定的供貨量和品質可以談到比行情更好的保底價。"}
+  ],
+  tip:"💡 很多新手到了採收期就放鬆施肥，結果採完前幾批後植株衰退、後期產量大跌。採收期每採一次，就要補充一次鉀肥。"
+ }
+};
 const RTYPES={fert:{t:"施肥",c:"fert"},spray:{t:"用藥",c:"spray"},harv:{t:"採收",c:"harv"},ecph:{t:"EC/pH",c:"ecph"},work:{t:"作業",c:"work"},obs:{t:"觀察",c:"obs"},ipm:{t:"黏板",c:"ipm"},cost:{t:"成本",c:"obs"}};
 /* IPM 防治門檻（隻/板/週，參考 IPM 精神：超標才用藥） */
 const IPM_THR={粉蝨:5,薊馬:3,葉蟎:5,蚜蟲:10};
@@ -562,6 +661,37 @@ function renderDiseaseRisk(risks,wx){
     '<div style="font-size:.65rem;color:var(--ink-soft);margin-top:8px">條件推算，非診斷。出現症狀請到【診斷】頁查閱，或洽農業改良場。</div></div>';
 }
 
+/* 依生育天數選出對應的學習指引 */
+function stageGuideKey(c,age){
+  if(age<0)return"定植前";
+  if(age>=c.grow)return"採收期";
+  if(age<=14)return"苗期";
+  if(age<=c.grow*0.5)return"生長期"; // 前半段生長期
+  if(age<=c.grow*0.7)return"花期";   // 開花期
+  return"果期";                        // 後段果實發育
+}
+function renderStageGuide(r,c,age){
+  const key=stageGuideKey(c,age);
+  const g=GROW_GUIDE[key];if(!g)return'';
+  const focusHtml=g.focus?'<div class="guide-focus-hd">現在的重點：</div><ul class="guide-focus">'+g.focus.map(f=>'<li>'+f+'</li>').join('')+'</ul>':'';
+  const howHtml=g.howTo.map((h,i)=>{
+    const uid='gh-'+CUR+'-'+i;
+    return'<div class="guide-how-item">'+
+      '<div class="guide-how-q" onclick="var a=document.getElementById(\''+uid+'\');a.classList.toggle(\'open\');this.textContent=(a.classList.contains(\'open\'))?\'▾ '+h.q.replace(/'/g,"&#39;"):\'▸ '+h.q.replace(/'/g,"&#39;")+'\'">▸ '+h.q+'</div>'+
+      '<div class="guide-how-a" id="'+uid+'">'+h.a.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>')+'</div></div>';
+  }).join('');
+  return'<div class="guide-card">'+
+    '<div class="guide-hd"><span class="guide-icon">'+g.icon+'</span>'+
+    '<span class="guide-title">'+g.title+'</span>'+
+    '<span class="guide-stage-badge">'+g.badge+'</span></div>'+
+    '<div class="guide-what">'+g.what+'</div>'+
+    focusHtml+
+    '<div class="guide-howto">'+
+    '<div class="guide-how-lbl">📖 點開學「怎麼做」</div>'+
+    howHtml+'</div>'+
+    '<div class="guide-tip">'+g.tip+'</div></div>';
+}
+
 /* ---------- 總覽 ---------- */
 function renderDash(){
   const plots=load();const v=document.getElementById("view-dash");const tdy=today();
@@ -572,7 +702,24 @@ function renderDash(){
     const li=(r.records||[]).filter(x=>x.type==="ipm").sort((a,b)=>b.date<a.date?-1:1)[0];
     if(li&&Object.entries({粉蝨:+li.wf,薊馬:+li.th,葉蟎:+li.sm,蚜蟲:+li.ap}).some(([k,v])=>v>=IPM_THR[k]))ipmAlert++;
   });
-  if(!plots.length){v.innerHTML='<div id="wx-widget"></div><div id="wx-alerts" style="display:none;margin-bottom:4px"></div><div id="disease-risk"></div><div class="empty">歡迎使用農務小幫手 👋<br><br>點下方「🌱 田區」新增你的第一個田區，<br>系統就會開始幫你管理每日農務、生育進度與採收。</div>';loadWx(v);return;}
+  if(!plots.length){
+    const onboard='<div class="onboard-card">'+
+      '<div class="onboard-hd">🌱 歡迎！從零開始的農務指引</div>'+
+      '<div class="onboard-sub">完全不懂農業沒關係。這套系統會從「準備」到「採收」一步一步帶你做。先完成下面的準備清單，再新增第一個田區！</div>'+
+      [
+        ["準備溫室空間","薄膜/防蟲網無破口，側窗與天窗可正常開關"],
+        ["備妥栽培介質","椰纖塊 + 珍珠石 1:1 混合（或購買溫室專用介質），填入栽培袋（每袋 10–15 L）"],
+        ["設置滴灌系統","每株 1 個滴頭，連接主管與幫浦；用定時器控制每天灌溉時間"],
+        ["購買量測工具","EC 計 + pH 計（農業資材行或網購約 NT$500–1500）。每天量才知道植株健不健康"],
+        ["準備種苗","向種苗商或農友取得牛番茄/彩椒嫁接苗。嫁接苗根系強、抗病，比自育苗穩定"],
+        ["備好黏板與支架","黃色黏板監測粉蝨/蚜蟲，藍色黏板監測薊馬；提前架好誘引鐵線（高約 2m）"]
+      ].map(([b,s],i)=>'<div class="onboard-step"><span class="onboard-num">'+(i+1)+'</span><div class="onboard-body"><b>'+b+'</b><span>'+s+'</span></div></div>').join('')+
+      '<div style="font-size:.8rem;color:var(--ink-soft);margin-top:11px;padding-top:8px;border-top:1px solid var(--line)">👇 準備好後，點下方「🌱 田區」→「＋ 新增田區」，系統就開始每天引導你了！</div>'+
+      '<div class="guide-tip" style="margin-top:8px">💡 加入田區後，每次開啟 App，「今日行動清單」會根據天氣、生育天數與田區狀態，告訴你今天最重要的3件事，並說明原因和做法。</div>'+
+      '</div>';
+    v.innerHTML='<div id="wx-widget"></div><div id="wx-alerts" style="display:none;margin-bottom:4px"></div><div id="disease-risk"></div>'+onboard;
+    loadWx(v);return;
+  }
   let dynCount=0;plots.forEach((r,i)=>dynCount+=getDyn(i).length);
   let checkinBtn='<button class="btn" id="checkin" style="margin-top:0;margin-bottom:14px">📝 今日回報（EC值/病蟲害/天氣）→ 動態調整</button>'+
     (dynCount?'<div class="info" style="margin-bottom:14px">今日回報已產生 '+dynCount+' 項動態調整，見各田區。<button class="del" id="export" style="margin-left:6px">匯出摘要給顧問</button></div>':'');
@@ -800,6 +947,7 @@ function renderPlots(){
     ((()=>{const g=harvestGrades(r);return (g.g2||g.g3)?'<span class="pill ok" style="background:var(--accent-soft);color:var(--accent)">特'+g.g1+'/優'+g.g2+'/次'+g.g3+' kg</span>':'';})())+
     ((()=>{const costs=(r.records||[]).filter(x=>x.type==='cost'&&x.amount);if(!costs.length)return'';const tot=costs.reduce((a,x)=>a+(+x.amount||0),0);return '<span class="pill" style="background:var(--grow-bg);color:var(--grow)">💰 累計成本 NT$'+Math.round(tot).toLocaleString()+'</span>';})())+
     ipmWarn+'</div>'+
+    renderStageGuide(r,c,age)+
     dynHtml+
     (tasks?'<div class="card"><h3 style="margin:0 0 4px;font-size:1rem">今日待辦</h3>'+tasks+soon+'</div>':'')+
     '<div class="card"><h3 style="margin:0 0 8px;font-size:1rem">快速登錄紀錄</h3><div class="qlog">'+

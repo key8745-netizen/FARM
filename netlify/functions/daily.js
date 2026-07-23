@@ -253,12 +253,15 @@ function generateTasks(plots, today, tomorrow, perPlotRisks) {
   for (const plot of plots) {
     if (plot.isDone) continue;   // 已結束輪作
     if (plot.ageDays < 0) {      // 尚未定植
+      const daysLeft = -plot.ageDays;
       tasks.push({
         priority: 'today',
         icon: '🌱',
         plot: plot.plot,
-        task: `${-plot.ageDays} 天後定植`,
-        detail: '準備介質、消毒容器、確認種苗來源',
+        task: `${daysLeft} 天後定植`,
+        detail: daysLeft <= 3
+          ? '定植前確認清單：① 介質填充完成（椰纖:珍珠石=1:1，排液 EC < 1.0）② 每株滴頭出水順暢 ③ 誘引繩/夾子備妥 ④ 夜溫確認 > 15°C'
+          : '本週工作：備妥栽培介質、裝好滴灌管、確認每株滴頭出水。定植前 1 天先澆水讓介質充分濕潤。',
         reason: '定植前準備'
       });
       continue;
@@ -275,19 +278,20 @@ function generateTasks(plots, today, tomorrow, perPlotRisks) {
         icon: '⚠️',
         plot: plot.plot,
         task: `禁採：用藥安全期至 ${plot.phiEndStr}`,
-        detail: '安全採收期尚未結束，採收將有農藥殘留超標風險，依食安法可開罰',
-        reason: '植保安全採收期'
+        detail: `什麼是安全採收期（PHI）？\n農藥施用後，需要一段時間讓藥劑在果實中分解到安全濃度以下，這段時間就是 PHI（Pre-Harvest Interval）。\n在 ${plot.phiEndStr} 之前採收，可能導致農藥殘留超標，消費者吃了有健康風險，你也可能面臨罰款或取消產銷履歷認證。\n→ 今日繼續其他農事，耐心等待 PHI 結束。`,
+        reason: '植保安全採收期，食安法規強制要求'
       });
     }
 
     // ② 病害高風險 → 考慮預防施藥
     if (hiRisks.length > 0 && !plot.inPHI && (plot.sprayLastDays == null || plot.sprayLastDays > 7)) {
+      const riskLines = hiRisks.map(r => `• ${r.name}（${r.score}分）：${r.sym}\n  → ${r.adv}`).join('\n');
       tasks.push({
         priority: 'urgent',
         icon: '🦠',
         plot: plot.plot,
         task: `病害高風險（${hiRisks.length} 項）— 考慮預防施藥`,
-        detail: hiRisks.map(r => `${r.name} ${r.score}分 → ${r.adv}`).join('\n'),
+        detail: `今日天氣條件有利以下病害發生，建議先巡田確認有無初期症狀，再決定是否施藥：\n${riskLines}\n\n施藥前請記得：① 查植保資訊系統確認登記藥 ② 記錄藥名和安全採收期（PHI）③ 避免正午高溫噴藥。`,
         reason: `最高評分 ${hiRisks[0].score} 分，天氣條件極適病害發生`
       });
     }
@@ -299,20 +303,25 @@ function generateTasks(plots, today, tomorrow, perPlotRisks) {
         icon: '🌧',
         plot: plot.plot,
         task: `明日降雨 ${tmRain}%，把握今日施藥視窗`,
-        detail: '明日雨後藥效消失，今日是噴施農藥或葉面肥最後時機',
-        reason: '雨水稀釋藥效，明日後需重新評估'
+        detail: `為什麼下雨前要施藥？\n雨水會把剛噴的農藥或葉面肥沖洗掉，藥效大幅降低甚至完全消失。明日降雨機率 ${tmRain}%，若有需要施藥，今日（最好上午 9–11 點或傍晚）是本週最後機會。\n\n今日施藥步驟：① 確認藥劑已在植保系統登記 ② 依稀釋倍數配藥 ③ 均勻噴施葉面（正反兩面）④ 登錄藥名、日期、安全採收期到 App →「用藥」。`,
+        reason: '雨水會沖洗藥劑，明日後需重新評估是否補噴'
       });
     }
 
     // ④ EC/pH 已逾 7 天未量
     if (plot.ecLastDays == null || plot.ecLastDays >= 7) {
+      const ecStageHint = plot.stage === '苗期' ? '苗期目標 EC 1.5–2.0'
+        : plot.stage === '生長期' ? '生長期目標 EC 2.0–2.5'
+        : plot.stage === '花期' ? '花期目標 EC 2.5–2.8'
+        : plot.stage === '果期' || plot.stage === '採收期' ? '果期/採收期目標 EC 2.8–3.2'
+        : 'EC 目標請對照系統建議值';
       tasks.push({
         priority: 'today',
         icon: '🌡️',
         plot: plot.plot,
         task: `EC/pH 抄錄${plot.ecLastDays != null ? `（已 ${plot.ecLastDays} 天未測）` : '（尚無紀錄）'}`,
-        detail: `${plot.stage || ''}期目標 EC 請對照系統建議值；pH 維持 6.0–6.8`,
-        reason: 'EC/pH 偏差直接影響根系吸水吸肥效率，每週至少一次'
+        detail: `怎麼量？用 EC 計和 pH 計插入介質中，或收集排液（袋底流出的水）放入小杯測量。\n\n今日 ${plot.crop || ''}（${plot.stage || '生育中'}）：${ecStageHint}，pH 目標 6.0–6.8。\n\nEC 偏高（> 目標×1.3）→ 今日澆清水淋洗，暫停追肥。\nEC 偏低（< 目標×0.6）→ 可適量追肥補養分。\npH > 7.2 或 < 5.5 → 調整灌溉水酸鹼度（加磷酸或石灰）。\n\n量完後記到 App →「EC/pH」，系統會自動分析偏差。`,
+        reason: 'EC/pH 偏差直接影響根系吸水吸肥效率，每週至少量一次'
       });
     }
 
@@ -323,8 +332,8 @@ function generateTasks(plots, today, tomorrow, perPlotRisks) {
         icon: '🪤',
         plot: plot.plot,
         task: `黏板巡查${plot.ipmLastDays != null ? `（已 ${plot.ipmLastDays} 天未查）` : '（尚無紀錄）'}`,
-        detail: '計數各色黏板：粉蝨、薊馬、葉蟎、蚜蟲；達門檻才查植保系統用藥',
-        reason: '兩週未巡查可能錯過蟲口暴增初期'
+        detail: `怎麼做黏板巡查？\n① 取下舊黃板，數上面黏著的小蟲數量。\n   黃板：主要黏粉蝨（白色小飛蟲）和蚜蟲（綠/黑色小蟲）\n   藍板：主要黏薊馬（細長小黑蟲）\n② 記錄到 App →「黏板巡查」（粉蝨、薊馬、葉蟎、蚜蟲各填數量）\n③ 換上新黃板/藍板（每 1–2 週換一次）\n\n達到門檻才需要用藥（IPM 原則）：\n粉蝨 ≥ 5 隻/板、薊馬 ≥ 3 隻/板、葉蟎 ≥ 5 隻/板、蚜蟲 ≥ 10 隻/板\n未達門檻：繼續觀察，不需急著用藥。`,
+        reason: '兩週未巡查可能錯過蟲口暴增初期，IPM 防治的核心是監測密度'
       });
     }
 
@@ -335,20 +344,21 @@ function generateTasks(plots, today, tomorrow, perPlotRisks) {
         icon: '🧺',
         plot: plot.plot,
         task: `${plot.daysToHarvest} 天後預計開始採收`,
-        detail: '備妥採收容器、分級設備、冷藏空間；提前與盤商確認出貨時間',
-        reason: '提前準備可降低首批採收損耗'
+        detail: `採收前準備清單：\n① 採收工具：準備採果剪（鋒利、消毒）\n② 容器：塑膠採收箱（帶透氣孔），內墊軟墊避免碰傷\n③ 冷藏：確認冷藏庫/冷藏車有足夠空間（番茄冷藏 10–13°C）\n④ 聯繫盤商：提前 2–3 天通知採收量，確認出貨時間、市場\n⑤ 採收標準（番茄）：果肩轉橘紅色即可（七分熟），不要等到全紅才摘，否則運輸中容易損傷\n\n採完後用 App →「採收」記錄產量，分級填入特/優/次級。`,
+        reason: '提前準備可大幅降低首批採收損耗與物流壓力'
       });
     }
 
     // ⑦ 病害中風險（且無高風險） → 加強通風即可
     if (midRisks.length > 0 && hiRisks.length === 0) {
+      const riskNames = midRisks.slice(0, 3).map(r => `${r.name}（${r.score}分）`).join('、');
       tasks.push({
         priority: 'today',
         icon: '💨',
         plot: plot.plot,
-        task: `病害中風險 — 加強通風`,
-        detail: midRisks.slice(0, 3).map(r => `${r.name}（${r.score}分）`).join('、') + '，及早清除枯葉、病花、落果',
-        reason: '通風是預防真菌病害最經濟的手段，優先於用藥'
+        task: `病害中風險（${riskNames}）— 加強通風`,
+        detail: `今日天氣對 ${riskNames} 有中等感染風險。最簡單有效的預防是通風降濕：\n\n怎麼加強通風？\n① 上午 9 點起打開側窗 + 天窗（利用煙囪效應帶走濕氣）\n② 保持走道通暢，不堆放雜物阻礙氣流\n③ 摘除老葉（下位葉、黃葉），增加株間通風\n④ 撿起落果落葉，避免成為病菌繁殖溫床\n\n通風是最便宜的病害預防，優先於用藥。若明日症狀惡化才考慮施藥。`,
+        reason: '通風是預防真菌病害最經濟的手段，優先於化學防治'
       });
     }
   }
