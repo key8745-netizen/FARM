@@ -153,6 +153,11 @@ nav button.on{color:var(--accent);}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;z-index:20;}
 .modal{background:var(--card);border-radius:18px 18px 0 0;width:100%;max-width:600px;padding:18px 16px calc(20px + env(safe-area-inset-bottom));max-height:88vh;overflow-y:auto;}
 .modal h3{margin:0 0 2px;font-size:1.15rem;}
+.ec-feedback{font-size:.76rem;padding:4px 9px;border-radius:7px;margin-top:4px;font-weight:700;line-height:1.4;}
+.ec-feedback.ok{background:var(--harv-bg);color:var(--harv);}
+.ec-feedback.warn{background:var(--warn-bg);color:var(--warn);}
+.ec-feedback.info{background:var(--grow-bg);color:var(--grow);}
+.stage-hint{font-size:.8rem;padding:7px 11px;border-radius:9px;background:var(--accent-soft);color:var(--accent-d);margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 /* ---------- 桌面版（寬螢幕）：左側選單 + 寬版面 + 置中彈窗 ---------- */
 @media (min-width:900px){
   .app{max-width:960px;margin:0 auto 0 250px;padding:22px 30px 40px;}
@@ -539,9 +544,11 @@ function evalCheckin(rec,inp){
     if(w.indexOf("低溫")>=0||w.indexOf("寒")>=0)out.push({lv:"warn",t:"🌡️ "+w+" → 夜間保溫（覆蓋/加溫），花果期低於15℃易落花落果"});
     if(w.indexOf("豪雨")>=0||w.indexOf("颱")>=0)out.push({lv:"warn",t:"🌧️ "+w+" → 加強排水、暫緩採收、穩定介質水分防裂果、綁固支架"});
     if(w.indexOf("高溫")>=0||w.indexOf("乾")>=0)out.push({lv:"info",t:"☀️ "+w+" → 遮陰降溫、增加灌溉但保持穩定，注意薊馬/蟎"});}
-  if(inp.symptom&&inp.symptom!=="無"){
-    const d=DIAG.find(x=>x.q===inp.symptom);
-    if(d)out.push({lv:"warn",t:"🔍 "+inp.symptom+"：可能"+d.c+" → "+d.a});}
+  if(inp.symptom&&inp.symptom!==""){
+    let found=null;
+    for(const pt of SYMPTOM_DB){const s=pt.items.find(x=>x.q===inp.symptom);if(s){found=s;break;}}
+    if(found)out.push({lv:"warn",t:"🔍 "+inp.symptom+"｜可能原因："+found.c+" → "+found.a.split('\n')[0]});
+    else{const d=DIAG.find(x=>x.q===inp.symptom);if(d)out.push({lv:"warn",t:"🔍 "+inp.symptom+"：可能"+d.c+" → "+d.a});}}
   return out;
 }
 
@@ -888,22 +895,80 @@ function renderDash(){
 /* 每日回報：引導式問答 → 即時決策 */
 function checkinModal(){
   const plots=load();const mr=document.getElementById("modal-root");
+  if(!plots.length){mr.innerHTML='<div class="modal-bg" id="mbg"><div class="modal"><h3>📝 今日回報</h3><p class="note">請先在「我的田區」頁新增田區。</p><button class="btn sec" id="k-cancel">關閉</button></div></div>';document.getElementById("k-cancel").onclick=()=>mr.innerHTML="";return;}
   let opts=plots.map((r,i)=>'<option value="'+i+'">'+r.plot+' · '+r.crop+'</option>').join("");
-  let symp='<option>無</option>'+DIAG.map(d=>'<option>'+d.q+'</option>').join("");
+  // 症狀下拉：用 SYMPTOM_DB 分群
+  let symp='<option value="">無</option>';
+  SYMPTOM_DB.forEach(pt=>{symp+='<optgroup label="'+pt.part+'">';pt.items.forEach(s=>{symp+='<option>'+s.q+'</option>';});symp+='</optgroup>';});
   mr.innerHTML='<div class="modal-bg" id="mbg"><div class="modal"><h3>📝 今日回報</h3>'+
-    '<p class="note">回答現況，系統立即判斷要不要給肥/給水/給藥並調整今日待辦。</p>'+
+    '<p class="note">輸入今日量測數值，系統立即顯示是否正常並給出今日建議。</p>'+
     '<div id="wx-sum"></div>'+
     '<label class="f">哪個田區？</label><select class="t" id="k-plot">'+opts+'</select>'+
-    '<label class="f">植株狀態（觀察到的徵狀）</label><select class="t" id="k-symp">'+symp+'</select>'+
-    '<div class="row2"><div><label class="f">介質 EC (dS/m)</label><input class="t" id="k-ec" type="number" step="0.1" placeholder="如 2.5"></div>'+
-    '<div><label class="f">pH</label><input class="t" id="k-ph" type="number" step="0.1" placeholder="如 6.5"></div></div>'+
+    '<div id="k-stage-hint"></div>'+
+    '<div class="row2">'+
+      '<div><label class="f">介質 EC (dS/m)</label><input class="t" id="k-ec" type="number" step="0.1" placeholder="如 2.5"><div id="k-ec-fb" class="ec-feedback" style="display:none"></div></div>'+
+      '<div><label class="f">pH</label><input class="t" id="k-ph" type="number" step="0.1" placeholder="如 6.5"><div id="k-ph-fb" class="ec-feedback" style="display:none"></div></div>'+
+    '</div>'+
+    '<label class="f">今日觀察到的植株症狀</label><select class="t" id="k-symp">'+symp+'</select>'+
     '<label class="f">病蟲害發現</label><select class="t" id="k-pest"><option>無</option><option>粉蝨</option><option>薊馬</option><option>蟎類</option><option>蚜蟲</option><option>疑似病害（斑點/萎凋）</option><option>疑似病毒病</option></select>'+
     '<label class="f">天氣/環境</label><select class="t" id="k-wx"><option>正常</option><option>低溫寒流</option><option>豪雨/颱風</option><option>高溫乾燥</option></select>'+
-    '<label class="f">今日施作（選填）</label><input class="t" id="k-work" placeholder="如 摘側芽、澆水">'+
+    '<label class="f">今日施作（選填）</label><input class="t" id="k-work" placeholder="如 摘側芽、追肥">'+
     '<button class="btn" id="k-go">分析並給建議</button><button class="btn sec" id="k-cancel">取消</button>'+
     '<div id="k-res"></div></div></div>';
   document.getElementById("k-cancel").onclick=()=>mr.innerHTML="";
   document.getElementById("mbg").onclick=e=>{if(e.target.id==="mbg")mr.innerHTML="";};
+
+  // 取得目前選定田區的階段與 EC 目標
+  function curPlotInfo(){
+    const idx=+document.getElementById("k-plot").value;
+    const r=load()[idx];if(!r)return null;
+    const c=CROPS[r.crop];const age=Math.round((today()-parseD(r.date))/DAY);
+    const[stg,ecTarget]=ecStage(c,age);
+    return{r,c,age,stg,ecTarget};
+  }
+
+  // 更新「階段提示」區塊
+  function updateStageHint(){
+    const info=curPlotInfo();const el=document.getElementById("k-stage-hint");if(!el)return;
+    if(!info){el.innerHTML="";return;}
+    const{r,age,stg,ecTarget}=info;
+    el.innerHTML='<div class="stage-hint">📍 <b>'+r.crop+'</b> · '+stg+'（第 '+Math.max(age,0)+' 天）'+
+      '&emsp;目標 EC <b>'+ecTarget+' dS/m</b>&emsp;pH 目標 <b>6.0–6.8</b></div>';
+    refreshFeedback();
+  }
+
+  // EC 即時回饋
+  function refreshEcFb(){
+    const info=curPlotInfo();const el=document.getElementById("k-ec");const fb=document.getElementById("k-ec-fb");if(!el||!fb)return;
+    const val=el.value;if(!val){fb.style.display="none";return;}
+    const ec=+val;const tgt=info?info.ecTarget:2.5;
+    let cls,msg;
+    if(ec>Math.max(3.6,tgt*1.3)){cls="warn";msg="⚠ 偏高（目標 "+tgt+" dS/m） → 今日澆清水淋洗，暫停追肥";}
+    else if(ec<tgt*0.6){cls="info";msg="↓ 偏低（目標 "+tgt+" dS/m） → 可適量追肥補充養分";}
+    else{cls="ok";msg="✓ EC 正常（目標 "+tgt+" dS/m）";}
+    fb.className="ec-feedback "+cls;fb.textContent=msg;fb.style.display="block";
+  }
+
+  // pH 即時回饋
+  function refreshPhFb(){
+    const el=document.getElementById("k-ph");const fb=document.getElementById("k-ph-fb");if(!el||!fb)return;
+    const val=el.value;if(!val){fb.style.display="none";return;}
+    const ph=+val;let cls,msg;
+    if(ph<5.5){cls="warn";msg="⚠ 偏酸（< 5.5） → 施用石灰資材調整，過酸影響養分吸收";}
+    else if(ph>7.2){cls="warn";msg="⚠ 偏鹼（> 7.2） → 以磷酸調低 pH，注意微量元素被固定";}
+    else if(ph<6.0){cls="info";msg="△ 略偏酸（最佳 6.0–6.8），可稍微向上調整";}
+    else if(ph>6.8){cls="info";msg="△ 略偏鹼（最佳 6.0–6.8），可稍微向下調整";}
+    else{cls="ok";msg="✓ pH 正常（6.0–6.8）";}
+    fb.className="ec-feedback "+cls;fb.textContent=msg;fb.style.display="block";
+  }
+
+  function refreshFeedback(){refreshEcFb();refreshPhFb();}
+
+  document.getElementById("k-plot").onchange=updateStageHint;
+  document.getElementById("k-ec").oninput=refreshEcFb;
+  document.getElementById("k-ph").oninput=refreshPhFb;
+  updateStageHint(); // 初始化
+
   // 自動帶入今日天氣
   (async()=>{
     try{
@@ -916,7 +981,7 @@ function checkinModal(){
       const ws=document.getElementById('wx-sum');
       if(ws){
         const note=rain1>=60?'<div class="info" style="margin-top:4px;background:var(--warn-bg);color:var(--warn)">☔ 明日降雨機率 '+rain1+'%：<b>今日宜完成施藥/施肥</b></div>':'';
-        ws.innerHTML='<div class="info" style="margin-bottom:4px;display:flex;align-items:center;gap:8px">'+
+        ws.innerHTML='<div class="info" style="margin-bottom:8px;display:flex;align-items:center;gap:8px">'+
           '<span style="font-size:1.2rem">'+(WMO_EMOJI[code]||'🌡')+'</span>'+
           '<span>今日 <b>'+(WMO_TXT[code]||'')+'</b>　高 '+hi+'°C / 低 '+lo+'°C　降雨機率 '+rain0+'%</span></div>'+note;
       }
@@ -932,27 +997,25 @@ function checkinModal(){
       }
     }catch(e){}
   })();
+
   document.getElementById("k-go").onclick=()=>{
     const idx=+document.getElementById("k-plot").value;const rec=load()[idx];
     const inp={ec:document.getElementById("k-ec").value,ph:document.getElementById("k-ph").value,
       pest:document.getElementById("k-pest").value,weather:document.getElementById("k-wx").value,
       symptom:document.getElementById("k-symp").value,work:document.getElementById("k-work").value};
     const advice=evalCheckin(rec,inp);
-    // 存紀錄
     const p=load();p[idx].records=p[idx].records||[];
     if(inp.ec||inp.ph)p[idx].records.push({type:"ecph",date:fmtD(today()),ec:inp.ec,ph:inp.ph});
     if(inp.work)p[idx].records.push({type:"work",date:fmtD(today()),note:inp.work});
     if(inp.pest&&inp.pest!=="無")p[idx].records.push({type:"obs",date:fmtD(today()),note:"發現"+inp.pest});
-    if(inp.symptom&&inp.symptom!=="無")p[idx].records.push({type:"obs",date:fmtD(today()),note:inp.symptom});
+    if(inp.symptom&&inp.symptom!=="")p[idx].records.push({type:"obs",date:fmtD(today()),note:inp.symptom});
     save(p);
-    // 動態任務
     const dyn=advice.filter(a=>a.lv==="warn").map(a=>a.t);setDyn(idx,dyn);
-    // 顯示決策
     let html='<div class="res"><h4>今日建議（'+rec.plot+'）</h4>';
-    if(!advice.length)html+='<div class="rec"><span class="rt">✅ 現況正常，依原定待辦即可。</span></div>';
-    advice.forEach(a=>{const col=a.lv==="warn"?"var(--warn)":a.lv==="ok"?"var(--harv)":"var(--ink)";
+    if(!advice.length)html+='<div class="rec"><span class="rt">✅ 現況正常，依原定待辦執行即可。</span></div>';
+    advice.forEach(a=>{const col=a.lv==="warn"?"var(--warn)":a.lv==="ok"?"var(--harv)":"var(--grow)";
       html+='<div class="rec"><span class="rt" style="color:'+col+'">'+a.t+'</span></div>';});
-    html+='</div><button class="btn" id="k-done">完成（已更新田區與今日待辦）</button>';
+    html+='</div><button class="btn" id="k-done">完成，更新今日待辦</button>';
     document.getElementById("k-res").innerHTML=html;
     document.getElementById("k-go").style.display="none";
     document.getElementById("k-done").onclick=()=>{mr.innerHTML="";renderDash();};
