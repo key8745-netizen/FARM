@@ -1353,6 +1353,24 @@ function renderHarvestGuide(cropName){
     '<div class="ecguide-body" id="'+uid+'-b">'+body+'</div></div>';
 }
 
+/* 施藥安全操作步驟 */
+function renderSprayGuide(){
+  const uid='sg-'+Date.now();
+  const steps=[
+    {b:'穿戴防護裝備再開始',s:'防農藥型口罩 + 防水手套 + 護目鏡 + 長袖防護衣。施藥區禁止兒童和寵物進入，確保通風'},
+    {b:'選對施藥時機',s:'清晨 6–9 點或傍晚 5–7 點最佳。正午高溫（> 30°C）易藥害且藥劑揮發快；下雨前 4 小時勿施藥（藥效損失）'},
+    {b:'精確稀釋，勿憑感覺',s:'先加 1/3 清水 → 用量筒量取藥劑加入 → 攪拌均勻 → 補足水量。嚴格按稀釋倍數，過濃傷葉，過稀無效'},
+    {b:'均勻噴施，重點葉背',s:'葉正面和葉背都要噴到。<b>害蟲主要藏在葉背</b>，噴到葉面略濕為止，勿讓藥液積水滴落。噴頭與葉面距離 20–30 cm'},
+    {b:'施藥後立即清潔',s:'噴霧器用清水沖洗 3 次。剩餘藥液倒入指定地點（勿倒水溝）。脫除防護裝備、徹底洗手洗臉、更換衣物'},
+  ];
+  const warn='<div style="font-size:.74rem;background:var(--warn-bg);border-radius:8px;padding:7px 10px;margin-top:8px;color:var(--warn);line-height:1.6">'+
+    '⚠️ <b>用藥合法性</b>：農藥一律查詢<a href="https://pesticide.baphiq.gov.tw" target="_blank" style="color:var(--warn)">植保資訊系統</a>確認登記核准，未核准藥劑不可使用。輪替不同作用機制，延緩抗藥性產生。</div>';
+  const stepsHtml=steps.map((s,i)=>'<div class="ecguide-step"><span class="ecguide-sn">'+(i+1)+'</span><div class="ecguide-st"><b>'+s.b+'</b><span>'+s.s+'</span></div></div>').join('');
+  return'<div class="ecguide">'+
+    '<div class="ecguide-q" id="'+uid+'" onclick="var b=document.getElementById(\''+uid+'-b\');b.classList.toggle(\'open\');this.classList.toggle(\'open\')">🧴 安全施藥 5 步驟</div>'+
+    '<div class="ecguide-body" id="'+uid+'-b">'+stepsHtml+warn+'</div></div>';
+}
+
 /* ---------- 田區詳情 ---------- */
 function openPlot(i){CUR=i;go("plots");renderPlots();}
 function renderPlots(){
@@ -1503,6 +1521,7 @@ function logModal(type){
     const ddOpts=Object.entries(byStage).map(([s,fs])=>'<optgroup label="'+s+'">'+fs.map(f=>'<option value="'+f.name+'|'+f.dose+'|'+f.note+'">'+f.name+'</option>').join("")+'</optgroup>').join("");
     fields+='<label class="f">快選推薦肥料（依生育階段）</label>'+
     '<select class="t" id="m-fq"><option value="">── 請選擇或手動填寫 ──</option>'+ddOpts+'</select>'+
+    '<div id="fert-plants-hint" style="display:none;font-size:.76rem;background:var(--accent-soft);color:var(--accent-d);border-radius:8px;padding:6px 10px;margin-top:5px"></div>'+
     '<label class="f">施肥內容（肥料、用量、方式）</label><textarea class="t" id="m-note" placeholder="例如 台肥46號 稀釋500倍 灌根 每株500ml"></textarea>';
   }
   else if(type==="spray"){
@@ -1511,13 +1530,14 @@ function logModal(type){
     const byTarget={};opts.forEach(p=>{(byTarget[p.target]=byTarget[p.target]||[]).push(p);});
     const ddOpts=Object.entries(byTarget).map(([t,ps])=>
       '<optgroup label="'+t+'">'+ps.map((p,i)=>'<option value="'+t+'|'+p.name+'|'+p.dose+'|'+p.phi+'">'+p.name+'</option>').join("")+'</optgroup>').join("");
-    fields+='<div class="info" style="margin:6px 0">安全用藥五要點：適藥·適期·適量·稀釋倍數·安全採收期。請依植保系統登記藥填寫。</div>'+
+    fields+=renderSprayGuide()+
     '<label class="f">快選登記藥（選後自動填入）</label>'+
     '<select class="t" id="m-quick"><option value="">── 請選擇或手動填寫 ──</option>'+ddOpts+'</select>'+
     '<label class="f">防治對象（病蟲害）</label><input class="t" id="m-target" placeholder="例如 粉蝨">'+
     '<label class="f">藥劑名稱（含許可證字號佳）</label><input class="t" id="m-note" placeholder="例如 賽速安 25%水分散性粒劑">'+
     '<div class="row2"><div><label class="f">稀釋倍數</label><input class="t" id="m-dose" placeholder="如 2000倍"></div>'+
-    '<div><label class="f">安全採收期(天)</label><input class="t" id="m-phi" type="number" placeholder="如 7"></div></div>'+
+    '<div><label class="f">安全採收期(天)</label><input class="t" id="m-phi" type="number" placeholder="如 7">'+
+    '<div id="phi-preview" style="display:none;font-size:.78rem;background:var(--warn-bg);color:var(--warn);border-radius:8px;padding:6px 10px;margin-top:5px;font-weight:700"></div></div></div>'+
     '<div style="font-size:.75rem;color:var(--ink-soft);margin-top:6px">⚠️ 使用前請核對植保資訊系統登記（輪替不同作用機制延緩抗藥性）</div>';
   }
   else if(type==="ipm")fields+=
@@ -1544,11 +1564,16 @@ function logModal(type){
   }
   if(type==="fert"){
     const fq=document.getElementById("m-fq");
+    const fertPlants=(load()[CUR]||{}).plants||0;
     if(fq)fq.onchange=function(){
       const v=this.value;if(!v)return;
       const[name,dose,note]=v.split("|");
       document.getElementById("m-note").value=name+"　"+dose+"　（"+note+"）";
+      const ph=document.getElementById("fert-plants-hint");
+      if(ph&&fertPlants){ph.textContent='💡 本田區 '+fertPlants+' 株，請依「'+dose+'」計算總用量';ph.style.display='';}
     };
+    const phEl=document.getElementById("fert-plants-hint");
+    if(phEl&&fertPlants)phEl.textContent='💡 本田區 '+fertPlants+' 株。選擇肥料後顯示用量提示';
   }
   if(type==="spray"){
     document.getElementById("m-quick").onchange=function(){
@@ -1558,7 +1583,20 @@ function logModal(type){
       document.getElementById("m-note").value=name;
       document.getElementById("m-dose").value=dose;
       document.getElementById("m-phi").value=phi;
+      updatePhiPreview();
     };
+    function updatePhiPreview(){
+      const days=+document.getElementById("m-phi").value;
+      const dateStr=document.getElementById("m-date").value;
+      const pv=document.getElementById("phi-preview");if(!pv)return;
+      if(days>0&&dateStr){
+        const earliest=addD(parseD(dateStr),days);
+        pv.innerHTML='⏰ 施藥後 '+days+' 天安全採收期 → 最早 <b>'+md(earliest)+'</b> 才可採';
+        pv.style.display='';
+      }else{pv.style.display='none';}
+    }
+    document.getElementById("m-phi").oninput=updatePhiPreview;
+    document.getElementById("m-date").onchange=updatePhiPreview;
   }
   document.getElementById("m-save").onclick=()=>{
     const p=load();const rec={type,date:document.getElementById("m-date").value};
