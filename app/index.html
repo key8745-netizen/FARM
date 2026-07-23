@@ -315,6 +315,27 @@ nav button.on{color:var(--accent);}
 .onboard-body{flex:1;}
 .onboard-body b{display:block;font-size:.88rem;color:var(--ink);margin-bottom:2px;}
 .onboard-body span{font-size:.75rem;color:var(--ink-soft);}
+/* 分批定植規劃器 */
+.bt-timeline-wrap{overflow-x:auto;margin:12px 0;-webkit-overflow-scrolling:touch;}
+.bt-timeline{display:grid;min-width:480px;border:1px solid var(--line);border-radius:10px;overflow:hidden;}
+.bt-hd{display:grid;grid-template-columns:4em repeat(12,1fr);background:var(--card2);border-bottom:1px solid var(--line);}
+.bt-hd-cell{font-size:.58rem;font-weight:700;text-align:center;padding:5px 1px;color:var(--ink-soft);}
+.bt-hd-cell.hi{color:var(--harv);background:var(--harv-bg);}
+.bt-hd-cell.lo{color:var(--warn);background:var(--warn-bg);}
+.bt-row{display:grid;grid-template-columns:4em repeat(12,1fr);border-bottom:1px solid var(--line);}
+.bt-row:last-child{border-bottom:none;}
+.bt-row-lbl{font-size:.7rem;font-weight:800;padding:5px 3px 5px 5px;display:flex;align-items:center;color:var(--ink-soft);}
+.bt-cell{padding:3px 1px;}
+.bt-cell-inner{border-radius:3px;height:20px;display:flex;align-items:center;justify-content:center;font-size:.55rem;font-weight:800;}
+.bt-cell-inner.grow{background:var(--pre-bg);color:var(--pre);}
+.bt-cell-inner.harv.hi{background:var(--harv-bg);color:var(--harv);}
+.bt-cell-inner.harv.lo{background:var(--warn-bg);color:var(--warn);}
+.bt-cell-inner.harv.mid{background:var(--grow-bg);color:var(--grow);}
+.bt-sum-card{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:12px;}
+.bt-sum-hd{font-size:.85rem;font-weight:800;margin-bottom:8px;}
+.bt-batch-row{display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--line);font-size:.82rem;flex-wrap:wrap;}
+.bt-batch-row:last-child{border-bottom:none;}
+.bt-batch-n{font-weight:800;color:var(--accent);min-width:3.2em;}
 </style>
 
 </head>
@@ -1813,6 +1834,14 @@ function renderTools(){
     '<button class="btn" id="c-go">計算</button><div id="c-res"></div></div>'+
     '<h2 style="margin-top:22px">年度輪種規劃</h2><p class="note">從起始月排全年輪種，收成卡高價月＋輪作。</p>'+
     '<div class="card"><label class="f">起始月</label><input class="t" id="p-start" type="month" value="'+nowM.getFullYear()+"-"+String(nowM.getMonth()+1).padStart(2,"0")+'"><button class="btn" id="p-go">產生規劃</button><div id="p-res"></div></div>'+
+    '<h2 style="margin-top:22px">分批定植規劃器</h2><p class="note">同作物分批錯開定植，拉長採收窗口、分散爛價風險，並卡住信義鄉夏季高價空窗。月份欄位：<b style="color:var(--harv)">綠底</b>=高價月（指數≥1.15），<b style="color:var(--warn)">紅底</b>=爛價月（≤0.90）。</p>'+
+    '<div class="card">'+
+    '<div class="row2"><div><label class="f">作物</label><select class="t" id="bt-crop">'+opts+'</select></div>'+
+    '<div><label class="f">每批株數</label><input class="t" id="bt-plants" type="number" value="300"></div></div>'+
+    '<div class="row2"><div><label class="f">第一批定植日</label><input class="t" id="bt-date" type="date" value="'+fmtD(today())+'"></div>'+
+    '<div><label class="f">批數</label><select class="t" id="bt-n"><option value="2">2 批</option><option value="3" selected>3 批</option><option value="4">4 批</option></select></div></div>'+
+    '<label class="f">批次間隔（天）</label><select class="t" id="bt-interval"><option value="14">14 天（2 週）</option><option value="21" selected>21 天（3 週）</option><option value="28">28 天（4 週）</option><option value="35">35 天（5 週）</option></select>'+
+    '<button class="btn" id="bt-go" style="margin-top:14px">產生分批計畫</button><div id="bt-res"></div></div>'+
     '<h2 style="margin-top:22px">市場行情比價（送哪個市場）</h2><p class="note">抓 AMIS 各批發市場的上/中/下/均價，判斷上貨、下貨分別送哪裡最划算，並試算這批貨收入。需部署到 Netlify 才能即時抓取。</p>'+
     '<div class="card"><div class="row2"><div><label class="f">作物</label><select class="t" id="mk-crop">'+opts+'</select></div>'+
     '<div><label class="f">查詢天數</label><select class="t" id="mk-days"><option value="7">近 7 天</option><option value="14">近 14 天</option><option value="30">近 30 天</option><option value="3">近 3 天</option></select></div></div>'+
@@ -1853,6 +1882,83 @@ function renderTools(){
     while(pos<end){let best=null;for(const[nm,c]of Object.entries(CROPS)){if(c.科===prev)continue;for(let dl=0;dl<=45;dl+=15){const pl=addD(pos,dl);const sc=avgIdx(c,pl);const adj=sc-dl*.001;if(!best||adj>best.adj)best={adj,sc,nm,c,pl};}}if(!best)break;const hs=addD(best.pl,best.c.grow),he=addD(hs,best.c.dur);out.push({nm:best.nm,fam:best.c.科,pl:best.pl,hs,he,sc:best.sc});prev=best.c.科;pos=addD(he,20);}
     const avg=out.reduce((a,r)=>a+r.sc,0)/out.length;
     v.querySelector("#p-res").innerHTML='<div class="res"><b>平均價位分數 '+avg.toFixed(2)+'</b> '+(avg>=1.15?"多數卡高價 🟢":"中上")+'</div>'+out.map((r,i)=>{const[cl,lb]=light(r.sc);return '<div class="rec"><span class="rd">輪'+(i+1)+'</span><span class="rt"><b>'+r.nm+'</b> 定植'+md(r.pl)+' → 採收'+md(r.hs)+'–'+md(r.he)+'　<span class="badge '+cl+'">'+lb+' '+r.sc.toFixed(2)+'</span></span></div>';}).join("");
+  };
+  // 分批定植規劃器
+  v.querySelector("#bt-go").onclick=()=>{
+    const cropNm=v.querySelector("#bt-crop").value;
+    const c=CROPS[cropNm];
+    const ds=v.querySelector("#bt-date").value;
+    const n=+v.querySelector("#bt-n").value;
+    const intv=+v.querySelector("#bt-interval").value;
+    const plants=+v.querySelector("#bt-plants").value||300;
+    if(!ds)return;
+    const plant0=parseD(ds);
+    // 計算每批的定植日、初採日、末採日、平均行情
+    const batches=[];
+    for(let i=0;i<n;i++){
+      const pd=addD(plant0,i*intv);
+      const fh=addD(pd,c.grow);
+      const lh=addD(fh,c.dur);
+      let ps=0,pc=0,cc=fh;
+      while(cc<=lh){ps+=c.idx[cc.getMonth()];pc++;cc=addD(cc,7);}
+      batches.push({i,pd,fh,lh,avgP:pc?ps/pc:1});
+    }
+    // 12 個月（從第一批定植月開始）
+    const MN=["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"];
+    const months=[];
+    for(let i=0;i<12;i++){const d=new Date(plant0.getFullYear(),plant0.getMonth()+i,1);months.push({y:d.getFullYear(),m:d.getMonth()});}
+    // 月份標題列（含行情底色）
+    let hd='<div class="bt-hd-cell"></div>';
+    months.forEach(({m})=>{const pi=c.idx[m];hd+='<div class="bt-hd-cell'+(pi>=1.15?' hi':pi<=.9?' lo':'')+'">'+MN[m]+'</div>';});
+    // 各批次列
+    let rows='';
+    batches.forEach(({i,pd,fh,lh})=>{
+      let cells='<div class="bt-row-lbl">批'+(i+1)+'</div>';
+      months.forEach(({y,m})=>{
+        const ms=new Date(y,m,1),me=new Date(y,m+1,0,23,59,59);
+        const inH=fh<=me&&lh>=ms;
+        const inG=pd<=me&&fh>ms;
+        let cls='',lbl='';
+        if(inH){const pi=c.idx[m];cls='harv '+(pi>=1.15?'hi':pi<=.9?'lo':'mid');lbl=pi>=1.15?'★':pi<=.9?'▼':'';}
+        else if(inG){cls='grow';lbl='';}
+        cells+='<div class="bt-cell"><div class="bt-cell-inner '+(cls||'')+'">'+lbl+'</div></div>';
+      });
+      rows+='<div class="bt-row">'+cells+'</div>';
+    });
+    // 各批次文字明細
+    const pLabel=p=>p>=1.15?'hi':p<=.9?'lo':'mid';
+    const pText=p=>p>=1.15?'高價★':p<=.9?'低價':'平盤';
+    const ratio=plants/c.density;
+    const fertLine=Object.entries(c.fert).map(([k,x])=>k+' '+(x*ratio*n).toFixed(1)+'kg').join('、');
+    let smry=batches.map(({i,pd,fh,lh,avgP})=>{
+      const ms=new Set();let cc=fh;while(cc<=lh){ms.add(cc.getMonth());cc=addD(cc,15);}
+      return '<div class="bt-batch-row"><span class="bt-batch-n">批次'+(i+1)+'</span>'+
+        '<span style="flex:1;min-width:0">定植 '+md(pd)+' → 採收 '+md(fh)+'–'+md(lh)+'（'+[...ms].map(x=>MN[x]).join('/')+'）</span>'+
+        '<span class="badge '+pLabel(avgP)+'">'+pText(avgP)+' '+avgP.toFixed(2)+'</span></div>';
+    }).join('');
+    // 策略分析
+    const allHM=new Set();
+    batches.forEach(({fh,lh})=>{let cc=fh;while(cc<=lh){allHM.add(cc.getMonth());cc=addD(cc,15);}});
+    const hiMs=[...allHM].filter(m=>c.idx[m]>=1.15);
+    const loMs=[...allHM].filter(m=>c.idx[m]<=.9);
+    const ana=hiMs.length?
+      '✅ 採收期涵蓋高價月（'+hiMs.map(m=>MN[m]).join('/')+'），分批策略有效。超量時走市場，爛價月靠契作保底。':
+      loMs.length===allHM.size?
+      '⚠️ 採收期幾乎全落在爛價月。建議調整第一批定植日（往前或往後），讓部分批次採收卡住高價月。':
+      '📊 採收期行情平盤。若能往高價月調整，整體收益可再提升。';
+    // 橫向採收重疊分析
+    const overlapMs=[...allHM].filter(m=>{let cnt=0;batches.forEach(({fh,lh})=>{let cc=fh;while(cc<=lh){if(cc.getMonth()===m)cnt++;cc=addD(cc,15);}});return cnt>batches.length*0.5;});
+    const overlapNote=overlapMs.length?'<div style="font-size:.74rem;color:var(--ink-soft);margin-top:5px">⚡ 批次在 '+overlapMs.map(m=>MN[m]).join('/')+'重疊採收，需確認倉儲/出貨量能。</div>':'';
+    v.querySelector("#bt-res").innerHTML=
+      '<div class="bt-timeline-wrap"><div class="bt-timeline"><div class="bt-hd">'+hd+'</div>'+rows+'</div></div>'+
+      '<div style="font-size:.67rem;color:var(--ink-soft);margin:5px 0 10px;display:flex;gap:10px;flex-wrap:wrap">'+
+      '<span><i style="display:inline-block;width:10px;height:8px;background:var(--pre-bg);border-radius:2px;vertical-align:middle"></i> 成長期</span>'+
+      '<span><i style="display:inline-block;width:10px;height:8px;background:var(--harv-bg);border-radius:2px;vertical-align:middle"></i> 採收高價★</span>'+
+      '<span><i style="display:inline-block;width:10px;height:8px;background:var(--grow-bg);border-radius:2px;vertical-align:middle"></i> 採收平盤</span>'+
+      '<span><i style="display:inline-block;width:10px;height:8px;background:var(--warn-bg);border-radius:2px;vertical-align:middle"></i> 採收低價▼</span></div>'+
+      '<div class="bt-sum-card"><div class="bt-sum-hd">各批次明細</div>'+smry+
+      '<div style="font-size:.78rem;padding-top:8px;margin-top:4px;border-top:1px solid var(--line)"><b>全 '+n+' 批總用料</b>（共 '+n*plants+' 株）：'+fertLine+'</div></div>'+
+      '<div class="info" style="margin-top:10px">'+ana+'</div>'+overlapNote;
   };
   // 把市場比價結果渲染出來（含常送市場過濾、加星、收入試算）
   function renderMarket(d,range){
