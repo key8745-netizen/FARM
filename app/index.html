@@ -301,6 +301,10 @@ nav button.on{color:var(--accent);}
 .hg-badge.b{background:var(--pre-bg);color:var(--pre);}
 .hg-crit{font-size:.77rem;color:var(--ink);flex:1;line-height:1.5;}
 .hg-tip{font-size:.74rem;color:var(--blue);background:var(--card2);border-radius:8px;padding:7px 10px;margin-top:7px;line-height:1.55;}
+/* 整枝作業快選晶片 */
+.work-chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px;}
+.work-chip{background:var(--card2);border:1.5px solid var(--line);border-radius:20px;padding:5px 12px;font-size:.8rem;cursor:pointer;color:var(--ink);user-select:none;transition:background .1s,border-color .1s;}
+.work-chip:active,.work-chip.sel{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-d);}
 /* 新手入門清單 */
 .onboard-card{background:var(--card);border:1.5px solid var(--accent);border-radius:16px;padding:15px;margin-bottom:14px;}
 .onboard-hd{font-size:1.05rem;font-weight:800;color:var(--accent);margin-bottom:4px;display:flex;align-items:center;gap:8px;}
@@ -1371,6 +1375,51 @@ function renderSprayGuide(){
     '<div class="ecguide-body" id="'+uid+'-b">'+stepsHtml+warn+'</div></div>';
 }
 
+/* 整枝/作業 快選晶片 + 指引 */
+const WORK_CHIPS={
+  "牛番茄":["摘側芽（主幹整枝）","引蔓固定","摘老葉（下位3–4片）","輔助授粉（輕搖花穗）","疏果 每串留5果","整理支架鐵線","打頂（主蔓超2m）"],
+  "玉女番茄":["摘側芽（單蔓誘引）","引蔓固定","疏果 每串留6–8果","摘老葉","輔助授粉","整理果穗"],
+  "彩椒":["Y形整枝（摘除主分叉以下側芽）","引蔓固定","摘老葉","輔助授粉","側枝打頂（留2葉）","去除形狀不良果"],
+  "高山草莓":["摘匍匐莖（走莖）","摘老黃葉","疏花疏果","人工授粉","更換栽培袋介質（季末）"],
+  "高麗菜":["除草","外葉培土","摘除病葉","追肥覆土","防網整理"],
+  "敏豆":["引蔓固定（纏繞支架）","打頂（超過頂部）","除草","摘除病莢","追肥覆土"]
+};
+const WORK_GUIDE={
+  "牛番茄":{steps:[
+    {b:"每週固定摘側芽（單幹整枝）",s:"葉腋冒出的「側芽」（主幹和葉片間的嫩芽）一律摘除，保持主蔓單一垂直生長。超過 5cm 的側芽用剪刀剪，小的直接折斷。"},
+    {b:"引蔓固定（避免折斷）",s:"將主蔓 S 型纏繞在誘引繩上，每 2–3 節固定一次，不要綁太緊（留 1 根手指的空間）。花穗朝走道側讓採收更方便。"},
+    {b:"疏果（每串留 5 果）",s:"花謝後 10–14 天，每串番茄留 5 個大小相近的果，多餘的小果摘除。疏果後養分集中，果實更大更甜。"},
+    {b:"打頂（主蔓達 2m 時）",s:"用剪刀剪去生長點（最頂端新芽）。打頂後讓養分全力供應已結的果，避免植株繼續長高但果實品質下降。"},
+  ]},
+  "彩椒":{steps:[
+    {b:"Y 形整枝（保留 2 主蔓）",s:"第一分叉以下所有腋芽全部摘除。第一分叉以上保留 2 個主蔓向上生長，這兩個就是永久主蔓。"},
+    {b:"側枝管理（每主蔓上）",s:"每條主蔓上的側枝留 1–2 個結果，結果後在第 2 葉處打頂。不打頂的側枝會一直長，搶走主蔓的養分。"},
+    {b:"引蔓固定",s:"彩椒枝條較脆，引蔓時動作輕柔，用橡皮夾或布條（不用細鐵絲）固定，每 2–3 節一次。"},
+  ]},
+  "玉女番茄":{steps:[
+    {b:"單蔓誘引",s:"與牛番茄相同，所有側芽全部摘除，保留主蔓向上生長。每週至少巡查一次，及時摘除新生側芽。"},
+    {b:"疏果（每串留 6–8 果）",s:"花謝後 7–10 天疏果，均勻留大小相近的果實，整串採收風味最佳。疏果後整串重量更均勻，賣相好。"},
+  ]},
+  "高山草莓":{steps:[
+    {b:"摘匍匐莖（走莖）",s:"草莓會不斷長出走莖（細長的蔓），若不摘除，養分大量被走莖消耗，果實變小。結果期間所有走莖一律摘除。"},
+    {b:"摘老黃葉",s:"下位老葉、黃化葉、有斑點葉一律摘除改善通風，預防灰黴病（草莓最大天敵）。留健康綠葉 3–5 片即可。"},
+  ]},
+  "高麗菜":{steps:[{b:"除草培土",s:"雜草與作物競爭養分，每週除草一次，鬆土後培土於株基部穩定根系。"}]},
+  "敏豆":{steps:[{b:"引蔓打頂",s:"引蔓讓豆蔓攀附支架，超過支架頂部後打頂讓側蔓發育結莢。每 3–4 天採收一次避免老化。"}]}
+};
+function renderWorkGuide(cropName){
+  const chips=(WORK_CHIPS[cropName]||[]).map(t=>'<button class="work-chip" data-task="'+t+'">'+t+'</button>').join('');
+  const g=WORK_GUIDE[cropName];
+  if(!g)return'<label class="f">快選常見作業</label><div class="work-chips">'+chips+'</div>';
+  const uid='wg-'+Date.now();
+  const stepsHtml=g.steps.map((s,i)=>'<div class="ecguide-step"><span class="ecguide-sn">'+(i+1)+'</span><div class="ecguide-st"><b>'+s.b+'</b><span>'+s.s+'</span></div></div>').join('');
+  return'<label class="f">快選常見作業（點選後加入記錄）</label>'+
+    '<div class="work-chips">'+chips+'</div>'+
+    '<div class="ecguide">'+
+    '<div class="ecguide-q" id="'+uid+'" onclick="var b=document.getElementById(\''+uid+'-b\');b.classList.toggle(\'open\');this.classList.toggle(\'open\')">✂️ '+cropName+'整枝操作指引</div>'+
+    '<div class="ecguide-body" id="'+uid+'-b">'+stepsHtml+'</div></div>';
+}
+
 /* ---------- 田區詳情 ---------- */
 function openPlot(i){CUR=i;go("plots");renderPlots();}
 function renderPlots(){
@@ -1554,7 +1603,13 @@ function logModal(type){
     '<label class="f">類別</label><select class="t" id="m-cat"><option>肥料</option><option>農藥</option><option>人工</option><option>耗材</option><option>其他</option></select>'+
     '<label class="f">金額（NT$）</label><input class="t" id="m-amount" type="number" min="0" placeholder="例如 850">'+
     '<label class="f">說明（選填）</label><input class="t" id="m-note" placeholder="例如 台肥43號 5kg、噴藥工資">';
-  else fields+='<label class="f">內容</label><textarea class="t" id="m-note" placeholder="'+(type==="fert"?"例如 追肥 台肥43號 3kg":type==="work"?"例如 摘側芽、疏果":"例如 葉色正常、發現少量粉蝨")+'"></textarea>';
+  else if(type==="work"){
+    const wCrop=load()[CUR]?load()[CUR].crop:"";
+    fields+=renderWorkGuide(wCrop)+
+    '<label class="f">記錄內容（點晶片自動填入，可手動補充）</label>'+
+    '<textarea class="t" id="m-note" placeholder="例如 摘側芽、引蔓固定、疏果每串留5果"></textarea>';
+  }
+  else fields+='<label class="f">內容</label><textarea class="t" id="m-note" placeholder="例如 葉色正常、發現少量粉蝨"></textarea>';
   mr.innerHTML='<div class="modal-bg" id="mbg"><div class="modal"><h3>登錄'+meta.t+'</h3><p class="note">'+load()[CUR].plot+' · '+load()[CUR].crop+'</p>'+fields+'<button class="btn" id="m-save">儲存</button><button class="btn sec" id="m-cancel">取消</button></div></div>';
   document.getElementById("m-cancel").onclick=()=>mr.innerHTML="";
   document.getElementById("mbg").onclick=e=>{if(e.target.id==="mbg")mr.innerHTML="";};
@@ -1597,6 +1652,14 @@ function logModal(type){
     }
     document.getElementById("m-phi").oninput=updatePhiPreview;
     document.getElementById("m-date").onchange=updatePhiPreview;
+  }
+  if(type==="work"){
+    document.querySelectorAll(".work-chip").forEach(btn=>btn.onclick=()=>{
+      const ta=document.getElementById("m-note");
+      const val=btn.dataset.task;
+      ta.value=ta.value?(ta.value+"、"+val):val;
+      btn.classList.toggle("sel");
+    });
   }
   document.getElementById("m-save").onclick=()=>{
     const p=load();const rec={type,date:document.getElementById("m-date").value};
