@@ -267,6 +267,29 @@ nav button.on{color:var(--accent);}
 .wpc-watch-hd{font-size:.76rem;font-weight:800;color:var(--warn);margin-bottom:5px;}
 .wpc-watch ul{margin:0;padding:0 0 0 14px;}
 .wpc-watch li{font-size:.78rem;color:var(--ink);line-height:1.55;padding:2px 0;}
+/* 作物資訊卡（新增田區選作物時顯示） */
+.crop-info-card{background:var(--accent-soft);border:1.5px solid var(--accent);border-radius:13px;padding:12px 14px;margin:8px 0 2px;animation:fadeIn .2s;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.cic-hd{font-size:.9rem;font-weight:800;color:var(--accent-d);margin-bottom:8px;display:flex;align-items:center;gap:7px;}
+.cic-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px 14px;margin-bottom:8px;}
+.cic-item{font-size:.78rem;line-height:1.4;}
+.cic-item b{color:var(--ink);font-weight:700;display:block;}
+.cic-item span{color:var(--ink-soft);}
+.cic-diff.easy{color:var(--harv);font-weight:800;}
+.cic-diff.mid{color:var(--grow);font-weight:800;}
+.cic-diff.hard{color:var(--warn);font-weight:800;}
+.cic-tip{font-size:.76rem;color:var(--accent-d);background:var(--card);border-radius:9px;padding:8px 10px;line-height:1.6;border-left:3px solid var(--accent);}
+/* EC/pH 量測步驟指引 */
+.ecguide{background:var(--card2);border:1px solid var(--line);border-radius:10px;margin-bottom:10px;}
+.ecguide-q{padding:9px 12px;cursor:pointer;font-size:.82rem;font-weight:700;color:var(--blue);display:flex;justify-content:space-between;align-items:center;user-select:none;}
+.ecguide-q::after{content:"▸　展開量測步驟";font-weight:400;font-size:.72rem;color:var(--ink-soft);}
+.ecguide-q.open::after{content:"▾　收起";}
+.ecguide-body{display:none;padding:2px 12px 10px;}
+.ecguide-body.open{display:block;}
+.ecguide-step{display:flex;gap:9px;padding:6px 0;border-bottom:1px solid var(--line);font-size:.78rem;line-height:1.55;align-items:flex-start;}
+.ecguide-step:last-child{border-bottom:none;}
+.ecguide-sn{min-width:20px;height:20px;background:var(--blue);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:800;flex:none;margin-top:.1em;}
+.ecguide-st{flex:1;}.ecguide-st b{color:var(--ink);display:block;margin-bottom:1px;}.ecguide-st span{color:var(--ink-soft);}
 /* 新手入門清單 */
 .onboard-card{background:var(--card);border:1.5px solid var(--accent);border-radius:16px;padding:15px;margin-bottom:14px;}
 .onboard-hd{font-size:1.05rem;font-weight:800;color:var(--accent);margin-bottom:4px;display:flex;align-items:center;gap:8px;}
@@ -1203,6 +1226,52 @@ function exportModal(){
   document.getElementById("exp-copy").onclick=()=>{const ta=document.getElementById("exp-t");ta.select();try{document.execCommand("copy");document.getElementById("exp-copy").textContent="已複製 ✓";}catch(e){}};
 }
 
+/* ---------- 作物資訊卡（新增田區表單用） ---------- */
+const CROP_META={
+  "牛番茄":{icon:"🍅",diff:"mid",tip:"建議購買嫁接苗（根系強、抗病）。採用單幹整枝，每週摘除側芽，讓養分集中到果實。第一花穗留 4–5 果，後續每穗留 5–6 果。"},
+  "彩椒":{icon:"🫑",diff:"mid",tip:"採 Y 形整枝（保留 2 主蔓），需長期持續管理。果實要等充分轉色（紅/黃/橙）才採收，轉色愈完整甜度愈高。"},
+  "玉女番茄":{icon:"🍓",diff:"hard",tip:"EC 需求最高（3.5 dS/m），灌溉必須非常穩定，否則容易裂果。單蔓誘引，每穗留 6–8 顆，結果期需每天補充水分。"},
+  "高山草莓":{icon:"🍓",diff:"hard",tip:"需要蜜蜂或人工輔助授粉。高海拔 800m 以上適合露地，平地建議設冷藏設施。灰黴病是最大威脅，保持通風最重要。"},
+  "高麗菜":{icon:"🥬",diff:"easy",tip:"最適合新手入門。定植後只需除草、追肥、防蟲（紋白蝶），結球飽滿即可採收。不需整枝或特殊訓練。"},
+  "敏豆":{icon:"🫘",diff:"easy",tip:"生長週期最短（55天），最快看到成果！需立支柱或誘引網讓蔓爸爬。採收從花謝後 8–10 天開始，過熟豆莢木質化失去商品價值。"}
+};
+const DIFF_LBL={easy:'<span class="cic-diff easy">★☆☆ 易</span>',mid:'<span class="cic-diff mid">★★☆ 中</span>',hard:'<span class="cic-diff hard">★★★ 難</span>'};
+function renderCropInfoCard(cropName){
+  const c=CROPS[cropName];const m=CROP_META[cropName];if(!c||!m)return'';
+  const totalWeeks=Math.ceil((c.grow+c.dur)/7);
+  const growWeeks=Math.ceil(c.grow/7);
+  const harvWeeks=Math.ceil(c.dur/7);
+  const ecVals=Object.values(c.ec);
+  const ecMin=Math.min(...ecVals),ecMax=Math.max(...ecVals);
+  const ecStages=Object.entries(c.ec).map(([s,v])=>'<span style="white-space:nowrap">'+s+'：<b>'+v+'</b></span>').join('　');
+  return'<div class="crop-info-card">'+
+    '<div class="cic-hd">'+m.icon+' '+cropName+'　'+DIFF_LBL[m.diff||'mid']+'</div>'+
+    '<div class="cic-grid">'+
+      '<div class="cic-item"><b>'+growWeeks+' 週後採收</b><span>定植至首次採收</span></div>'+
+      '<div class="cic-item"><b>可採 '+harvWeeks+' 週</b><span>採收持續期</span></div>'+
+      '<div class="cic-item"><b>合計 '+totalWeeks+' 週</b><span>全期管理天數</span></div>'+
+      '<div class="cic-item"><b>EC '+ecMin+'–'+ecMax+' dS/m</b><span>生育期目標範圍</span></div>'+
+    '</div>'+
+    '<div style="font-size:.7rem;color:var(--ink-soft);margin-bottom:6px">各階段 EC：'+ecStages+'</div>'+
+    '<div class="cic-tip">💡 '+m.tip+'</div>'+
+    '</div>';
+}
+/* EC/pH 量測步驟指引 HTML */
+function renderEcGuide(){
+  const uid='ecg-'+Date.now();
+  const steps=[
+    {b:'在排水管（滴液出口）採集培養液約 20 ml',s:'不要量灌溉水！要量植株根域「滲出」的液體才準確反映根部環境'},
+    {b:'將 EC 計電極插入液體，靜待 30 秒讀穩定值',s:'讀數會先飄動，等數字停止變化後才記錄。急著讀的數字通常偏高'},
+    {b:'沖洗電極後，再量同一份樣本的 pH',s:'先 EC 後 pH，用同一份樣本比較。量完立即用清水沖洗電極'},
+    {b:'電極沖洗乾淨，放回保護套（內加保存液）',s:'電極乾燥會損壞，長期保護套內要有少量電極保存液或飽和 KCl 溶液'},
+    {b:'每 2 週校正一次 EC 計和 pH 計',s:'EC 計用 1.413 mS/cm 標準液；pH 計用 pH 4 和 pH 7 緩衝液兩點校正'},
+  ];
+  const stepsHtml=steps.map((s,i)=>'<div class="ecguide-step"><span class="ecguide-sn">'+(i+1)+'</span><div class="ecguide-st"><b>'+s.b+'</b><span>→ '+s.s+'</span></div></div>').join('');
+  return'<div class="ecguide">'+
+    '<div class="ecguide-q" id="'+uid+'" onclick="var b=document.getElementById(\''+uid+'-b\');b.classList.toggle(\'open\');this.classList.toggle(\'open\')">📏 怎麼量 EC / pH？</div>'+
+    '<div class="ecguide-body" id="'+uid+'-b">'+stepsHtml+'</div></div>';
+}
+
 /* ---------- 田區詳情 ---------- */
 function openPlot(i){CUR=i;go("plots");renderPlots();}
 function renderPlots(){
@@ -1215,10 +1284,12 @@ function renderPlots(){
       '<div class="card"><h3 style="margin:0 0 2px">＋ 新增田區</h3>'+
       '<label class="f">畦區名稱</label><input class="t" id="np" placeholder="例如 A區">'+
       '<label class="f">作物</label><select class="t" id="nc">'+opts+'</select>'+
+      '<div id="nc-info">'+renderCropInfoCard(Object.keys(CROPS)[0])+'</div>'+
       '<div class="row2"><div><label class="f">定植日</label><input class="t" id="nd" type="date" value="'+fmtD(today())+'"></div>'+
       '<div><label class="f">株數</label><input class="t" id="nn" type="number" value="300"></div></div>'+
       '<button class="btn" id="addp">新增田區</button></div>';
     v.querySelector("#addp").onclick=()=>{const p=load();p.push({plot:v.querySelector("#np").value.trim()||"未命名",crop:v.querySelector("#nc").value,date:v.querySelector("#nd").value,plants:+v.querySelector("#nn").value||0,records:[]});save(p);renderPlots();};
+    v.querySelector("#nc").onchange=function(){const el=v.querySelector("#nc-info");if(el)el.innerHTML=renderCropInfoCard(this.value);};
     v.querySelectorAll(".card.tap").forEach(cd=>cd.onclick=()=>openPlot(+cd.dataset.i));
     return;
   }
@@ -1325,7 +1396,8 @@ function logModal(type){
     const[,,age]=rc?stageOf(rc):[0,0,0];
     let ecTarget=cr?Object.entries(cr.ec).map(([s,v])=>s+"："+v).join("　"):"";
     let stTarget="";if(cr){const ec=cr.ec;stTarget=age<14?ec["苗期"]:age<35?ec["生長期"]:age<60?ec["花期"]:ec["果期"];}
-    fields+='<div class="info" style="margin-bottom:8px">目標 EC <b>'+(stTarget||"2.0–3.0")+'</b> dS/m　· pH 目標 <b>6.0–6.8</b>'+(ecTarget?'<br><small style="color:var(--ink-soft)">'+ecTarget+'</small>':'')+'</div>'+
+    fields+=renderEcGuide()+
+    '<div class="info" style="margin-bottom:8px">目標 EC <b>'+(stTarget||"2.0–3.0")+'</b> dS/m　· pH 目標 <b>6.0–6.8</b>'+(ecTarget?'<br><small style="color:var(--ink-soft)">'+ecTarget+'</small>':'')+'</div>'+
     '<div class="row2"><div><label class="f">EC 實測值 (dS/m)</label><input class="t" id="m-ec" type="number" step="0.1" placeholder="2.5"></div><div><label class="f">pH 實測值</label><input class="t" id="m-ph" type="number" step="0.1" placeholder="6.5"></div></div>';
   }
   else if(type==="harv")fields+=
