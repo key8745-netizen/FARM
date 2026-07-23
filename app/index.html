@@ -349,6 +349,33 @@ nav button.on{color:var(--accent);}
 .pl-bar{height:100%;border-radius:3px;background:var(--warn);}
 .pl-field-row{display:flex;gap:6px;padding:7px 0;border-bottom:1px solid var(--line);font-size:.82rem;align-items:baseline;flex-wrap:wrap;}
 .pl-field-row:last-child{border-bottom:none;}
+/* 農事月曆 */
+.cal-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:13px 14px;margin-bottom:12px;}
+.cal-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.cal-hd h3{font-size:.98rem;margin:0;}
+.cal-nav{display:flex;align-items:center;gap:4px;}
+.cal-nav-btn{background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:3px 10px;font-size:.82rem;cursor:pointer;color:var(--ink);}
+.cal-nav-btn:active{opacity:.7;}
+.cal-ym{font-size:.88rem;font-weight:700;padding:0 6px;color:var(--ink);}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+.cal-dow{text-align:center;font-size:.6rem;font-weight:700;color:var(--ink-soft);padding:2px 0 5px;}
+.cal-day{border-radius:7px;padding:4px 2px 5px;cursor:pointer;min-height:36px;text-align:center;}
+.cal-day:hover{background:var(--card2);}
+.cal-day.today{background:var(--accent-soft);}
+.cal-day.has-event{cursor:pointer;}
+.cal-dn{font-size:.68rem;font-weight:700;color:var(--ink-soft);}
+.cal-day.today .cal-dn{color:var(--accent);font-weight:800;}
+.cal-dots{display:flex;flex-wrap:wrap;gap:2px;justify-content:center;margin-top:2px;}
+.cal-dot{width:5px;height:5px;border-radius:50%;flex:none;display:inline-block;}
+.cal-dot.harv{background:var(--harv);}
+.cal-dot.phi{background:var(--warn);}
+.cal-dot.task{background:var(--blue);}
+.cal-legend{display:flex;gap:12px;flex-wrap:wrap;font-size:.67rem;color:var(--ink-soft);margin-top:9px;padding-top:7px;border-top:1px solid var(--line);}
+.cal-legend span{display:flex;align-items:center;gap:4px;}
+.cal-detail{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:9px;}
+.cal-detail h4{margin:0 0 7px;font-size:.88rem;}
+.cal-det-row{display:flex;align-items:flex-start;gap:7px;padding:4px 0;border-bottom:1px solid var(--line);font-size:.82rem;}
+.cal-det-row:last-child{border-bottom:none;}
 </style>
 
 </head>
@@ -1112,13 +1139,93 @@ function renderDash(){
   let up=upcoming.length?'<div class="card">'+upcoming.map(x=>'<div class="rec"><span class="rd">'+x.d+'天</span><span class="rt"><b>'+x.r.plot+' '+x.r.crop+'</b> 預計 '+md(addD(parseD(x.r.date),x.c.grow))+' 開始採收</span></div>').join("")+'</div>':'';
 
   v.innerHTML=kpi+
+    '<div id="farm-cal"></div>'+
     '<div class="sec-h"><h3>各田區生育進度</h3><span>點卡片看詳情與紀錄</span></div>'+cards+
     (up?'<div class="sec-h"><h3>30 天內即將採收</h3></div>'+up:'')+
     '<div class="foot">用藥一律查植保系統合法登記藥並守安全採收期。數值為示範，請經台中區農業改良場校正。</div>';
   v.querySelectorAll(".card.tap").forEach(cd=>cd.addEventListener("click",()=>openPlot(+cd.dataset.i)));
   const cb=v.querySelector("#checkin");if(cb)cb.onclick=()=>checkinModal();
   const ex=v.querySelector("#export");if(ex)ex.onclick=()=>exportModal();
+  renderFarmCal(tdy.getFullYear(),tdy.getMonth());
   loadWx(v);
+}
+
+/* ────── 農事月曆 ────── */
+function renderFarmCal(y,m){
+  const fc=document.getElementById("farm-cal");if(!fc)return;
+  const plots=load();if(!plots.length){fc.innerHTML='';return;}
+  const MN=["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"];
+  const DOW=["日","一","二","三","四","五","六"];
+  const first=new Date(y,m,1);
+  const daysInMonth=new Date(y,m+1,0).getDate();
+  const tds=fmtD(today());
+  // 建立每日事件索引
+  const evMap={};
+  for(let d=1;d<=daysInMonth;d++){
+    const dt=new Date(y,m,d);const ds=fmtD(dt);
+    const ev={harv:[],phi:[],task:[]};
+    plots.forEach(plot=>{
+      const c=CROPS[plot.crop];if(!c||!plot.date)return;
+      const plant=parseD(plot.date);
+      const hs=addD(plant,c.grow),he=addD(hs,c.dur);
+      if(dt>=hs&&dt<=he)ev.harv.push(plot.plot);
+      const phi=phiLock(plot);
+      if(phi&&dt<=phi)ev.phi.push(plot.plot);
+      (c.sched||[]).forEach(([offset,name])=>{
+        if(fmtD(addD(plant,offset))===ds)ev.task.push({p:plot.plot,n:name});
+      });
+    });
+    evMap[ds]=ev;
+  }
+  // 格線：標頭 + 前置空格 + 日期
+  let grid=DOW.map(d=>'<div class="cal-dow">'+d+'</div>').join('');
+  for(let i=0;i<first.getDay();i++)grid+='<div class="cal-day"></div>';
+  for(let d=1;d<=daysInMonth;d++){
+    const ds=fmtD(new Date(y,m,d));
+    const ev=evMap[ds];const isTdy=ds===tds;
+    let dots='';
+    if(ev.harv.length)dots+='<div class="cal-dot harv"></div>';
+    if(ev.phi.length)dots+='<div class="cal-dot phi"></div>';
+    if(ev.task.length)dots+='<div class="cal-dot task"></div>';
+    grid+='<div class="cal-day'+(isTdy?' today':'')+(ev.harv.length||ev.phi.length||ev.task.length?' has-event':'')+'" data-ds="'+ds+'">'+
+      '<div class="cal-dn">'+d+'</div>'+
+      (dots?'<div class="cal-dots">'+dots+'</div>':'')+
+      '</div>';
+  }
+  const endDow=new Date(y,m,daysInMonth).getDay();
+  for(let i=endDow+1;i<7;i++)grid+='<div class="cal-day"></div>';
+  fc.innerHTML='<div class="cal-card">'+
+    '<div class="cal-hd"><h3>📅 農事月曆</h3>'+
+    '<div class="cal-nav">'+
+    '<button class="cal-nav-btn" id="cal-prev">◀</button>'+
+    '<span class="cal-ym">'+y+' / '+MN[m]+'</span>'+
+    '<button class="cal-nav-btn" id="cal-next">▶</button>'+
+    '</div></div>'+
+    '<div class="cal-grid">'+grid+'</div>'+
+    '<div class="cal-legend">'+
+    '<span><i class="cal-dot harv"></i> 採收期</span>'+
+    '<span><i class="cal-dot phi"></i> 用藥安全期（禁採）</span>'+
+    '<span><i class="cal-dot task"></i> 作業提醒</span>'+
+    '</div>'+
+    '<div id="cal-detail"></div>'+
+    '</div>';
+  // 換月
+  fc.querySelector("#cal-prev").onclick=()=>{let nm=m-1,ny=y;if(nm<0){nm=11;ny--;}renderFarmCal(ny,nm);};
+  fc.querySelector("#cal-next").onclick=()=>{let nm=m+1,ny=y;if(nm>11){nm=0;ny++;}renderFarmCal(ny,nm);};
+  // 點日期看明細
+  fc.querySelectorAll(".cal-day.has-event").forEach(el=>{
+    el.onclick=()=>{
+      const ds=el.dataset.ds;const ev=evMap[ds];
+      const det=fc.querySelector("#cal-detail");
+      if(!ev){det.innerHTML='';return;}
+      const[,mm2,dd]=ds.split('-');
+      let rows='';
+      if(ev.harv.length)rows+='<div class="cal-det-row"><i class="cal-dot harv"></i><span><b>採收期</b>：'+ev.harv.join('、')+'</span></div>';
+      if(ev.phi.length)rows+='<div class="cal-det-row"><i class="cal-dot phi"></i><span><b>用藥管制（禁採收）</b>：'+ev.phi.join('、')+'</span></div>';
+      ev.task.forEach(t=>rows+='<div class="cal-det-row"><i class="cal-dot task"></i><span><b>'+t.p+'</b>：'+t.n+'</span></div>');
+      det.innerHTML='<div class="cal-detail"><h4>'+parseInt(mm2)+'月'+parseInt(dd)+'日</h4>'+rows+'</div>';
+    };
+  });
 }
 
 /* 每日回報：引導式問答 → 即時決策 */
