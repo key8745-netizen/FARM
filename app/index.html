@@ -115,10 +115,13 @@ button{font-family:inherit;cursor:pointer;border:none;border-radius:12px;font-we
 .diag-q:active{background:var(--card2);}
 .diag-a{background:var(--warn-bg);border-radius:11px;padding:12px 14px;margin:-4px 0 9px;font-size:.9rem;}
 .diag-a b{color:var(--warn);}
-.chart{display:flex;align-items:flex-end;gap:6px;height:110px;padding:8px 0;}
-.chart .bar{flex:1;background:var(--accent);border-radius:5px 5px 0 0;min-height:3px;position:relative;}
-.chart .bar span{position:absolute;bottom:-18px;left:0;right:0;text-align:center;font-size:.64rem;color:var(--ink-soft);}
-.chart .bar b{position:absolute;top:-16px;left:0;right:0;text-align:center;font-size:.62rem;color:var(--ink-soft);font-variant-numeric:tabular-nums;}
+.chart{display:flex;align-items:flex-end;gap:4px;height:110px;padding:8px 0 18px;}
+.chart .bar{flex:1;border-radius:5px 5px 0 0;min-height:3px;position:relative;}
+.chart .bar span{position:absolute;bottom:-18px;left:0;right:0;text-align:center;font-size:.6rem;color:var(--ink-soft);}
+.chart .bar b{position:absolute;top:-15px;left:0;right:0;text-align:center;font-size:.6rem;color:var(--ink-soft);font-variant-numeric:tabular-nums;}
+.chart-ph{display:flex;gap:4px;margin-top:4px;border-top:1px solid var(--line);padding-top:4px;}
+.chart-ph-lbl{flex:none;font-size:.6rem;color:var(--ink-soft);padding:2px 4px 0 0;white-space:nowrap;align-self:center;}
+.chart-ph-v{flex:1;text-align:center;font-size:.65rem;padding:2px 0;border-radius:4px;font-variant-numeric:tabular-nums;}
 .foot{font-size:.74rem;color:var(--ink-soft);text-align:center;margin-top:18px;line-height:1.7;}
 nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);display:flex;max-width:600px;margin:0 auto;padding-bottom:env(safe-area-inset-bottom);}
 nav button{flex:1;background:none;padding:9px 2px 11px;color:var(--ink-soft);font-size:.68rem;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:2px;}
@@ -621,8 +624,28 @@ function renderPlots(){
     const meta=RTYPES[rc.type]||{t:rc.type,c:"obs"};
     let extra=rc.type==="ecph"?("EC "+(rc.ec||"?")+" / pH "+(rc.ph||"?")):rc.type==="harv"?(rc.qty+" kg"+((rc.g1!=null&&(rc.g2||rc.g3))?"（特"+rc.g1+"/優"+rc.g2+"/次"+rc.g3+"）":"")):rc.type==="spray"?((rc.target?"防"+rc.target+"：":"")+rc.note+(rc.dose?" "+rc.dose:"")+(rc.phi?"（安全期"+rc.phi+"天）":"")):rc.type==="ipm"?((["粉蝨"+rc.wf,"薊馬"+rc.th,"葉蟎"+rc.sm,"蚜蟲"+rc.ap].filter(s=>!/0$/.test(s)).join("・")||"無蟲")+(rc.note?" ｜ "+rc.note:"")):rc.note||"";
     return '<div class="rec"><span class="rd">'+md(parseD(rc.date))+'</span><span class="rt"><span class="rtag '+meta.c+'">'+meta.t+'</span>'+extra+'</span><button class="del" data-r="'+ri+'">刪</button></div>';}).join("");
-  let ecHist=(r.records||[]).filter(x=>x.type==="ecph"&&x.ec).slice(-8);
-  let ecChart=ecHist.length>=2?'<div class="res"><h4>EC 趨勢</h4><div class="chart">'+ecHist.map(x=>{const h=Math.min(100,(+x.ec)/4*100);return '<div class="bar" style="height:'+h+'%"><b>'+x.ec+'</b><span>'+md(parseD(x.date))+'</span></div>';}).join("")+'</div></div>':"";
+  let ecHist=(r.records||[]).filter(x=>x.type==="ecph"&&x.ec).slice(-12);
+  const[,ecTarget]=ecStage(c,age);
+  let ecChart="";
+  if(ecHist.length>=2){
+    const bars=ecHist.map(x=>{
+      const ec=+x.ec,tg=ecTarget;
+      const h=Math.min(100,Math.round(ec/4*100));
+      const col=ec>Math.max(3.5,tg*1.35)?'var(--warn)':ec<tg*0.6?'var(--grow)':'var(--accent)';
+      return '<div class="bar" style="height:'+h+'%;background:'+col+'"><b>'+x.ec+'</b><span>'+md(parseD(x.date))+'</span></div>';
+    }).join('');
+    const phRow=ecHist.map(x=>{
+      const ph=+x.ph;
+      const ok=x.ph&&ph>=6.0&&ph<=6.8;const warn=x.ph&&(ph<5.5||ph>7.2);
+      const col=warn?'var(--warn)':ok?'var(--blue)':'var(--ink-soft)';
+      const bg=warn?'var(--warn-bg)':ok?'var(--accent-soft)':'transparent';
+      return '<div class="chart-ph-v" style="color:'+col+';background:'+bg+'">'+(x.ph||'—')+'</div>';
+    }).join('');
+    ecChart='<div class="res"><h4>EC / pH 趨勢（近 '+ecHist.length+' 筆）</h4>'+
+      '<div style="font-size:.7rem;color:var(--ink-soft);margin-bottom:4px">目標 EC <b style="color:var(--accent)">'+ecTarget+'</b> dS/m　pH 目標 <b style="color:var(--blue)">6.0–6.8</b></div>'+
+      '<div class="chart">'+bars+'</div>'+
+      '<div class="chart-ph"><span class="chart-ph-lbl">pH</span>'+phRow+'</div></div>';
+  }
 
   v.innerHTML='<button class="back" id="bk">‹ 返回</button>'+
     '<div class="card"><div class="card-top"><h3>'+r.plot+'　<span class="crop">'+r.crop+'</span></h3><span class="stage '+cls+'">'+st+'</span></div>'+
