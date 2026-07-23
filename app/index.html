@@ -921,6 +921,63 @@ async function loadAmisWidget(container,harvestingCrops){
   el.innerHTML=renderAmisWidget(results);
 }
 
+/* ---------- 本機離線今日任務（不需 Netlify API） ---------- */
+function renderLocalDailyTasks(plots){
+  if(!plots.length)return'';
+  const items=[];
+  plots.forEach(r=>{
+    const o=tasksFor(r);
+    if(o.done)return;
+    if(o.pre){
+      items.push({plot:r.plot,icon:'⏳',task:'定植倒數 '+o.pre+' 天',detail:'查看「田區」→「本週重點」，先完成定植前準備作業',priority:'info'});
+      return;
+    }
+    (o.today||[]).forEach(t=>{
+      if(t.startsWith('📋')){
+        items.push({plot:r.plot,icon:'📌',task:t.slice(3),detail:'',priority:'sched'});
+      }else if(t.startsWith('🧺')){
+        items.push({plot:r.plot,icon:'🧺',task:t.slice(3),detail:'採收當天早上先量 EC/pH 確認品質，採後立即秤重記錄',priority:'harv'});
+      }else if(t.includes('EC/pH')){
+        items.push({plot:r.plot,icon:'🌡️',task:t.replace(/^[^ ]+ /,''),detail:'每天同一時段量（建議早上），並在「田區」→「新增紀錄」存檔',priority:'daily'});
+      }else if(t.includes('巡視')){
+        items.push({plot:r.plot,icon:'👀',task:t.replace(/^[^ ]+ /,''),detail:'順序：頂葉→中葉→老葉→果實→莖基部。發現異狀拍照後到【診斷】查閱',priority:'daily'});
+      }else if(t.includes('黏板')){
+        items.push({plot:r.plot,icon:'🪤',task:t.replace(/^[^ ]+ /,''),detail:'黃板（粉蝨/蚜）+ 藍板（薊馬）。數量超過 10 隻/片 → 記錄 IPM，考慮施藥',priority:'daily'});
+      }
+    });
+  });
+  if(!items.length)return'';
+  const order={sched:0,harv:1,daily:2,info:3};
+  items.sort((a,b)=>(order[a.priority]||9)-(order[b.priority]||9));
+  const urgCnt=items.filter(x=>x.priority==='sched'||x.priority==='harv').length;
+  const multi=plots.filter(r=>{const o=tasksFor(r);return!o.done;}).length>1;
+  const rows=items.map(item=>{
+    const cls=(item.priority==='sched'||item.priority==='harv')?' urgent':'';
+    const badge=item.priority==='sched'?'<span class="daily-badge urgent">排程</span>'
+      :item.priority==='harv'?'<span class="daily-badge urgent">採收</span>'
+      :item.priority==='info'?'<span class="daily-badge today">準備</span>'
+      :'<span class="daily-badge today">每日</span>';
+    return'<div class="daily-row">'+
+      '<div class="daily-icon">'+item.icon+'</div>'+
+      '<div class="daily-body">'+
+      (multi?'<div class="daily-plot">'+item.plot+'</div>':'')+
+      '<div class="daily-task'+cls+'">'+item.task+'</div>'+
+      (item.detail?'<div class="daily-detail">'+item.detail+'</div>':'')+
+      '</div>'+badge+'</div>';
+  }).join('');
+  let soonRows='';
+  plots.forEach(r=>{const o=tasksFor(r);if(o.done||o.pre)return;(o.soon||[]).forEach(t=>{soonRows+='<div style="font-size:.73rem;color:var(--ink);padding:3px 0;border-bottom:1px solid var(--line);line-height:1.4">'+
+    (multi?'<b style="color:var(--ink-soft)">'+r.plot+'</b>　':'')+t+'</div>';});});
+  const upHtml=soonRows?'<div style="margin-top:9px;padding:8px 10px;background:var(--card2);border-radius:9px">'+
+    '<div style="font-size:.7rem;font-weight:700;color:var(--ink-soft);margin-bottom:5px">📅 7 天內即將</div>'+soonRows+'</div>':'';
+  const hd=urgCnt
+    ?'今日必做 <span style="font-size:.65rem;color:var(--warn);font-weight:700">★ '+urgCnt+' 項重要排程</span>'
+    :'今日必做';
+  return'<div class="daily-card">'+
+    '<div class="daily-hd">🎯 '+hd+'<span style="font-size:.6rem;font-weight:400;color:var(--done)">本機計算・不需網路</span></div>'+
+    rows+upHtml+'</div>';
+}
+
 /* ---------- 總覽 ---------- */
 function renderDash(){
   const plots=load();const v=document.getElementById("view-dash");const tdy=today();
@@ -952,7 +1009,7 @@ function renderDash(){
   let dynCount=0;plots.forEach((r,i)=>dynCount+=getDyn(i).length);
   let checkinBtn='<button class="btn" id="checkin" style="margin-top:0;margin-bottom:14px">📝 今日回報（EC值/病蟲害/天氣）→ 動態調整</button>'+
     (dynCount?'<div class="info" style="margin-bottom:14px">今日回報已產生 '+dynCount+' 項動態調整，見各田區。<button class="del" id="export" style="margin-left:6px">匯出摘要給顧問</button></div>':'');
-  let kpi='<div id="wx-widget"></div><div id="wx-alerts" style="display:none;margin-bottom:4px"></div><div id="disease-risk"></div>'+checkinBtn+'<div class="kpis">'+
+  let kpi='<div id="wx-widget"></div><div id="wx-alerts" style="display:none;margin-bottom:4px"></div><div id="disease-risk">'+renderLocalDailyTasks(plots)+'</div>'+checkinBtn+'<div class="kpis">'+
     '<div class="kpi"><b>'+plots.length+'</b><small>田區</small></div>'+
     '<div class="kpi"><b>'+taskCount+'</b><small>今日任務</small></div>'+
     '<div class="kpi"><b>'+harvSoon+'</b><small>近採收</small></div>'+
