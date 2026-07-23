@@ -290,6 +290,17 @@ nav button.on{color:var(--accent);}
 .ecguide-step:last-child{border-bottom:none;}
 .ecguide-sn{min-width:20px;height:20px;background:var(--blue);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:800;flex:none;margin-top:.1em;}
 .ecguide-st{flex:1;}.ecguide-st b{color:var(--ink);display:block;margin-bottom:1px;}.ecguide-st span{color:var(--ink-soft);}
+/* 採收分級指引 */
+.hg-timing{font-size:.8rem;background:var(--harv-bg);border-radius:9px;padding:8px 11px;margin-bottom:8px;color:var(--ink);line-height:1.6;}
+.hg-timing b{color:var(--harv);}
+.hg-grade{display:flex;align-items:flex-start;gap:9px;padding:6px 0;border-bottom:1px solid var(--line);}
+.hg-grade:last-child{border-bottom:none;}
+.hg-badge{font-size:.64rem;font-weight:800;padding:2px 7px;border-radius:20px;white-space:nowrap;flex:none;margin-top:2px;}
+.hg-badge.s{background:var(--grow-bg);color:var(--grow);}
+.hg-badge.a{background:var(--accent-soft);color:var(--accent);}
+.hg-badge.b{background:var(--pre-bg);color:var(--pre);}
+.hg-crit{font-size:.77rem;color:var(--ink);flex:1;line-height:1.5;}
+.hg-tip{font-size:.74rem;color:var(--blue);background:var(--card2);border-radius:8px;padding:7px 10px;margin-top:7px;line-height:1.55;}
 /* 新手入門清單 */
 .onboard-card{background:var(--card);border:1.5px solid var(--accent);border-radius:16px;padding:15px;margin-bottom:14px;}
 .onboard-hd{font-size:1.05rem;font-weight:800;color:var(--accent);margin-bottom:4px;display:flex;align-items:center;gap:8px;}
@@ -1272,6 +1283,76 @@ function renderEcGuide(){
     '<div class="ecguide-body" id="'+uid+'-b">'+stepsHtml+'</div></div>';
 }
 
+/* 採收分級與熟度指引 */
+const HARV_GUIDE={
+  "牛番茄":{
+    timing:"轉色約 70–80%（果肩留一點綠），觸感微硬有彈性。<b>不能等全紅才摘</b>——全紅果運輸易裂，70% 轉色後室溫 3–5 天自然後熟風味最佳。",
+    grades:[
+      {g:"特級",cls:"s",crit:"直徑 ≥ 7 cm · 重量 ≥ 180 g · 無裂口病斑 · 轉色均勻"},
+      {g:"優級",cls:"a",crit:"直徑 5–7 cm · 微小斑點不影響外觀 · 輕微形狀偏差"},
+      {g:"次級",cls:"b",crit:"直徑 < 5 cm · 輕微裂口 · 形狀扁塌 → 留自用或加工"}
+    ],
+    tip:"🌡 採後放陰涼處，勿冷藏（< 13°C 破壞風味），15°C 可保 7–10 天"
+  },
+  "彩椒":{
+    timing:"完全轉色（紅/黃/橙 100%），果實硬挺飽滿，果梗仍呈鮮綠色。<b>轉色不完全甜度不足，完全轉色甜度高出 30–50%。</b>",
+    grades:[
+      {g:"特級",cls:"s",crit:"重量 ≥ 200 g · 完全轉色 · 4 凹型完整 · 無病斑裂口"},
+      {g:"優級",cls:"a",crit:"重量 150–200 g · 顏色均勻稍淺 · 輕微形狀偏差"},
+      {g:"次級",cls:"b",crit:"重量 < 150 g · 色澤不均 · 輕微損傷 → 加工用"}
+    ],
+    tip:"🌡 保存溫度 10–13°C · 濕度 90–95%；勿與番茄同放（乙烯催熟）"
+  },
+  "玉女番茄":{
+    timing:"果串轉色 80–90%（串型品種等整串約 70% 轉色後整串剪下），果粒顏色亮紅、微有光澤。<b>過熟裂果損耗大。</b>",
+    grades:[
+      {g:"特級",cls:"s",crit:"果重 15–25 g · 串型完整無裂果 · 轉色均勻亮紅"},
+      {g:"優級",cls:"a",crit:"散裝單果 · 微裂痕 · 大小稍不一致"},
+      {g:"次級",cls:"b",crit:"裂果 · 過熟軟爛 · 形狀異常 → 自用或榨汁"}
+    ],
+    tip:"🚫 玉女番茄採後不可冷藏（冷藏破壞甜味），室溫 3 天內食用風味最佳"
+  },
+  "高山草莓":{
+    timing:"果實整體轉紅 80–90%，果尖微白即可採，<b>全紅後果肉軟爛易損。</b>清晨採（露水蒸發後），放扁淺容器單層排放。",
+    grades:[
+      {g:"特級",cls:"s",crit:"單果重 ≥ 20 g · 錐形完整 · 轉色 ≥ 85% · 無傷痕"},
+      {g:"優級",cls:"a",crit:"單果重 15–20 g · 輕微形狀偏差 · 轉色 70–85%"},
+      {g:"次級",cls:"b",crit:"果重 < 15 g · 畸形 · 有傷 → 現採現食或加工"}
+    ],
+    tip:"🌡 0–2°C 冷藏，勿重疊；採後 24 小時內出貨品質最佳"
+  },
+  "高麗菜":{
+    timing:"結球緊實飽滿，用手按壓感覺堅硬，<b>外葉開始自然翻捲即可採</b>。過熟結球爆裂品質下降。",
+    grades:[
+      {g:"特級",cls:"s",crit:"球重 ≥ 1.5 kg · 外形圓整 · 無裂球 · 外葉 2–3 片完整"},
+      {g:"優級",cls:"a",crit:"球重 1–1.5 kg · 形狀稍扁 · 輕微外葉損傷"},
+      {g:"次級",cls:"b",crit:"球重 < 1 kg · 輕微裂球 · 蟲傷 → 低價或加工"}
+    ],
+    tip:"🌡 去外葉、剪根部，網袋或紙箱包裝，0–4°C 冷藏可保存 2 週"
+  },
+  "敏豆":{
+    timing:"花謝後 8–10 天，豆莢飽滿挺直、<b>豆粒微隆起但未完全鼓出</b>，莢色鮮綠。過熟纖維化口感差、售價大跌。",
+    grades:[
+      {g:"特級",cls:"s",crit:"莢長 12–15 cm · 無筋 · 色澤鮮綠 · 莢形筆直"},
+      {g:"優級",cls:"a",crit:"莢長 10–12 cm · 輕微彎曲 · 色澤稍黃"},
+      {g:"次級",cls:"b",crit:"莢長 < 10 或 > 15 cm · 纖維化 · 蟲傷"}
+    ],
+    tip:"🌡 採後立即冷藏（4–7°C），不冷藏 2 天即迅速老化；每 2–3 天採收一次維持持續產量"
+  }
+};
+function renderHarvestGuide(cropName){
+  const g=HARV_GUIDE[cropName];if(!g)return'';
+  const uid='hg-'+Date.now();
+  const gradesHtml=g.grades.map(gr=>'<div class="hg-grade"><span class="hg-badge '+gr.cls+'">'+gr.g+'</span><span class="hg-crit">'+gr.crit+'</span></div>').join('');
+  const body='<div class="hg-timing">⏰ <b>採收時機：</b>'+g.timing+'</div>'+
+    '<div style="font-size:.72rem;font-weight:700;color:var(--ink-soft);margin-bottom:5px">分級標準</div>'+
+    gradesHtml+
+    '<div class="hg-tip">'+g.tip+'</div>';
+  return'<div class="ecguide">'+
+    '<div class="ecguide-q" id="'+uid+'" onclick="var b=document.getElementById(\''+uid+'-b\');b.classList.toggle(\'open\');this.classList.toggle(\'open\')">🧺 如何判斷熟度與分級？</div>'+
+    '<div class="ecguide-body" id="'+uid+'-b">'+body+'</div></div>';
+}
+
 /* ---------- 田區詳情 ---------- */
 function openPlot(i){CUR=i;go("plots");renderPlots();}
 function renderPlots(){
@@ -1356,7 +1437,13 @@ function renderPlots(){
     '<div class="sub">定植 '+r.date+'　·　'+(r.plants||"?")+' 株　·　'+c.科+'</div>'+
     '<div class="prog"><i class="'+(age>=c.grow?'h':'g')+'" style="width:'+Math.max(age<0?0:Math.round(age/(c.grow+c.dur)*100),2)+'%"></i></div>'+
     '<div class="prog-l"><span>第 '+Math.max(age,0)+' 天</span><span>'+(age>=c.grow?"採收期":"距採收 "+(c.grow-age)+" 天")+'</span></div>'+
-    (phi?'<span class="pill">⚠ 用藥安全期至 '+md(phi)+' 禁止採收</span>':'')+
+    (phi?(()=>{const dl=Math.ceil((phi-today())/DAY);return'<div style="background:var(--warn-bg);border:1.5px solid var(--warn);border-radius:11px;padding:8px 12px;margin:8px 0 4px;display:flex;align-items:center;gap:10px">'+
+      '<span style="font-size:1.6rem;flex:none">🚫</span>'+
+      '<div><div style="font-size:.88rem;font-weight:800;color:var(--warn)">禁止採收 · 還剩 <b>'+dl+' 天</b></div>'+
+      '<div style="font-size:.72rem;color:var(--ink-soft);margin-top:1px">用藥安全期至 <b>'+md(phi)+'</b> 後才可採收</div>'+
+      '<div style="height:5px;background:var(--line);border-radius:3px;margin-top:6px;overflow:hidden">'+
+        '<div style="height:100%;width:'+Math.min(100,Math.max(0,Math.round((1-dl/30)*100)))+'%;background:var(--warn);border-radius:3px;transition:width .3s"></div></div></div></div>';})()
+    :'')+
     (ht?'<span class="pill ok">累計採收 '+(Math.round(ht*10)/10)+' kg</span>':'')+
     ((()=>{const g=harvestGrades(r);return (g.g2||g.g3)?'<span class="pill ok" style="background:var(--accent-soft);color:var(--accent)">特'+g.g1+'/優'+g.g2+'/次'+g.g3+' kg</span>':'';})())+
     ((()=>{const costs=(r.records||[]).filter(x=>x.type==='cost'&&x.amount);if(!costs.length)return'';const tot=costs.reduce((a,x)=>a+(+x.amount||0),0);return '<span class="pill" style="background:var(--grow-bg);color:var(--grow)">💰 累計成本 NT$'+Math.round(tot).toLocaleString()+'</span>';})())+
@@ -1400,12 +1487,15 @@ function logModal(type){
     '<div class="info" style="margin-bottom:8px">目標 EC <b>'+(stTarget||"2.0–3.0")+'</b> dS/m　· pH 目標 <b>6.0–6.8</b>'+(ecTarget?'<br><small style="color:var(--ink-soft)">'+ecTarget+'</small>':'')+'</div>'+
     '<div class="row2"><div><label class="f">EC 實測值 (dS/m)</label><input class="t" id="m-ec" type="number" step="0.1" placeholder="2.5"></div><div><label class="f">pH 實測值</label><input class="t" id="m-ph" type="number" step="0.1" placeholder="6.5"></div></div>';
   }
-  else if(type==="harv")fields+=
+  else if(type==="harv"){
+    const harCrop=load()[CUR]?load()[CUR].crop:"";
+    fields+=renderHarvestGuide(harCrop)+
     '<p style="font-size:.8rem;color:var(--ink-soft);margin:4px 0 8px">分級記錄，方便對應契作規格與計價。若不分級，全填在特級即可。</p>'+
     '<div class="row2"><div><label class="f">特級 (kg)</label><input class="t" id="m-g1" type="number" step="0.1" placeholder="0"></div>'+
     '<div><label class="f">優級 (kg)</label><input class="t" id="m-g2" type="number" step="0.1" placeholder="0"></div></div>'+
     '<label class="f">次級／處理果 (kg)</label><input class="t" id="m-g3" type="number" step="0.1" placeholder="0">'+
     '<div class="info" style="margin-top:8px">合計：<b id="m-gtot">0</b> kg</div>';
+  }
   else if(type==="fert"){
     const crop=load()[CUR]?load()[CUR].crop:"";
     const fertOpts=FERTDB.filter(f=>!crop||f.crop.includes(crop.replace(/牛|玉女/,"").trim())||f.crop==="番茄/彩椒");
