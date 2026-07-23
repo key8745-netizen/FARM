@@ -376,6 +376,16 @@ nav button.on{color:var(--accent);}
 .cal-detail h4{margin:0 0 7px;font-size:.88rem;}
 .cal-det-row{display:flex;align-items:flex-start;gap:7px;padding:4px 0;border-bottom:1px solid var(--line);font-size:.82rem;}
 .cal-det-row:last-child{border-bottom:none;}
+/* 配肥計算器 */
+.mix-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);}
+.mix-row:last-child{border-bottom:none;}
+.mix-info{flex:1;min-width:0;}
+.mix-name{font-size:.88rem;font-weight:700;line-height:1.35;}
+.mix-note{font-size:.72rem;color:var(--ink-soft);margin-top:2px;line-height:1.45;}
+.mix-amt{flex:none;text-align:right;min-width:5.5em;}
+.mix-amt b{font-size:1.15rem;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums;display:block;line-height:1.1;}
+.mix-amt small{font-size:.66rem;color:var(--ink-soft);}
+.mix-dose-tag{font-size:.65rem;font-weight:700;color:var(--grow);background:var(--grow-bg);padding:1px 7px;border-radius:20px;white-space:nowrap;}
 </style>
 
 </head>
@@ -1962,6 +1972,13 @@ function renderTools(){
     '<div><label class="f">批數</label><select class="t" id="bt-n"><option value="2">2 批</option><option value="3" selected>3 批</option><option value="4">4 批</option></select></div></div>'+
     '<label class="f">批次間隔（天）</label><select class="t" id="bt-interval"><option value="14">14 天（2 週）</option><option value="21" selected>21 天（3 週）</option><option value="28">28 天（4 週）</option><option value="35">35 天（5 週）</option></select>'+
     '<button class="btn" id="bt-go" style="margin-top:14px">產生分批計畫</button><div id="bt-res"></div></div>'+
+    '<h2 style="margin-top:22px">配肥計算器</h2><p class="note">選生育階段與你的水桶容量，把「稀釋800倍」這種抽象倍數，直接換算成「這桶要加幾 mL / 幾 g」。液肥用量筒量、粉狀/結晶用秤重。數值為參考，請依植株反應微調並先小量試配。</p>'+
+    '<div class="card">'+
+    '<div class="row2"><div><label class="f">生育階段</label><select class="t" id="mx-stage"><option>苗期</option><option>生長期</option><option>花期</option><option>果期</option><option>追肥</option></select></div>'+
+    '<div><label class="f">配肥作物</label><select class="t" id="mx-crop"><option value="番茄/彩椒">番茄/彩椒共通</option><option value="番茄">番茄</option><option value="彩椒">彩椒</option></select></div></div>'+
+    '<div class="row2"><div><label class="f">水桶/肥槽容量（公升 L）</label><input class="t" id="mx-vol" type="number" value="200" min="1"></div>'+
+    '<div><label class="f">株數（每株用量型才需要）</label><input class="t" id="mx-plants" type="number" value="500" min="1"></div></div>'+
+    '<button class="btn" id="mx-go" style="margin-top:14px">計算配肥用量</button><div id="mx-res"></div></div>'+
     '<h2 style="margin-top:22px">市場行情比價（送哪個市場）</h2><p class="note">抓 AMIS 各批發市場的上/中/下/均價，判斷上貨、下貨分別送哪裡最划算，並試算這批貨收入。需部署到 Netlify 才能即時抓取。</p>'+
     '<div class="card"><div class="row2"><div><label class="f">作物</label><select class="t" id="mk-crop">'+opts+'</select></div>'+
     '<div><label class="f">查詢天數</label><select class="t" id="mk-days"><option value="7">近 7 天</option><option value="14">近 14 天</option><option value="30">近 30 天</option><option value="3">近 3 天</option></select></div></div>'+
@@ -2090,6 +2107,50 @@ function renderTools(){
       '<div class="bt-sum-card"><div class="bt-sum-hd">各批次明細</div>'+smry+
       '<div style="font-size:.78rem;padding-top:8px;margin-top:4px;border-top:1px solid var(--line)"><b>全 '+n+' 批總用料</b>（共 '+n*plants+' 株）：'+fertLine+'</div></div>'+
       '<div class="info" style="margin-top:10px">'+ana+'</div>'+overlapNote;
+  };
+  // 配肥計算器：把稀釋倍數/每株用量換算成這桶的實際用量
+  v.querySelector("#mx-go").onclick=()=>{
+    const stage=v.querySelector("#mx-stage").value;
+    const cropSel=v.querySelector("#mx-crop").value;
+    const vol=+v.querySelector("#mx-vol").value||0;
+    const plants=+v.querySelector("#mx-plants").value||0;
+    const res=v.querySelector("#mx-res");
+    if(vol<=0){res.innerHTML='<div class="info" style="margin-top:10px;color:var(--warn)">請輸入水桶容量。</div>';return;}
+    // 選出符合階段的肥料；作物選番茄/彩椒時顯示通用+該作物專屬
+    const items=FERTDB.filter(f=>{
+      if(f.stage!==stage)return false;
+      if(f.crop==="番茄/彩椒")return true;
+      if(cropSel==="番茄/彩椒")return true; // 通用視圖顯示全部
+      return f.crop===cropSel;
+    });
+    if(!items.length){res.innerHTML='<div class="info" style="margin-top:10px;color:var(--ink-soft)">此階段無配方資料。</div>';return;}
+    // 液肥→mL，粉狀/結晶→g
+    const isLiquid=name=>/液肥/.test(name);
+    const rows=items.map(f=>{
+      const dose=f.dose;let amtHtml='';
+      const mDil=dose.match(/稀釋\s*(\d+)\s*倍/);
+      const mPer=dose.match(/每株\s*([\d.]+)\s*g/);
+      if(mDil){
+        const ratio=+mDil[1];
+        const base=vol*1000/ratio; // mL(液) 或 g(粉，約 1000倍=1g/L)
+        const liquid=isLiquid(f.name);
+        const val=base>=100?Math.round(base):Math.round(base*10)/10;
+        amtHtml='<b>'+val.toLocaleString()+'</b><small>'+(liquid?'mL':'公克 g')+' / '+vol+'L</small>';
+      }else if(mPer){
+        const per=+mPer[1];
+        const tot=Math.round(per*plants);
+        amtHtml='<b>'+tot.toLocaleString()+'</b><small>公克 g（'+plants+'株×'+per+'g）</small>';
+      }else{
+        amtHtml='<b>—</b><small>依標示</small>';
+      }
+      return '<div class="mix-row"><div class="mix-info"><div class="mix-name">'+f.name+
+        (cropSel==="番茄/彩椒"&&f.crop!=="番茄/彩椒"?' <span class="mix-dose-tag">'+f.crop+'專屬</span>':'')+
+        '</div><div class="mix-note">'+f.note+'　·　原則：'+f.dose+'</div></div>'+
+        '<div class="mix-amt">'+amtHtml+'</div></div>';
+    }).join('');
+    res.innerHTML='<div class="res" style="margin-top:12px"><h4>🧪 '+stage+' 配肥用量（'+vol+'L 水）</h4>'+rows+
+      '<div class="foot" style="text-align:left">操作：先把水加約 8 分滿 → 加入上列肥料攪拌溶解 → 補水到 '+vol+'L → 量測 EC/pH（目標見各作物階段值）。'+
+      '<b>硝酸鈣不可與磷酸鹽、硫酸鹽同槽混合</b>（會產生沉澱），需分開施用或分槽（A/B 槽）。粉狀肥料先小量溶水再倒入。</div></div>';
   };
   // 把市場比價結果渲染出來（含常送市場過濾、加星、收入試算）
   function renderMarket(d,range){
