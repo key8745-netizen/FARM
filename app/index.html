@@ -191,6 +191,20 @@ nav button.on{color:var(--accent);}
 .risk-sym{font-size:.7rem;color:var(--ink-soft);margin-top:1px;}
 .risk-adv{font-size:.7rem;color:var(--blue);margin-top:2px;}
 .risk-score{font-size:.67rem;color:var(--ink-soft);flex:none;font-variant-numeric:tabular-nums;padding-top:3px;}
+/* 今日智慧行動清單 */
+.daily-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:12px;}
+.daily-hd{font-size:.8rem;font-weight:700;color:var(--ink-soft);margin-bottom:8px;display:flex;justify-content:space-between;align-items:baseline;}
+.daily-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:.82rem;line-height:1.45;}
+.daily-row:last-child{border-bottom:none;}
+.daily-icon{flex:none;font-size:1.1rem;line-height:1;padding-top:.1em;}
+.daily-body{flex:1;min-width:0;}
+.daily-plot{font-size:.65rem;font-weight:700;color:var(--ink-soft);margin-bottom:2px;letter-spacing:.04em;text-transform:uppercase;}
+.daily-task{font-size:.85rem;font-weight:700;line-height:1.3;}
+.daily-task.urgent{color:var(--warn);}
+.daily-detail{font-size:.7rem;color:var(--ink-soft);margin-top:3px;line-height:1.5;}
+.daily-badge{font-size:.6rem;font-weight:800;padding:2px 7px;border-radius:20px;white-space:nowrap;flex:none;margin-top:3px;}
+.daily-badge.urgent{background:var(--warn-bg);color:var(--warn);}
+.daily-badge.today{background:var(--accent-soft);color:var(--accent);}
 </style>
 
 </head>
@@ -453,23 +467,44 @@ function loadWx(container){
         if(ha){ha.innerHTML=hints.map(h=>'<div class="info" style="margin-bottom:6px;background:var(--warn-bg);color:var(--warn)">'+h+'</div>').join('');ha.style.display='';}
       }
     }catch(e){/* 離線或受限網路時靜默忽略 */}
-    // 病害風險 — 呼叫 Netlify Function（引擎與資料庫在伺服器端，完全自包含）
+    // 每日智慧行動清單 — 呼叫 daily Function（天氣×病害×田區狀態統一整合）
     try{
       const dr=container.querySelector('#disease-risk');if(!dr)return;
       const plots=load();
-      const cropKeys=[...new Set(plots.map(r=>r.crop.includes("番茄")?"番茄":"彩椒"))];
-      if(!cropKeys.length){cropKeys.push("番茄");cropKeys.push("彩椒");}
-      // 取得目前所有田區的主要生育期（傳給 Function 做階段加成）
-      const stageMap={'定植期':'定植期','苗期':'苗期','生長期':'生長期','花期':'花期','果期':'果期','採收期':'採收期'};
-      const stages=plots.map(r=>{const[st]=stageOf(r);return stageMap[st]||'';}).filter(Boolean);
-      const stage=stages[0]||'';
-      const resp=await fetch('/.netlify/functions/disease',{
+      // 計算每個田區的狀態摘要，傳給後端做精準評分
+      function daysSinceType(rec,type){
+        const rs=(rec.records||[]).filter(r=>r.type===type);
+        if(!rs.length)return null;
+        const last=rs.map(r=>parseD(r.date)).reduce((a,b)=>a>b?a:b);
+        return Math.round((today()-last)/DAY);
+      }
+      const plotSummaries=plots.map(rec=>{
+        const c=CROPS[rec.crop];const[,,ageDays]=stageOf(rec);
+        const isHarvesting=ageDays>=0&&ageDays>=c.grow;
+        const phi=phiLock(rec);
+        let stageLabel='';
+        if(ageDays<0)stageLabel='定植期';
+        else if(isHarvesting)stageLabel='採收期';
+        else{const[sn]=ecStage(c,ageDays);stageLabel=sn||'';}
+        const isDone=ageDays>c.grow+c.dur+30;
+        return{
+          plot:rec.plot,crop:rec.crop,stage:stageLabel,ageDays,isHarvesting,isDone,
+          daysToHarvest:c.grow-ageDays,
+          inPHI:!!phi,phiEndStr:phi?md(phi):null,
+          ecLastDays:daysSinceType(rec,'ecph'),
+          ipmLastDays:daysSinceType(rec,'ipm'),
+          sprayLastDays:daysSinceType(rec,'spray'),
+        };
+      });
+      const resp=await fetch('/.netlify/functions/daily',{
         method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({crops:cropKeys,stage})
+        body:JSON.stringify({plots:plotSummaries})
       });
       if(resp.ok){
         const data=await resp.json();
-        dr.innerHTML=renderDecisions(data.decisions,data.weather)+renderDiseaseRisk(data.risks,data.weather);
+        dr.innerHTML=renderDecisions(data.decisions,data.weather)+
+          renderDailyTasks(data.tasks)+
+          renderDiseaseRisk(data.risks,data.weather);
       }
     }catch(e){/* 離線 / 本機開發時靜默忽略 */}
   })();
@@ -487,6 +522,29 @@ function renderDecisions(decs,wx){
       '<span class="dec-msg">'+d.msg+'</span></div>';
   }).join('');
   return '<div class="dec-card"><div class="dec-hd">📋 今日農事決策'+src+'</div>'+rows+'</div>';
+}
+function renderDailyTasks(tasks){
+  if(!tasks||!tasks.length)return'';
+  const urgent=tasks.filter(t=>t.priority==='urgent').length;
+  const hd=urgent
+    ?'🎯 今日行動清單<span style="font-size:.65rem;color:var(--warn);font-weight:700">⚠ '+urgent+' 項緊急</span>'
+    :'🎯 今日行動清單';
+  const rows=tasks.map(t=>{
+    const badge=t.priority==='urgent'
+      ?'<span class="daily-badge urgent">緊急</span>'
+      :'<span class="daily-badge today">今日</span>';
+    const detail=t.detail
+      ?'<div class="daily-detail">'+t.detail.replace(/\n/g,'<br>')+'</div>'
+      :'';
+    return'<div class="daily-row">'+
+      '<div class="daily-icon">'+t.icon+'</div>'+
+      '<div class="daily-body">'+
+        (t.plot?'<div class="daily-plot">'+t.plot+'</div>':'')+
+        '<div class="daily-task '+t.priority+'">'+t.task+'</div>'+
+        detail+
+      '</div>'+badge+'</div>';
+  }).join('');
+  return'<div class="daily-card"><div class="daily-hd">'+hd+'</div>'+rows+'</div>';
 }
 function renderDiseaseRisk(risks,wx){
   if(!risks||!risks.length)return'';
