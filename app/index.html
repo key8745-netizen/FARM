@@ -168,6 +168,17 @@ nav button.on{color:var(--accent);}
 .wx-lo{font-weight:400;opacity:.78;}
 .wx-rain{font-size:.65rem;margin-top:2px;}
 .wx-foot{font-size:.58rem;opacity:.55;text-align:right;margin-top:7px;}
+/* 今日農事決策 */
+.dec-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:12px;}
+.dec-hd{font-size:.8rem;font-weight:700;color:var(--ink-soft);margin-bottom:8px;display:flex;justify-content:space-between;align-items:baseline;}
+.dec-src{font-size:.63rem;font-weight:400;color:var(--done);}
+.dec-row{display:flex;align-items:baseline;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:.82rem;line-height:1.4;}
+.dec-row:last-child{border-bottom:none;}
+.dec-cat{flex:none;font-weight:800;font-size:.72rem;width:4.5em;}
+.dec-cat.hi{color:var(--warn);}.dec-cat.mid{color:var(--grow);}.dec-cat.ok{color:var(--harv);}
+.dec-dot{flex:none;font-size:.55rem;margin-top:.1em;}
+.dec-dot.hi{color:var(--warn);}.dec-dot.mid{color:var(--grow);}.dec-dot.ok{color:var(--harv);}
+.dec-msg{flex:1;color:var(--ink-soft);}
 /* 天氣驅動病害風險 */
 .risk-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:12px;}
 .risk-hd{display:flex;align-items:center;gap:7px;font-size:.82rem;font-weight:700;margin-bottom:6px;color:var(--ink-soft);}
@@ -448,13 +459,34 @@ function loadWx(container){
       const plots=load();
       const cropKeys=[...new Set(plots.map(r=>r.crop.includes("番茄")?"番茄":"彩椒"))];
       if(!cropKeys.length){cropKeys.push("番茄");cropKeys.push("彩椒");}
+      // 取得目前所有田區的主要生育期（傳給 Function 做階段加成）
+      const stageMap={'定植期':'定植期','苗期':'苗期','生長期':'生長期','花期':'花期','果期':'果期','採收期':'採收期'};
+      const stages=plots.map(r=>{const[st]=stageOf(r);return stageMap[st]||'';}).filter(Boolean);
+      const stage=stages[0]||'';
       const resp=await fetch('/.netlify/functions/disease',{
         method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({crops:cropKeys})
+        body:JSON.stringify({crops:cropKeys,stage})
       });
-      if(resp.ok){const data=await resp.json();dr.innerHTML=renderDiseaseRisk(data.risks,data.weather);}
+      if(resp.ok){
+        const data=await resp.json();
+        dr.innerHTML=renderDecisions(data.decisions,data.weather)+renderDiseaseRisk(data.risks,data.weather);
+      }
     }catch(e){/* 離線 / 本機開發時靜默忽略 */}
   })();
+}
+function renderDecisions(decs,wx){
+  if(!decs||!decs.length)return'';
+  const src=wx?.source==='CWA'
+    ?'<span class="dec-src">📡 '+wx.stations+'</span>'
+    :'<span class="dec-src">🌐 Open-Meteo 預報</span>';
+  const rows=decs.map(d=>{
+    const icons={ok:'●',mid:'●',hi:'●'};
+    return '<div class="dec-row">'+
+      '<span class="dec-dot '+d.level+'">'+icons[d.level]+'</span>'+
+      '<span class="dec-cat '+d.level+'">'+d.cat+'</span>'+
+      '<span class="dec-msg">'+d.msg+'</span></div>';
+  }).join('');
+  return '<div class="dec-card"><div class="dec-hd">📋 今日農事決策'+src+'</div>'+rows+'</div>';
 }
 function renderDiseaseRisk(risks,wx){
   if(!risks||!risks.length)return'';
