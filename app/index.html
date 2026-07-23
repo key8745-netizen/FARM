@@ -336,6 +336,19 @@ nav button.on{color:var(--accent);}
 .bt-batch-row{display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--line);font-size:.82rem;flex-wrap:wrap;}
 .bt-batch-row:last-child{border-bottom:none;}
 .bt-batch-n{font-weight:800;color:var(--accent);min-width:3.2em;}
+/* 損益分析 */
+.pl-kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:12px 0;}
+.pl-kpi{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:11px 12px;text-align:center;}
+.pl-kpi b{display:block;font-size:1.55rem;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums;}
+.pl-kpi.pos b{color:var(--harv);}
+.pl-kpi.neg b{color:var(--warn);}
+.pl-kpi small{font-size:.68rem;color:var(--ink-soft);display:block;margin-top:4px;}
+.pl-cat-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:.85rem;}
+.pl-cat-row:last-child{border-bottom:none;}
+.pl-bar-wrap{flex:1;height:6px;background:var(--line);border-radius:3px;}
+.pl-bar{height:100%;border-radius:3px;background:var(--warn);}
+.pl-field-row{display:flex;gap:6px;padding:7px 0;border-bottom:1px solid var(--line);font-size:.82rem;align-items:baseline;flex-wrap:wrap;}
+.pl-field-row:last-child{border-bottom:none;}
 </style>
 
 </head>
@@ -1851,6 +1864,17 @@ function renderTools(){
     '<div id="mk-res"></div></div>'+
     '<h2 style="margin-top:22px">產銷履歷紀錄簿</h2><p class="note">依台灣安全農業（TGAP）匯出用藥/施肥/採收紀錄，供驗證稽核與追溯。</p>'+
     '<div class="card"><button class="btn" id="rb-go">匯出履歷紀錄簿 CSV</button><div id="rb-res"></div></div>'+
+    '<h2 style="margin-top:22px">損益分析</h2><p class="note">彙整所有田區的採收量 × 你輸入的單價 = 預估收入；再扣除在田區「💰成本登錄」累計的支出，得出差額（毛利估算）。成本愈完整，數字愈準確。</p>'+
+    '<div class="card">'+
+    '<div class="row2"><div><label class="f">起始日</label><input class="t" id="pl-s" type="date" value="'+fmtD(addD(today(),-180))+'"></div>'+
+    '<div><label class="f">結束日</label><input class="t" id="pl-e" type="date" value="'+fmtD(today())+'"></div></div>'+
+    '<p style="font-size:.78rem;color:var(--ink-soft);margin:8px 0 4px">採收均價（依市場行情或契約填入，影響收入估算）</p>'+
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">'+
+    '<div><label class="f">特級（元/kg）</label><input class="t" id="pl-p1" type="number" value="60" min="0"></div>'+
+    '<div><label class="f">優級（元/kg）</label><input class="t" id="pl-p2" type="number" value="40" min="0"></div>'+
+    '<div><label class="f">次級（元/kg）</label><input class="t" id="pl-p3" type="number" value="20" min="0"></div>'+
+    '</div>'+
+    '<button class="btn" id="pl-go" style="margin-top:14px">計算損益</button><div id="pl-res"></div></div>'+
     '<h2 style="margin-top:22px">資料備份 / 還原</h2><p class="note">App 資料存在瀏覽器，清除快取會消失。定期備份 JSON 檔到手機相簿或雲端，需要時可還原。</p>'+
     '<div class="card"><div class="row2">'+
     '<button class="btn" id="bk-exp">⬇ 備份下載 JSON</button>'+
@@ -2058,6 +2082,98 @@ function renderTools(){
       csv+=[rc.date,r.plot,r.crop,ty,rc.target||"",mat,dose,rc.phi||"",gradeNote].map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(",")+"\n";});});
     v.querySelector("#rb-res").innerHTML=n?'<div class="res"><h4>紀錄簿（'+n+' 筆，CSV）</h4><textarea class="t" style="min-height:180px;font-size:.72rem" readonly id="rb-t">'+csv.replace(/</g,"&lt;")+'</textarea><button class="btn" id="rb-copy">複製 CSV</button><div class="foot" style="text-align:left">可貼進 Excel 或匯入產銷履歷系統。用藥紀錄請確認符合植保系統登記藥、稀釋倍數與安全採收期。</div></div>':'<div class="info">尚無用藥/施肥/採收紀錄。到田區登錄後即可匯出。</div>';
     const cp=v.querySelector("#rb-copy");if(cp)cp.onclick=()=>{const ta=v.querySelector("#rb-t");ta.select();try{document.execCommand("copy");cp.textContent="已複製 ✓";}catch(e){}};
+  };
+  // 損益分析
+  v.querySelector("#pl-go").onclick=()=>{
+    const ds=v.querySelector("#pl-s").value;
+    const de=v.querySelector("#pl-e").value;
+    const p1=+v.querySelector("#pl-p1").value||60;
+    const p2=+v.querySelector("#pl-p2").value||40;
+    const p3=+v.querySelector("#pl-p3").value||20;
+    if(!ds||!de)return;
+    const plots=load();
+    let tG1=0,tG2=0,tG3=0,tCost=0,costRecs=0;
+    const catCost={};const cropMap={};const fieldRows=[];
+    plots.forEach(plot=>{
+      let fG1=0,fG2=0,fG3=0,fCost=0;
+      (plot.records||[]).forEach(r=>{
+        if(r.date<ds||r.date>de)return;
+        if(r.type==="harv"){fG1+=(+r.g1||0);fG2+=(+r.g2||0);fG3+=(+r.g3||0);}
+        if(r.type==="cost"&&r.amount){
+          const cat=r.category||"其他";
+          catCost[cat]=(catCost[cat]||0)+(+r.amount);
+          fCost+=(+r.amount);tCost+=(+r.amount);costRecs++;
+        }
+      });
+      tG1+=fG1;tG2+=fG2;tG3+=fG3;
+      const fRev=Math.round(fG1*p1+fG2*p2+fG3*p3);
+      if(fRev>0||fCost>0){
+        if(!cropMap[plot.crop])cropMap[plot.crop]={g1:0,g2:0,g3:0,rev:0};
+        cropMap[plot.crop].g1+=fG1;cropMap[plot.crop].g2+=fG2;cropMap[plot.crop].g3+=fG3;
+        cropMap[plot.crop].rev+=fRev;
+        fieldRows.push({n:plot.plot,crop:plot.crop,fG1,fG2,fG3,fRev,fCost});
+      }
+    });
+    const tQty=Math.round((tG1+tG2+tG3)*10)/10;
+    const tRev=Math.round(tG1*p1+tG2*p2+tG3*p3);
+    const net=tRev-Math.round(tCost);
+    const ppkg=tQty>0?(net/tQty).toFixed(1):"-";
+    const kpiCls=net>=0?"pos":"neg";
+    const netStr=(net>=0?"+":"")+Math.round(net).toLocaleString();
+    // KPI 卡片
+    let html='<div class="pl-kpis">'+
+      '<div class="pl-kpi"><b>NT$'+tRev.toLocaleString()+'</b><small>預估收入</small></div>'+
+      '<div class="pl-kpi"><b>NT$'+Math.round(tCost).toLocaleString()+'</b><small>記錄成本（'+costRecs+' 筆）</small></div>'+
+      '<div class="pl-kpi '+kpiCls+'"><b>'+netStr+'</b><small>差額（毛利估算）</small></div>'+
+      '<div class="pl-kpi '+(+ppkg>=0?"pos":"neg")+'"><b>'+(ppkg!=="-"?"NT$"+ppkg:"-")+'</b><small>元/公斤</small></div>'+
+      '</div>';
+    // 採收明細
+    if(tQty>0){
+      html+='<div class="res"><h4>📦 採收量（'+ds+' ~ '+de+'）</h4>'+
+        (tG1?'<div class="r"><span>特級</span><b>'+tG1.toFixed(1)+' kg × NT$'+p1+' = <span style="color:var(--harv)">'+Math.round(tG1*p1).toLocaleString()+'</span></b></div>':'')+
+        (tG2?'<div class="r"><span>優級</span><b>'+tG2.toFixed(1)+' kg × NT$'+p2+' = <span style="color:var(--harv)">'+Math.round(tG2*p2).toLocaleString()+'</span></b></div>':'')+
+        (tG3?'<div class="r"><span>次級</span><b>'+tG3.toFixed(1)+' kg × NT$'+p3+' = <span style="color:var(--harv)">'+Math.round(tG3*p3).toLocaleString()+'</span></b></div>':'')+
+        '<div class="r" style="border-top:1.5px solid var(--line);margin-top:4px"><span>合計</span><b>'+tQty+' kg → 預估 NT$'+tRev.toLocaleString()+'</b></div>'+
+        Object.entries(cropMap).map(([crop,d])=>{
+          const cQty=Math.round((d.g1+d.g2+d.g3)*10)/10;
+          return '<div class="r"><span style="color:var(--ink-soft)">── '+crop+'</span><b style="font-weight:500">'+cQty+' kg，NT$'+d.rev.toLocaleString()+'</b></div>';
+        }).join('')+'</div>';
+    } else {
+      html+='<div class="info" style="color:var(--ink-soft);margin-top:8px">此期間無採收紀錄，請先在田區登錄採收資料。</div>';
+    }
+    // 成本分類
+    const catEntries=Object.entries(catCost).sort((a,b)=>b[1]-a[1]);
+    if(catEntries.length){
+      const cMax=catEntries[0][1];
+      html+='<div class="res" style="margin-top:10px"><h4>💰 成本支出分類</h4>'+
+        catEntries.map(([cat,amt])=>
+          '<div class="pl-cat-row"><span style="min-width:3.5em">'+cat+'</span>'+
+          '<div class="pl-bar-wrap"><div class="pl-bar" style="width:'+(amt/cMax*100).toFixed(0)+'%"></div></div>'+
+          '<b style="min-width:6em;text-align:right">NT$'+Math.round(amt).toLocaleString()+'</b></div>'
+        ).join('')+
+        '<div class="pl-cat-row" style="border-top:1.5px solid var(--line);margin-top:4px"><b>合計</b><div></div><b>NT$'+Math.round(tCost).toLocaleString()+'</b></div>'+
+        '</div>';
+    } else {
+      html+='<div class="info" style="margin-top:8px;color:var(--ink-soft)">尚無成本記錄。請至田區 → 💰成本登錄 補充，以算出真實獲利。</div>';
+    }
+    // 各田區明細
+    if(fieldRows.length>1){
+      html+='<div class="res" style="margin-top:10px"><h4>🌱 各田區明細</h4>'+
+        fieldRows.map(f=>{
+          const qty=Math.round((f.fG1+f.fG2+f.fG3)*10)/10;
+          const margin=f.fRev-Math.round(f.fCost);
+          return '<div class="pl-field-row">'+
+            '<span style="font-weight:700;min-width:5em">'+f.n+'</span>'+
+            '<span style="color:var(--ink-soft)">'+f.crop+'</span>'+
+            '<span>'+qty+'kg → NT$'+f.fRev.toLocaleString()+'</span>'+
+            (f.fCost?'<span class="badge '+(margin>=0?'hi':'lo')+'">'+(margin>=0?"+":"")+margin.toLocaleString()+'</span>':'<span style="font-size:.7rem;color:var(--done)">無成本記錄</span>')+
+            '</div>';
+        }).join('')+'</div>';
+    }
+    if(!costRecs){
+      html+='<div class="info" style="margin-top:10px;background:var(--grow-bg);color:var(--ink)">💡 目前差額 = 毛收入（無成本資料）。在田區詳情按 <b>💰成本登錄</b>，輸入每次肥料、農藥、人工費用後，再回此頁計算真實損益。</div>';
+    }
+    v.querySelector("#pl-res").innerHTML=html;
   };
   // 備份：下載 JSON
   v.querySelector("#bk-exp").onclick=()=>{
