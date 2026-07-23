@@ -211,7 +211,7 @@ const DIAG=[
  {q:"葉背小蟲、黏板誘到白色小蟲",c:"粉蝨/薊馬/蟎",a:"達門檻才查植保系統合法用藥並鎖安全採收期；可用天敵。"},
  {q:"介質偏鹹、植株萎凋生長慢",c:"鹽類累積(EC過高)",a:"減少施肥、澆清水淋洗鹽分、增加有機質。"}
 ];
-const RTYPES={fert:{t:"施肥",c:"fert"},spray:{t:"用藥",c:"spray"},harv:{t:"採收",c:"harv"},ecph:{t:"EC/pH",c:"ecph"},work:{t:"作業",c:"work"},obs:{t:"觀察",c:"obs"},ipm:{t:"黏板",c:"ipm"}};
+const RTYPES={fert:{t:"施肥",c:"fert"},spray:{t:"用藥",c:"spray"},harv:{t:"採收",c:"harv"},ecph:{t:"EC/pH",c:"ecph"},work:{t:"作業",c:"work"},obs:{t:"觀察",c:"obs"},ipm:{t:"黏板",c:"ipm"},cost:{t:"成本",c:"obs"}};
 /* IPM 防治門檻（隻/板/週，參考 IPM 精神：超標才用藥） */
 const IPM_THR={粉蝨:5,薊馬:3,葉蟎:5,蚜蟲:10};
 /* 施肥快選資料庫（溫室介質栽培番茄/彩椒，數值為參考，請依植株反應微調） */
@@ -622,7 +622,7 @@ function renderPlots(){
   // 紀錄歷史
   let recs=(r.records||[]).slice().sort((a,b)=>b.date<a.date?-1:1).map((rc,ri)=>{
     const meta=RTYPES[rc.type]||{t:rc.type,c:"obs"};
-    let extra=rc.type==="ecph"?("EC "+(rc.ec||"?")+" / pH "+(rc.ph||"?")):rc.type==="harv"?(rc.qty+" kg"+((rc.g1!=null&&(rc.g2||rc.g3))?"（特"+rc.g1+"/優"+rc.g2+"/次"+rc.g3+"）":"")):rc.type==="spray"?((rc.target?"防"+rc.target+"：":"")+rc.note+(rc.dose?" "+rc.dose:"")+(rc.phi?"（安全期"+rc.phi+"天）":"")):rc.type==="ipm"?((["粉蝨"+rc.wf,"薊馬"+rc.th,"葉蟎"+rc.sm,"蚜蟲"+rc.ap].filter(s=>!/0$/.test(s)).join("・")||"無蟲")+(rc.note?" ｜ "+rc.note:"")):rc.note||"";
+    let extra=rc.type==="ecph"?("EC "+(rc.ec||"?")+" / pH "+(rc.ph||"?")):rc.type==="harv"?(rc.qty+" kg"+((rc.g1!=null&&(rc.g2||rc.g3))?"（特"+rc.g1+"/優"+rc.g2+"/次"+rc.g3+"）":"")):rc.type==="spray"?((rc.target?"防"+rc.target+"：":"")+rc.note+(rc.dose?" "+rc.dose:"")+(rc.phi?"（安全期"+rc.phi+"天）":"")):rc.type==="ipm"?((["粉蝨"+rc.wf,"薊馬"+rc.th,"葉蟎"+rc.sm,"蚜蟲"+rc.ap].filter(s=>!/0$/.test(s)).join("・")||"無蟲")+(rc.note?" ｜ "+rc.note:"")):rc.type==="cost"?((rc.category?rc.category+"：":"")+"NT$"+(+rc.amount||0).toLocaleString()+(rc.note?" ｜ "+rc.note:"")):rc.note||"";
     return '<div class="rec"><span class="rd">'+md(parseD(rc.date))+'</span><span class="rt"><span class="rtag '+meta.c+'">'+meta.t+'</span>'+extra+'</span><button class="del" data-r="'+ri+'">刪</button></div>';}).join("");
   let ecHist=(r.records||[]).filter(x=>x.type==="ecph"&&x.ec).slice(-12);
   const[,ecTarget]=ecStage(c,age);
@@ -669,6 +669,7 @@ function renderPlots(){
     (phi?'<span class="pill">⚠ 用藥安全期至 '+md(phi)+' 禁止採收</span>':'')+
     (ht?'<span class="pill ok">累計採收 '+(Math.round(ht*10)/10)+' kg</span>':'')+
     ((()=>{const g=harvestGrades(r);return (g.g2||g.g3)?'<span class="pill ok" style="background:var(--accent-soft);color:var(--accent)">特'+g.g1+'/優'+g.g2+'/次'+g.g3+' kg</span>':'';})())+
+    ((()=>{const costs=(r.records||[]).filter(x=>x.type==='cost'&&x.amount);if(!costs.length)return'';const tot=costs.reduce((a,x)=>a+(+x.amount||0),0);return '<span class="pill" style="background:var(--grow-bg);color:var(--grow)">💰 累計成本 NT$'+Math.round(tot).toLocaleString()+'</span>';})())+
     ipmWarn+'</div>'+
     dynHtml+
     (tasks?'<div class="card"><h3 style="margin:0 0 4px;font-size:1rem">今日待辦</h3>'+tasks+soon+'</div>':'')+
@@ -680,6 +681,7 @@ function renderPlots(){
       '<button data-log="work"><span class="qi">✂️</span>作業</button>'+
       '<button data-log="obs"><span class="qi">👀</span>觀察</button>'+
       '<button data-log="ipm"><span class="qi">🪤</span>黏板巡查</button>'+
+      '<button data-log="cost"><span class="qi">💰</span>成本登錄</button>'+
       '<button data-log="ai" style="grid-column:1/-1;background:var(--accent);color:#fff;border:none"><span class="qi">📸</span>每日拍照 + AI 診斷</button></div></div>'+
     ecChart+
     harvChart+
@@ -744,6 +746,10 @@ function logModal(type){
     '<div><label class="f">蚜蟲（隻/板）門檻≥10</label><input class="t" id="m-ap" type="number" min="0" placeholder="0"></div>'+
     '</div>'+
     '<label class="f">其他觀察</label><textarea class="t" id="m-note" placeholder="例如：更換黃板/藍板、位置、環境狀況"></textarea>';
+  else if(type==="cost")fields+=
+    '<label class="f">類別</label><select class="t" id="m-cat"><option>肥料</option><option>農藥</option><option>人工</option><option>耗材</option><option>其他</option></select>'+
+    '<label class="f">金額（NT$）</label><input class="t" id="m-amount" type="number" min="0" placeholder="例如 850">'+
+    '<label class="f">說明（選填）</label><input class="t" id="m-note" placeholder="例如 台肥43號 5kg、噴藥工資">';
   else fields+='<label class="f">內容</label><textarea class="t" id="m-note" placeholder="'+(type==="fert"?"例如 追肥 台肥43號 3kg":type==="work"?"例如 摘側芽、疏果":"例如 葉色正常、發現少量粉蝨")+'"></textarea>';
   mr.innerHTML='<div class="modal-bg" id="mbg"><div class="modal"><h3>登錄'+meta.t+'</h3><p class="note">'+load()[CUR].plot+' · '+load()[CUR].crop+'</p>'+fields+'<button class="btn" id="m-save">儲存</button><button class="btn sec" id="m-cancel">取消</button></div></div>';
   document.getElementById("m-cancel").onclick=()=>mr.innerHTML="";
@@ -776,6 +782,7 @@ function logModal(type){
     else if(type==="harv"){rec.g1=+document.getElementById("m-g1").value||0;rec.g2=+document.getElementById("m-g2").value||0;rec.g3=+document.getElementById("m-g3").value||0;rec.qty=Math.round((rec.g1+rec.g2+rec.g3)*10)/10;}
     else if(type==="spray"){rec.note=document.getElementById("m-note").value;rec.phi=document.getElementById("m-phi").value;rec.target=document.getElementById("m-target").value;rec.dose=document.getElementById("m-dose").value;}
     else if(type==="ipm"){rec.wf=document.getElementById("m-wf").value||"0";rec.th=document.getElementById("m-th").value||"0";rec.sm=document.getElementById("m-sm").value||"0";rec.ap=document.getElementById("m-ap").value||"0";rec.note=document.getElementById("m-note").value;}
+    else if(type==="cost"){rec.category=document.getElementById("m-cat").value;rec.amount=document.getElementById("m-amount").value;rec.note=document.getElementById("m-note").value;}
     else rec.note=document.getElementById("m-note").value;
     p[CUR].records=p[CUR].records||[];p[CUR].records.push(rec);save(p);mr.innerHTML="";renderPlots();
   };
@@ -1009,8 +1016,8 @@ function renderTools(){
   v.querySelector("#rb-go").onclick=()=>{
     const plots=load();let csv="日期,田區,作物,類型,防治對象,藥劑/資材,稀釋倍數/用量,安全採收期,備註\n";let n=0;
     plots.forEach(r=>{(r.records||[]).slice().sort((a,b)=>a.date<b.date?-1:1).forEach(rc=>{
-      if(!["spray","fert","harv","work"].includes(rc.type))return;n++;
-      const ty={spray:"用藥",fert:"施肥",harv:"採收",work:"作業"}[rc.type];
+      if(!["spray","fert","harv","work","cost"].includes(rc.type))return;n++;
+      const ty={spray:"用藥",fert:"施肥",harv:"採收",work:"作業",cost:"成本"}[rc.type];
       const mat=rc.type==="harv"?"":(rc.note||"");
       const dose=rc.type==="harv"?(rc.qty+"kg"):(rc.dose||"");
       const gradeNote=rc.type==="harv"?((rc.g2||rc.g3)?"分級 特"+(rc.g1||0)+"/優"+(rc.g2||0)+"/次"+(rc.g3||0)+"kg":"產量"):"";
