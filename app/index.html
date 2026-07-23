@@ -441,77 +441,25 @@ function loadWx(container){
         const ha=container.querySelector('#wx-alerts');
         if(ha){ha.innerHTML=hints.map(h=>'<div class="info" style="margin-bottom:6px;background:var(--warn-bg);color:var(--warn)">'+h+'</div>').join('');ha.style.display='';}
       }
-      const plots=load();const cropKeys=[...new Set(plots.map(r=>r.crop.includes("番茄")?"番茄":"彩椒"))];
-      if(!cropKeys.length){cropKeys.push("番茄");cropKeys.push("彩椒");}
-      const risks=diseaseRisk(wx,cropKeys);
-      const dr=container.querySelector('#disease-risk');if(dr)dr.innerHTML=renderDiseaseRisk(risks,wx);
     }catch(e){/* 離線或受限網路時靜默忽略 */}
+    // 病害風險 — 呼叫 Netlify Function（引擎與資料庫在伺服器端，完全自包含）
+    try{
+      const dr=container.querySelector('#disease-risk');if(!dr)return;
+      const plots=load();
+      const cropKeys=[...new Set(plots.map(r=>r.crop.includes("番茄")?"番茄":"彩椒"))];
+      if(!cropKeys.length){cropKeys.push("番茄");cropKeys.push("彩椒");}
+      const resp=await fetch('/.netlify/functions/disease',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({crops:cropKeys})
+      });
+      if(resp.ok){const data=await resp.json();dr.innerHTML=renderDiseaseRisk(data.risks,data.weather);}
+    }catch(e){/* 離線 / 本機開發時靜默忽略 */}
   })();
 }
-
-/* ---------- AIAKOS 病害風險引擎（本地化，MIT）---------- */
-// 資料萃取自 github.com/r91628120/ai-agriculture-core，過濾番茄/彩椒，MIT License
-const DISEASE_DB=[
-  {name:"晚疫病",crops:["番茄"],cond:{tempRange:[15,25],humidityMin:90,rainMin:5},
-   sym:"葉背白色霉層，果實水浸腐爛",adv:"通風降濕；移除病葉病果；噴波爾多液（依植保系統）"},
-  {name:"早疫病",crops:["番茄"],cond:{tempRange:[24,30],humidityMin:85,rainMin:5,sunshineMax:4},
-   sym:"葉片同心環褐斑，嚴重時黃化枯落",adv:"保持通風；噴百克敏或甲基多保淨（依植保系統）"},
-  {name:"灰黴病",crops:["番茄","彩椒"],cond:{tempRange:[15,23],humidityMin:90,sunshineMax:3},
-   sym:"花、果腐爛並覆灰色黴層",adv:"摘除病花病果；開窗通風降濕；噴腐黴利（依植保系統）"},
-  {name:"疫病",crops:["番茄","彩椒"],cond:{tempRange:[20,30],humidityMin:90,rainMin:5},
-   sym:"莖葉水浸狀腐爛，2~3天蔓延",adv:"避免積水；苗期預防噴藥；發現立即拔除病株"},
-  {name:"葉黴病",crops:["番茄"],cond:{tempRange:[20,28],humidityMin:85},
-   sym:"葉背橄欖色黴斑，葉正面黃化",adv:"加強溫室通風；噴甲基多保淨（依植保系統）"},
-  {name:"青枯病",crops:["番茄","彩椒"],cond:{tempRange:[25,35],humidityMin:80,rainMin:5},
-   sym:"植株急速萎凋（葉仍綠），維管束褐變",adv:"拔除病株；避免傷根；接種木黴菌生物防治"},
-  {name:"細菌性斑點病",crops:["番茄","彩椒"],cond:{tempRange:[24,32],humidityMin:85,rainMin:5},
-   sym:"葉、果暗褐色斑點，風雨傳播快",adv:"減少雨水噴濺；噴氫氧化銅（依植保系統）"},
-  {name:"萎凋病",crops:["番茄"],cond:{tempRange:[25,30],humidityMin:75},
-   sym:"葉片黃化萎凋，維管束褐變",adv:"選抗病品種；介質消毒；拔除病株"},
-  {name:"白粉病",crops:["番茄"],cond:{tempRange:[20,28],humidityMin:70,sunshineMin:6},
-   sym:"葉面白粉狀病斑，葉片黃化枯死",adv:"通風；噴窄域油或硫黃粉（依植保系統）"},
-  {name:"炭疽病",crops:["彩椒"],cond:{tempRange:[24,32],humidityMin:80,rainMin:5},
-   sym:"果實凹陷水浸斑，採收期損失重",adv:"降濕；採收仔細選果；噴亞托敏（依植保系統）"},
-  {name:"捲葉病毒",crops:["番茄","彩椒"],cond:{tempRange:[22,32],humidityMin:60,sunshineMin:8},
-   sym:"新葉捲曲矮化，兩週內顯症",adv:"防治粉蝨媒介（黏板+登記藥劑）；及早拔除病株"},
-  {name:"斑點萎凋病毒",crops:["番茄","彩椒"],cond:{tempRange:[20,32],humidityMin:60,sunshineMin:8},
-   sym:"葉斑嵌紋，7~10天內萎凋",adv:"防治薊馬（主要媒介）；即早拔除病株"},
-];
-function _wxHum(code,rp){
-  if([45,48].includes(code))return 95;
-  if(rp>=80)return 92;
-  if(rp>=60||[55,63,65,82,95,96,99].includes(code))return 87;
-  if(rp>=40||[51,53,61,80,81].includes(code))return 79;
-  if(rp>=20||code===3)return 70;
-  return 60;
-}
-function _dScore(cond,wx){
-  let s=0;
-  const[tl,th]=cond.tempRange||[20,30];
-  if(wx.t>=tl&&wx.t<=th)s+=40;else{const d=Math.min(Math.abs(wx.t-tl),Math.abs(wx.t-th));s+=Math.max(0,40-d*5);}
-  if(cond.humidityMin!=null){if(wx.h>=cond.humidityMin)s+=30;else s+=Math.max(0,30-(cond.humidityMin-wx.h)*1.5);}else s+=15;
-  if(cond.rainMin>0){if(wx.r>=cond.rainMin)s+=20;else s+=Math.max(0,20-(cond.rainMin-wx.r)*4);}else s+=10;
-  if(cond.sunshineMax!=null){if(wx.s<=cond.sunshineMax)s+=10;else s+=Math.max(0,10-(wx.s-cond.sunshineMax)*2);}
-  else if(cond.sunshineMin!=null){if(wx.s>=cond.sunshineMin)s+=10;else s+=Math.max(0,10-(cond.sunshineMin-wx.s)*2);}
-  else s+=5;
-  return Math.min(100,Math.round(s));
-}
-function diseaseRisk(wx,cropKeys){
-  const d=wx.daily||{};if(!d.time)return[];
-  const code=d.weathercode?.[0]||0,rp=d.precipitation_probability_max?.[0]||0;
-  const wxp={t:((d.temperature_2m_max?.[0]||25)+(d.temperature_2m_min?.[0]||18))/2,
-    h:_wxHum(code,rp),r:d.precipitation_sum?.[0]||0,s:(d.sunshine_duration?.[0]||0)/3600};
-  return DISEASE_DB
-    .filter(ds=>ds.crops.some(c=>cropKeys.includes(c)))
-    .map(ds=>({...ds,score:_dScore(ds.cond,wxp)}))
-    .filter(ds=>ds.score>=50).sort((a,b)=>b.score-a.score).slice(0,5);
-}
 function renderDiseaseRisk(risks,wx){
-  if(!risks.length)return'';
-  const d=wx.daily||{},code=d.weathercode?.[0]||0,rp=d.precipitation_probability_max?.[0]||0;
-  const t=((d.temperature_2m_max?.[0]||25)+(d.temperature_2m_min?.[0]||18))/2;
-  const h=_wxHum(code,rp),r=(d.precipitation_sum?.[0]||0).toFixed(1),s=((d.sunshine_duration?.[0]||0)/3600).toFixed(1);
-  const meta='<div style="font-size:.68rem;color:var(--ink-soft);margin-bottom:8px">今日推估：'+Math.round(t)+'°C · 濕度~'+h+'% · 雨量 '+r+'mm · 日照 '+s+'h</div>';
+  if(!risks||!risks.length)return'';
+  const t=Math.round(wx.temp??25),h=wx.humidity??65,r=(wx.rain??0).toFixed(1),s=(wx.sunshine??0).toFixed(1);
+  const meta='<div style="font-size:.68rem;color:var(--ink-soft);margin-bottom:8px">今日推估：'+t+'°C · 濕度~'+h+'% · 雨量 '+r+'mm · 日照 '+s+'h</div>';
   const rows=risks.map(rs=>{
     const lv=rs.score>=70?'<span class="risk-level hi">高風險</span>':'<span class="risk-level mid">中風險</span>';
     return '<div class="risk-row">'+lv+'<div class="risk-info"><div class="risk-name">'+rs.name+'</div>'+
