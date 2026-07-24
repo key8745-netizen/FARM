@@ -589,6 +589,25 @@ nav button.on{color:var(--accent);}
 .diag-fix-hd{font-size:.72rem;font-weight:800;color:var(--grow);margin-bottom:5px;}
 .diag-fix-step{display:flex;gap:8px;font-size:.77rem;color:var(--ink-soft);line-height:1.6;margin-bottom:4px;align-items:baseline;}
 .diag-fix-num{background:var(--grow);color:#fff;border-radius:50%;width:17px;height:17px;font-size:.62rem;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex:none;}
+.wx-btns{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:12px;}
+.wx-btn{border:1.5px solid var(--line);background:var(--card2);border-radius:11px;padding:9px 4px;text-align:center;cursor:pointer;transition:border-color .15s;}
+.wx-btn:hover{border-color:var(--warn);}
+.wx-btn.sel{border-color:var(--warn);background:var(--warn-bg);}
+.wx-icon{font-size:1.3rem;display:block;margin-bottom:3px;}
+.wx-lbl{font-size:.62rem;font-weight:700;color:var(--ink);}
+.wx-level{display:inline-flex;align-items:center;gap:6px;font-size:.72rem;font-weight:700;border-radius:20px;padding:3px 10px;margin-bottom:10px;}
+.wx-level.red{background:var(--warn-bg);color:var(--warn);}
+.wx-level.orange{background:var(--harv-bg);color:var(--harv);}
+.wx-phase-hd{font-size:.72rem;font-weight:800;letter-spacing:.5px;margin:10px 0 5px;}
+.wx-phase-hd.p0{color:var(--warn);}
+.wx-phase-hd.p1{color:var(--harv);}
+.wx-phase-hd.p2{color:var(--grow);}
+.wx-step{display:flex;gap:8px;font-size:.76rem;color:var(--ink-soft);line-height:1.6;margin-bottom:4px;align-items:baseline;}
+.wx-step-num{min-width:17px;height:17px;border-radius:50%;font-size:.62rem;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex:none;color:#fff;}
+.wx-step-num.red{background:var(--warn);}
+.wx-step-num.orange{background:var(--harv);}
+.wx-step-num.green{background:var(--grow);}
+.wx-note{background:var(--card2);border-radius:8px;padding:7px 10px;font-size:.73rem;color:var(--ink-soft);line-height:1.6;margin-top:8px;border-left:3px solid var(--blue);}
 </style>
 
 </head>
@@ -3112,6 +3131,17 @@ function renderTools(){
     '<div id="mk-res"></div></div>'+
     '<h2 style="margin-top:22px">產銷履歷紀錄簿</h2><p class="note">依台灣安全農業（TGAP）匯出用藥/施肥/採收紀錄，供驗證稽核與追溯。</p>'+
     '<div class="card"><button class="btn" id="rb-go">匯出履歷紀錄簿 CSV</button><div id="rb-res"></div></div>'+
+    '<h2 style="margin-top:22px">⛈️ 天氣緊急應對速查</h2><p class="note">颱風、寒流、高溫、豪雨來了？選擇你遭遇的天氣狀況，立刻知道現在最重要的幾件事。時間有限時看紅色步驟就好，其他的等安全了再做。</p>'+
+    '<div class="card" id="wx-card">'+
+    '<div class="wx-btns">'+
+    '<div class="wx-btn" data-wx="颱風"><span class="wx-icon">🌀</span><span class="wx-lbl">颱風</span></div>'+
+    '<div class="wx-btn" data-wx="寒流"><span class="wx-icon">🥶</span><span class="wx-lbl">寒流</span></div>'+
+    '<div class="wx-btn" data-wx="高溫"><span class="wx-icon">🌡️</span><span class="wx-lbl">高溫熱浪</span></div>'+
+    '<div class="wx-btn" data-wx="豪雨"><span class="wx-icon">🌧️</span><span class="wx-lbl">豪雨積水</span></div>'+
+    '<div class="wx-btn" data-wx="乾旱"><span class="wx-icon">☀️</span><span class="wx-lbl">持續乾旱</span></div>'+
+    '</div>'+
+    '<div id="wx-res"></div>'+
+    '</div>'+
     '<h2 style="margin-top:22px">🔍 植株問題快速診斷</h2><p class="note">看到植株異常？選擇發病部位和症狀，立刻得到可能原因與處理步驟。不需要事先懂病蟲害，只要描述你看到的狀況。</p>'+
     '<div class="card" id="diag-card">'+
     '<div class="diag-parts" id="diag-parts">'+
@@ -3402,6 +3432,138 @@ function renderTools(){
       res.innerHTML='<div class="info">✓ 已從雲端下載（'+(ts?new Date(ts).toLocaleString():"")+'）。回總覽查看。</div>';}
     catch(e){res.innerHTML='<div class="info" style="color:var(--warn)">下載失敗：'+e.message+'</div>';}
   };
+  // 天氣緊急應對
+  const WX={
+    '颱風':{icon:'🌀',level:'red',levelTxt:'高警戒',
+      p0:{hd:'颱風前 24 小時（最重要）',items:[
+        '立刻把所有支架斜向加固，用束帶把植株固定在主架上，防止折斷',
+        '關緊所有天窗和側窗，用束帶或防風繩固定窗框，避免被風扯壞',
+        '拆下所有可移動設備（遮光網、水管、噴霧器），移入室內或倉庫',
+        '提前採收已成熟或接近成熟的果實，颱風後落果無法販售',
+        '備妥發電機和水桶（停電停水預案），確認電話可聯絡供電所',
+      ]},
+      p1:{hd:'颱風中（盡量不要進棚）',items:[
+        '待在安全室內。溫室結構若損壞會繼續惡化，不要冒險進入',
+        '若一定要進棚：只做最緊急處理（堵窗），兩人同行，確保退路',
+        '停止所有灌溉，斷掉灌溉系統電源（避免積水更嚴重）',
+      ]},
+      p2:{hd:'颱風後（恢復作業）',items:[
+        '先確認棚架結構安全，再進棚巡視（小心玻璃碎片和積水）',
+        '排除積水：打開排水口，用抽水泵抽走根域積水（最優先）',
+        '整理傾倒植株，剪掉斷葉和傷果，補束帶重新固定',
+        '噴施銅製劑預防颱風後常見的細菌性病害（傷口易感染）',
+        '24小時內回報保險公司或農委會災損，留影像記錄',
+      ]},
+      note:'颱風後 3 天是病害爆發高峰，每天巡查並記錄 App。'
+    },
+    '寒流':{icon:'🥶',level:'orange',levelTxt:'低溫警報',
+      p0:{hd:'降溫前（預防為主）',items:[
+        '關閉所有天窗和側窗，確認密封，減少冷空氣對流',
+        '加蓋不織布（農業用保溫布）在植株上方，晚上覆蓋早上掀起',
+        '確認暖氣設備（熱風爐/暖管）可正常運作，備妥燃料',
+        '提前施一次磷鉀肥（磷促根、鉀增抗寒力）',
+      ]},
+      p1:{hd:'低溫中（維持措施）',items:[
+        '目標：棚內夜溫維持 12°C 以上（番茄/彩椒）或 8°C 以上（草莓/高麗菜）',
+        '早上 8 點後氣溫回升再通風，通風前先量棚內溫度確認高於外溫',
+        '減少灌溉，低溫時根系吸水慢，濕根比乾根更怕冷',
+        '若有花朵，低溫授粉率差，可等溫度回升（18°C 以上）再操作',
+      ]},
+      p2:{hd:'回暖後（觀察恢復）',items:[
+        '緩慢打開天窗通風，避免溫度驟升（從小縫開始）',
+        '巡查生長點和嫩葉是否有凍傷（呈透明水浸狀）',
+        '凍傷葉片不要立刻剪掉，觀察 2-3 天確認死活再處理',
+        '受凍植株補充一次磷鈣肥，幫助根系和組織恢復',
+      ]},
+      note:'連續 3 天最低溫低於 10°C 就要全力保溫；番茄花粉在 12°C 以下失活，花期寒流會大幅減產。'
+    },
+    '高溫':{icon:'🌡️',level:'orange',levelTxt:'熱浪警戒',
+      p0:{hd:'早晨（08:00 前完成）',items:[
+        '提前完成授粉操作（日溫超過 32°C 花粉失活），最晚 08:30 前結束',
+        '全開天窗和側窗，讓早晨涼氣進入棚內',
+        '完成早上第一、二次灌溉，讓植株在最熱時有足夠水分',
+        '安裝或確認遮光網（30-40% 遮光率）已就位',
+      ]},
+      p1:{hd:'高溫中（11:00–15:00 最熱時段）',items:[
+        '在走道和地面灑水，透過蒸發降低棚內溫度（可降 3-5°C）',
+        '確認風扇全速運轉；若有強制通風設備全部打開',
+        '看到植株午後萎凋屬正常暫時現象，早晨恢復表示沒問題',
+        '若萎凋嚴重：啟動霧化噴嘴（細霧，避免大水珠傷花）',
+        '減少果實採收的中午時段，採後立刻移入陰涼處',
+      ]},
+      p2:{hd:'連續高溫管理',items:[
+        '增加灌溉次數（原 3 次改 4-5 次），每次量維持不變',
+        '施肥EC目標下調 0.3 mS/cm，避免高溫+高EC造成根傷',
+        '持續超過 35°C 超過 3 天，考慮白色反光材料覆蓋棚頂',
+        '定期補充鈣（噴氯化鈣）預防高溫+缺水引起的頂腐病',
+      ]},
+      note:'連續高溫最易誘發葉蟎和粉蝨，每天查黏板蟲數，超過門檻立刻處理。'
+    },
+    '豪雨':{icon:'🌧️',level:'red',levelTxt:'積水警報',
+      p0:{hd:'下雨中（立即行動）',items:[
+        '確認排水溝和出水口暢通，用鋤頭或手疏通淤塞，讓積水快速流走',
+        '關閉側窗（防雨水飄入），保留天窗頂部小縫透氣',
+        '暫停灌溉，雨天土壤/介質不缺水，繼續灌溉只會積水',
+        '若棚外積水位接近棚邊，立刻圍沙包防倒灌',
+      ]},
+      p1:{hd:'積水超過 30 分鐘（緊急排水）',items:[
+        '啟動抽水泵抽走根域積水（根系在積水中缺氧，超過 4 小時根腐機率大幅上升）',
+        '用鋤頭挖通臨時排水溝引流到棚外，方向往低處',
+        '確認植株根部沒有被水直接淹過，若已淹過立刻排水並準備灌根殺菌',
+      ]},
+      p2:{hd:'雨後（24 小時內）',items:[
+        '全面通風換氣，降低棚內濕度，防止灰霉病和疫病爆發',
+        '噴施銅製劑或保護性殺菌劑（預防，雨後24小時內效果最好）',
+        '等介質排水後確認 EC/pH（積水會稀釋 EC），視情況補肥',
+        '巡查植株有無徒長跡象（連陰雨導致光照不足）',
+        '若有積水超過 4 小時的田區，灌根一次殺菌劑預防根腐',
+      ]},
+      note:'連續豪雨最怕的是灰霉病和疫病，雨停後盡快噴藥，不要等到看到病斑才處理。'
+    },
+    '乾旱':{icon:'☀️',level:'orange',levelTxt:'乾旱注意',
+      p0:{hd:'輕度乾旱（井水或水源減少）',items:[
+        '優先確保每天清晨第一次灌溉，這是最關鍵的一次',
+        '調整灌溉時段，改為早晨為主（減少午後蒸發浪費）',
+        '用覆蓋物（稻草、黑色塑膠布）覆蓋土面，減少水分蒸發',
+        '暫時降低 EC 目標 0.3 mS/cm，高鹽在乾旱時更傷根',
+      ]},
+      p1:{hd:'中度乾旱（灌溉水量明顯不足）',items:[
+        '優先保護最有經濟價值的作物（果實快成熟的優先）',
+        '減少或停止噴農藥（噴藥會讓植株水分壓力更大）',
+        '果實期增加葉面噴水補充（不含肥料的清水），一天 2 次',
+        '緊急聯絡附近農友調水、或農田水利署查詢備援水源',
+      ]},
+      p2:{hd:'恢復供水後',items:[
+        '不要驟然大量澆水！分 3-4 次慢慢補充，避免裂果和根傷',
+        '第一次恢復供水後觀察 2 小時，確認植株沒有異常',
+        '補充一次鈣肥（氯化鈣），預防乾旱後驟然吸水引起的頂腐病',
+        '巡查根系狀況，長期乾旱後根系脆弱，避免過度施肥刺激',
+      ]},
+      note:'乾旱最大的後遺症是裂果和頂腐病，恢復供水後的頭 3 天是最危險的時期，要特別穩定水分。'
+    },
+  };
+  (()=>{
+    const wxCard=v.querySelector("#wx-card");
+    const wxRes=v.querySelector("#wx-res");
+    wxCard.querySelectorAll(".wx-btn").forEach(btn=>{
+      btn.onclick=()=>{
+        wxCard.querySelectorAll(".wx-btn").forEach(b=>b.classList.remove("sel"));
+        btn.classList.add("sel");
+        const d=WX[btn.dataset.wx];
+        const mkSteps=(phase,cls)=>phase.items.map((s,i)=>
+          '<div class="wx-step"><span class="wx-step-num '+cls+'">'+(i+1)+'</span><span>'+s+'</span></div>'
+        ).join('');
+        wxRes.innerHTML=
+          '<div style="margin-top:4px">'+
+          '<div class="wx-level '+d.level+'">'+btn.querySelector(".wx-icon").textContent+' '+btn.dataset.wx+' 緊急應對　'+d.levelTxt+'</div>'+
+          '<div class="wx-phase-hd p0">🔴 '+d.p0.hd+'</div>'+mkSteps(d.p0,'red')+
+          '<div class="wx-phase-hd p1">🟠 '+d.p1.hd+'</div>'+mkSteps(d.p1,'orange')+
+          '<div class="wx-phase-hd p2">🟢 '+d.p2.hd+'</div>'+mkSteps(d.p2,'green')+
+          '<div class="wx-note">💬 '+d.note+'</div>'+
+          '</div>';
+      };
+    });
+  })();
   // 植株問題快速診斷
   const DIAG={
     '葉片':{icon:'🍃',symptoms:[
