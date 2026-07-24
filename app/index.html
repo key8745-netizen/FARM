@@ -305,6 +305,20 @@ nav button.on{color:var(--accent);}
 .work-chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px;}
 .work-chip{background:var(--card2);border:1.5px solid var(--line);border-radius:20px;padding:5px 12px;font-size:.8rem;cursor:pointer;color:var(--ink);user-select:none;transition:background .1s,border-color .1s;}
 .work-chip:active,.work-chip.sel{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-d);}
+/* 本季收益試算卡 */
+.profit-card{background:var(--card);border:1.5px solid var(--line);border-radius:13px;padding:14px;margin:10px 0;}
+.profit-hd{font-size:.92rem;font-weight:800;color:var(--ink);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.profit-row{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--line);font-size:.82rem;gap:10px;}
+.profit-row:last-child{border-bottom:none;}
+.profit-row span{color:var(--ink-soft);flex-shrink:0;}
+.profit-row b{color:var(--ink);text-align:right;}
+.profit-row.sm{font-size:.72rem;padding:2px 0;color:var(--ink-soft);}
+.profit-total{background:var(--card2);border-radius:9px;padding:9px 12px;margin-top:9px;display:flex;justify-content:space-between;align-items:center;}
+.profit-total .pl{font-size:.8rem;color:var(--ink-soft);}
+.profit-total .pv{font-size:1.15rem;font-weight:800;font-variant-numeric:tabular-nums;}
+.profit-total .pv.pos{color:var(--accent);}
+.profit-total .pv.neg{color:var(--warn);}
+.profit-note{font-size:.68rem;color:var(--ink-soft);margin-top:6px;text-align:right;line-height:1.5;}
 /* 智能健康警告卡 */
 .health-alerts{margin:8px 0;}
 .ha-card{border-radius:11px;padding:10px 12px;margin-bottom:7px;border:1.5px solid transparent;}
@@ -1453,6 +1467,45 @@ function renderWorkGuide(cropName){
     '<div class="ecguide-body" id="'+uid+'-b">'+stepsHtml+'</div></div>';
 }
 
+/* 本季收益試算 */
+const PRICE_REF={
+  "牛番茄":  {g1:50, g2:35,g3:15,note:"產地參考行情"},
+  "玉女番茄":{g1:120,g2:80,g3:40,note:"產地參考行情"},
+  "彩椒":    {g1:100,g2:60,g3:25,note:"彩椒批發參考"},
+  "高山草莓":{g1:300,g2:180,g3:80,note:"盒裝(300g)參考"},
+  "高麗菜":  {g1:20, g2:12,g3:6, note:"批發行情"},
+  "敏豆":    {g1:40, g2:25,g3:10,note:"產地參考行情"},
+};
+function renderProfitCard(r){
+  const harvRecs=(r.records||[]).filter(x=>x.type==="harv"&&(+x.qty||0)>0);
+  const costRecs=(r.records||[]).filter(x=>x.type==="cost"&&(+x.amount||0)>0);
+  if(!harvRecs.length&&!costRecs.length)return'';
+  const g=harvestGrades(r);const totH=Math.round(harvestTotal(r)*10)/10;
+  const totC=Math.round(costRecs.reduce((a,x)=>a+(+x.amount||0),0));
+  const pr=PRICE_REF[r.crop]||{g1:50,g2:30,g3:10,note:"估計"};
+  const hasGr=g.g2>0||g.g3>0;
+  const rev=hasGr?Math.round(g.g1*pr.g1+g.g2*pr.g2+g.g3*pr.g3):Math.round(totH*pr.g1);
+  const profit=rev-totC;
+  const plants=r.plants||0;
+  const perPlant=plants&&totH?Math.round(totH/plants*100)/100:null;
+  let rows='';
+  if(harvRecs.length){
+    rows+='<div class="profit-row"><span>🌾 採收量</span><b>'+totH+' kg'+(hasGr?' （特'+g.g1+'/優'+g.g2+'/次'+g.g3+'kg）':'')+' </b></div>';
+    if(hasGr)rows+='<div class="profit-row sm"><span>參考單價（'+pr.note+'）</span><b>特 NT$'+pr.g1+' / 優 NT$'+pr.g2+' / 次 NT$'+pr.g3+' /kg</b></div>';
+    else rows+='<div class="profit-row sm"><span>參考單價（'+pr.note+'）</span><b>NT$'+pr.g1+'/kg</b></div>';
+    rows+='<div class="profit-row"><span>💵 預估收入</span><b>NT$'+rev.toLocaleString()+'</b></div>';
+  }
+  if(costRecs.length)rows+='<div class="profit-row"><span>📤 成本合計</span><b>NT$'+totC.toLocaleString()+'</b></div>';
+  if(perPlant)rows+='<div class="profit-row"><span>🌱 每株產量</span><b>'+perPlant+' kg</b></div>';
+  const showP=harvRecs.length&&costRecs.length;
+  const profitHtml=showP?
+    '<div class="profit-total"><span class="pl">預估毛利</span><span class="pv '+(profit>=0?'pos':'neg')+'">'+(profit>=0?'+':'−')+'NT$'+Math.abs(profit).toLocaleString()+'</span></div>'+
+    '<div class="profit-note">* 依 '+pr.note+' 估算，實際請依契作 / 市場成交價調整</div>':
+    harvRecs.length?'<div class="profit-note">💡 補記「💰 成本」後可顯示毛利試算</div>':
+    '<div class="profit-note">💡 補記「🧺 採收」後可顯示收入估算</div>';
+  return'<div class="profit-card"><div class="profit-hd">📊 本季收益試算</div>'+rows+profitHtml+'</div>';
+}
+
 /* 智能健康警告 — 根據田區資料自動產生個人化行動提示 */
 function renderHealthAlerts(r,c,age){
   if(age<3)return'';
@@ -1657,6 +1710,7 @@ function renderPlots(){
       '<button data-log="ai" style="grid-column:1/-1;background:var(--accent);color:#fff;border:none"><span class="qi">📸</span>每日拍照 + AI 診斷</button></div></div>'+
     ecChart+
     harvChart+
+    renderProfitCard(r)+
     '<div class="card"><h3 style="margin:0 0 6px;font-size:1rem">紀錄歷史 <span style="color:var(--ink-soft);font-weight:400;font-size:.8rem">('+((r.records||[]).length)+' 筆)</span></h3>'+(recs||'<div class="empty" style="padding:16px">尚無紀錄，用上方按鈕登錄。</div>')+'</div>'+
     '<button class="btn sec" id="delp">刪除此田區</button>';
   v.querySelector("#bk").onclick=()=>{CUR=null;renderPlots();};
