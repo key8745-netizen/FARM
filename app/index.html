@@ -305,6 +305,17 @@ nav button.on{color:var(--accent);}
 .work-chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px;}
 .work-chip{background:var(--card2);border:1.5px solid var(--line);border-radius:20px;padding:5px 12px;font-size:.8rem;cursor:pointer;color:var(--ink);user-select:none;transition:background .1s,border-color .1s;}
 .work-chip:active,.work-chip.sel{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-d);}
+/* 葉片症狀速查 */
+.sym-wrap{margin:4px 0 10px;}
+.sym-table{display:flex;flex-direction:column;gap:5px;margin-top:8px;}
+.sym-row{background:var(--card2);border-radius:9px;padding:8px 10px;border-left:3px solid var(--line);}
+.sym-row.lv-urgent{border-left-color:var(--warn);}
+.sym-row.lv-warn{border-left-color:var(--harv);}
+.sym-sym{font-size:.82rem;font-weight:700;color:var(--ink);margin-bottom:2px;}
+.sym-cat{display:inline-block;font-size:.66rem;font-weight:700;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:1px 6px;color:var(--ink-soft);margin-left:5px;vertical-align:middle;}
+.sym-cause{font-size:.72rem;color:var(--ink-soft);line-height:1.5;margin-bottom:3px;}
+.sym-act{font-size:.71rem;color:var(--grow);background:var(--grow-bg);border-radius:6px;padding:3px 7px;line-height:1.5;}
+.sym-row.lv-urgent .sym-act{color:var(--warn);background:var(--warn-bg);}
 /* IPM 病蟲害識別卡 */
 .ipm-guide-wrap{margin:4px 0 10px;}
 .ipm-pest-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;}
@@ -1541,6 +1552,35 @@ function renderObsGuide(stageKey){
     '<label class="f">今日巡查狀況（點選自動填入，可多選）</label>'+
     '<div class="work-chips">'+chips+'</div>';
 }
+/* 葉片症狀速查 */
+const SYMPTOM_GUIDE=[
+  {sym:"下位老葉均勻黃化",cat:"缺氮/老化",cause:"氮素供給不足；老葉正常老化（低位3葉以下屬正常）",act:"施均衡水溶肥；確認EC≥目標值；低位葉可摘除",lv:"warn"},
+  {sym:"葉緣焦褐乾枯",cat:"缺鉀/鹽害",cause:"缺鉀；或根域EC過高（鹽害）燒根",act:"增施硫酸鉀；若EC過高先大量清水淋洗再補肥",lv:"warn"},
+  {sym:"新芽/頂葉黃白色",cat:"缺鐵/pH偏高",cause:"pH>6.5 導致鐵、錳不可吸收",act:"立測pH；用磷酸調降至5.8–6.2；補施螯合鐵",lv:"urgent"},
+  {sym:"葉片日中向上捲曲",cat:"缺水/高溫",cause:"蒸散量大於供水速率；午後高溫屬暫時正常",act:"增加灌溉次數；確認滴頭暢通；傍晚應自行恢復",lv:"warn"},
+  {sym:"葉背細蛛絲/白色斑點",cat:"葉蟎",cause:"葉蟎危害，高溫乾燥時快速繁殖",act:"立查黏板；超5隻/板則噴礦物油或甲基多保淨",lv:"urgent"},
+  {sym:"葉面白粉末層",cat:"白粉病",cause:"真菌性病害，通風不良/高溫低濕易發生",act:"改善通風；噴百克敏乳劑或硫磺水懸劑；摘除重症葉",lv:"urgent"},
+  {sym:"水浸狀斑點→枯焦",cat:"細菌/病毒",cause:"疑細菌性斑點病或病毒病；可由薊馬/蚜蟲傳播",act:"隔離患株；停共用工具；拍照送農改場診斷",lv:"urgent"},
+  {sym:"果實底端黑褐凹陷",cat:"缺鈣/BER",cause:"底腐病（BER），鈣素移動慢＋灌溉不均",act:"補施硝酸鈣；維持固定灌溉節奏；避免乾濕交替",lv:"warn"},
+  {sym:"果實裂開",cat:"水分不均",cause:"乾濕交替過大，果皮與果肉生長速率不一",act:"定時定量灌溉；近採收前7天避免大量補水",lv:"warn"},
+  {sym:"整株萎凋早晨不恢復",cat:"根域/病害",cause:"根腐病或青枯病；或介質嚴重乾旱",act:"挖出根系檢查：黑爛→根腐（疑丟除）；若介質過乾則大量補水",lv:"urgent"}
+];
+function renderSymptomGuide(){
+  const uid='sym-'+Date.now();
+  const rows=SYMPTOM_GUIDE.map(s=>
+    '<div class="sym-row lv-'+s.lv+'">'+
+    '<div class="sym-sym">'+s.sym+'<span class="sym-cat">'+s.cat+'</span></div>'+
+    '<div class="sym-cause">'+s.cause+'</div>'+
+    '<div class="sym-act">→ '+s.act+'</div>'+
+    '</div>'
+  ).join('');
+  return'<div class="sym-wrap">'+
+    '<div class="ecguide-q" id="'+uid+'" onclick="var b=document.getElementById(\''+uid+'-b\');b.classList.toggle(\'open\');this.classList.toggle(\'open\')">🔍 葉片 ＋ 果實症狀速查表</div>'+
+    '<div class="ecguide-body" id="'+uid+'-b">'+
+    '<p style="font-size:.73rem;color:var(--ink-soft);margin:0 0 6px">對照今天觀察到的症狀，快速判斷原因與處置方向。橘線＝需盡快處理。</p>'+
+    '<div class="sym-table">'+rows+'</div>'+
+    '</div></div>';
+}
 /* IPM 病蟲害識別指引 */
 const IPM_PESTS=[
   {name:"粉蝨",thr:"≥5隻/板",look:"0.8mm 白色小蛾，葉背群集，受驚飛散如白雪",dmg:"吸汁、排蜜露→黑煤病、傳病毒",trap:"黃色黏板",ctrl:"苦楝油每7天噴1次；超門檻改用益達胺/聯苯除蟲菊（輪換避免抗性）"},
@@ -2012,7 +2052,8 @@ function logModal(type){
     const obRec=load()[CUR];const obCrop=obRec?CROPS[obRec.crop]:null;
     const[,,obAge]=obRec&&obCrop?stageOf(obRec):[0,0,0];
     const obSk=obCrop?stageGuideKey(obCrop,obAge):"生長期";
-    fields+=renderObsGuide(obSk)+
+    fields+=renderSymptomGuide()+
+    renderObsGuide(obSk)+
     '<label class="f">補充說明（選填）</label>'+
     '<textarea class="t" id="m-note" placeholder="例如 下位葉3片開始黃化、發現少量粉蝨、今日灌溉正常"></textarea>';
   }
