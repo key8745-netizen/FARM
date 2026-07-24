@@ -1422,6 +1422,34 @@ function renderSprayGuide(){
     '<div class="ecguide-body" id="'+uid+'-b">'+stepsHtml+warn+'</div></div>';
 }
 
+/* 觀察記錄：灌溉指引 + 巡查快選晶片 */
+const OBS_CHIPS=["葉色深綠正常","下位老葉自然黃落","葉緣出現焦褐（疑缺鉀）","葉片輕微萎凋（高溫蒸散）","發現葉背疑似小蟲","花朵開放已輔助授粉","果實膨大正常","支架/誘引需調整","根域排水出水正常","整體植株狀態良好"];
+const IRRIG_GUIDE={
+  "苗期":  {freq:"每天 1 次",time:"清晨 7–8 時",dur:"15–20 分鐘",tip:"根系淺，少量即可；排液比 20–30% 屬正常"},
+  "生長期":{freq:"每天 2–3 次",time:"清晨＋中午前",dur:"每次 15–20 分鐘",tip:"生長旺盛耗水；傍晚後減少灌溉，降低夜間濕度防病"},
+  "花期":  {freq:"每天 2–3 次",time:"清晨為主",dur:"每次 20 分鐘",tip:"水分需穩定；忽多忽少易落花，花期不宜過濕"},
+  "果期":  {freq:"每天 3–4 次",time:"均勻分散",dur:"每次 20–25 分鐘",tip:"最需穩定！驟乾驟濕是裂果根源；採收前 2 天微減水"},
+  "花果期":{freq:"每天 2–3 次",time:"清晨為主",dur:"每次 20 分鐘",tip:"草莓需保持介質濕潤但不積水，積水易爛根"},
+  "結球期":{freq:"每天 1–2 次",time:"清晨",dur:"20 分鐘",tip:"結球期需水量較大，保持介質均勻濕潤"},
+  "結莢期":{freq:"每天 1–2 次",time:"清晨",dur:"15 分鐘",tip:"豆科需水但怕積水，確保排水順暢"},
+  "採收期":{freq:"每天 2–3 次",time:"清晨",dur:"每次 20 分鐘",tip:"維持基本水分；即將拔株可逐漸減少給液"},
+};
+function renderObsGuide(stageKey){
+  const ig=IRRIG_GUIDE[stageKey]||IRRIG_GUIDE["生長期"];
+  const uid='og-'+Date.now();
+  const chips=OBS_CHIPS.map(t=>'<button class="work-chip" data-task="'+t+'">'+t+'</button>').join('');
+  return'<div class="ecguide"><div class="ecguide-q" id="'+uid+'-q" onclick="var b=document.getElementById(\''+uid+'-b\');b.classList.toggle(\'open\');this.classList.toggle(\'open\')">💧 '+stageKey+'灌溉頻率參考</div>'+
+    '<div class="ecguide-body" id="'+uid+'-b">'+
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px 10px;font-size:.78rem;padding:4px 0 8px">'+
+    '<div><b style="display:block;margin-bottom:2px">頻率</b><span style="color:var(--ink-soft)">'+ig.freq+'</span></div>'+
+    '<div><b style="display:block;margin-bottom:2px">時段</b><span style="color:var(--ink-soft)">'+ig.time+'</span></div>'+
+    '<div><b style="display:block;margin-bottom:2px">每次時長</b><span style="color:var(--ink-soft)">'+ig.dur+'</span></div>'+
+    '</div>'+
+    '<div style="font-size:.74rem;color:var(--blue);background:var(--card);border-radius:7px;padding:6px 9px;line-height:1.55">💡 '+ig.tip+'</div>'+
+    '</div></div>'+
+    '<label class="f">今日巡查狀況（點選自動填入，可多選）</label>'+
+    '<div class="work-chips">'+chips+'</div>';
+}
 /* 整枝/作業 快選晶片 + 指引 */
 const WORK_CHIPS={
   "牛番茄":["摘側芽（主幹整枝）","引蔓固定","摘老葉（下位3–4片）","輔助授粉（輕搖花穗）","疏果 每串留5果","整理支架鐵線","打頂（主蔓超2m）"],
@@ -1788,7 +1816,15 @@ function logModal(type){
     '<label class="f">記錄內容（點晶片自動填入，可手動補充）</label>'+
     '<textarea class="t" id="m-note" placeholder="例如 摘側芽、引蔓固定、疏果每串留5果"></textarea>';
   }
-  else fields+='<label class="f">內容</label><textarea class="t" id="m-note" placeholder="例如 葉色正常、發現少量粉蝨"></textarea>';
+  else if(type==="obs"){
+    const obRec=load()[CUR];const obCrop=obRec?CROPS[obRec.crop]:null;
+    const[,,obAge]=obRec&&obCrop?stageOf(obRec):[0,0,0];
+    const obSk=obCrop?stageGuideKey(obCrop,obAge):"生長期";
+    fields+=renderObsGuide(obSk)+
+    '<label class="f">補充說明（選填）</label>'+
+    '<textarea class="t" id="m-note" placeholder="例如 下位葉3片開始黃化、發現少量粉蝨、今日灌溉正常"></textarea>';
+  }
+  else fields+='<label class="f">內容</label><textarea class="t" id="m-note" placeholder=""></textarea>';
   mr.innerHTML='<div class="modal-bg" id="mbg"><div class="modal"><h3>登錄'+meta.t+'</h3><p class="note">'+load()[CUR].plot+' · '+load()[CUR].crop+'</p>'+fields+'<button class="btn" id="m-save">儲存</button><button class="btn sec" id="m-cancel">取消</button></div></div>';
   document.getElementById("m-cancel").onclick=()=>mr.innerHTML="";
   document.getElementById("mbg").onclick=e=>{if(e.target.id==="mbg")mr.innerHTML="";};
@@ -1832,7 +1868,7 @@ function logModal(type){
     document.getElementById("m-phi").oninput=updatePhiPreview;
     document.getElementById("m-date").onchange=updatePhiPreview;
   }
-  if(type==="work"){
+  if(type==="work"||type==="obs"){
     document.querySelectorAll(".work-chip").forEach(btn=>btn.onclick=()=>{
       const ta=document.getElementById("m-note");
       const val=btn.dataset.task;
