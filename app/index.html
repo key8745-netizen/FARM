@@ -693,6 +693,28 @@ nav button.on{color:var(--accent);}
 .fpc-tank-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
 .fpc-tank-row label{font-size:.74rem;color:var(--ink-soft);flex:none;}
 .fpc-tank-row input{width:80px;font-size:.84rem;font-weight:700;text-align:center;padding:4px 6px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--ink);}
+/* 病害識別卡 */
+.dg-card{background:var(--card);border:1px solid var(--warn);border-radius:13px;margin:8px 0;overflow:hidden;}
+.dg-hd{display:flex;align-items:center;gap:9px;padding:11px 14px;cursor:pointer;}
+.dg-title{flex:1;font-size:.88rem;font-weight:800;color:var(--warn);}
+.dg-arr{font-size:.85rem;color:var(--warn);transition:transform .2s;}
+.dg-arr.open{transform:rotate(90deg);}
+.dg-body{display:none;padding:0 14px 14px;}
+.dg-body.open{display:block;}
+.dg-intro{font-size:.74rem;color:var(--ink-soft);line-height:1.6;margin-bottom:8px;padding:7px 10px;background:var(--card2);border-radius:8px;}
+.dg-item{border:1px solid var(--line);border-radius:10px;margin-bottom:7px;overflow:hidden;}
+.dg-item-hd{display:flex;align-items:center;gap:8px;padding:8px 11px;cursor:pointer;background:var(--card2);}
+.dg-emoji{font-size:1.2rem;flex:none;}
+.dg-name{font-size:.82rem;font-weight:800;color:var(--ink);flex:1;}
+.dg-stage-tag{font-size:.64rem;color:var(--ink-soft);background:var(--card);border-radius:20px;padding:2px 8px;border:1px solid var(--line);white-space:nowrap;}
+.dg-stage-tag.hot{background:var(--warn-bg);color:var(--warn);border-color:var(--warn);}
+.dg-item-body{display:none;padding:9px 11px;border-top:1px solid var(--line);}
+.dg-item-body.open{display:block;}
+.dg-row{display:flex;gap:7px;margin-bottom:5px;font-size:.74rem;line-height:1.55;}
+.dg-lbl{font-weight:800;color:var(--ink);flex:none;width:48px;}
+.dg-symp-txt{color:var(--warn);}
+.dg-prev-txt{color:var(--accent);}
+.dg-tx-txt{color:var(--blue);}
 /* EC/pH 調整卡 */
 .epa-card{background:var(--card);border:1px solid var(--blue);border-radius:13px;margin:8px 0;overflow:hidden;}
 .epa-hd{display:flex;align-items:center;gap:9px;padding:11px 14px;cursor:pointer;}
@@ -2154,6 +2176,81 @@ function renderEcPhAdjCard(r,c,age){
     tips.map(t=>'💡 '+t).join('<br>')+'</div>'+
     '</div></div>';
 }
+const DISEASE_GUIDE={
+  '牛番茄':[
+    {name:'灰黴病',em:'🔘',stage:'花期/果期',symp:'花、果、葉柄出現灰褐色絨毛狀黴層（Botrytis），高濕低溫最嚴重',prev:'摘除老葉改善通風；避免夜間溫差過大；花朵凋謝後及早摘除',tx:'腐黴利（Pyrimethanil）或異菌脲（Iprodione），注意 PHI，與其他殺菌劑輪替使用'},
+    {name:'底腐病（BER）',em:'⬛',stage:'果期',symp:'果實底部出現黑色乾縮凹陷，切開可見果肉變褐（非病菌，是缺鈣）',prev:'定期施硝酸鈣；維持穩定水分，避免忽乾忽濕；EC 不超過 3.5',tx:'葉面噴施氯化鈣液（0.3%）；調整灌溉頻率；檢查 EC/pH 是否正常'},
+    {name:'晚疫病',em:'🍃',stage:'生長期/花期',symp:'葉片出現油漬狀水浸病斑，葉背可見白色黴斑；果實呈褐色腐爛',prev:'保持夜間低濕；葉面少噴水；加強通風',tx:'達滅芬（Dimethomorph）或福賽得（Fosetyl-Al），連續雨季前預防性噴施'},
+    {name:'黃化捲葉病毒（TYLCV）',em:'🟡',stage:'各階段',symp:'葉片黃化向上捲曲，植株矮化，由粉蝨（銀葉粉蝨）傳播',prev:'控制粉蝨族群（見 IPM 卡）；掛黃色黏板；選用抗病品種',tx:'無藥可治；發現病株立即拔除並套袋處理，防止粉蝨繼續傳播'},
+  ],
+  '玉女番茄':[
+    {name:'灰黴病',em:'🔘',stage:'花期/果期',symp:'果穗基部及花萼附近出現灰黴，採收後貯運期間更容易發生',prev:'花期保持通風；摘除老葉；果實採收後立即移至陰涼處',tx:'腐黴利輪替凡得生（Mancozeb），花期用藥注意蜜蜂安全'},
+    {name:'底腐病（BER）',em:'⬛',stage:'果期',symp:'小果底部出現黑色凹陷乾斑，玉女番茄果小容易被忽視',prev:'硝酸鈣每週補充；灌溉均勻穩定；果期 EC 控制在 3.0–3.5',tx:'葉面噴鈣（氯化鈣 0.3%）；嚴重時降低 EC 目標讓植株吸收'},
+    {name:'白粉病',em:'⬜',stage:'生長期',symp:'葉面出現白色粉末狀覆蓋，高溫乾燥天氣好發，老葉先發病',prev:'通風充足；避免氮肥過多（嫩葉多易感染）；適當降低夜間溫度',tx:'硫黃懸浮劑、碳酸氫鉀溶液（環保），重發時改用三唑類殺菌劑'},
+    {name:'萎凋病（Fusarium）',em:'🍂',stage:'生長期',symp:'植株下部葉片先黃化萎凋，莖幹橫切面可見維管束褐化',prev:'避免重茬種植；使用無病介質；選購抗病品種或嫁接苗',tx:'無有效藥劑，立即拔除並消毒環境；下一茬更換作物'},
+  ],
+  '彩椒':[
+    {name:'灰黴病',em:'🔘',stage:'花期/果期',symp:'花蕾及果肩處出現灰黴，秋冬低溫高濕季節最嚴重',prev:'花期後及時摘除殘花；夜間加強通風除濕',tx:'腐黴利（Pyrimethanil）輪替使用，至少每次換一種藥'},
+    {name:'炭疽病',em:'🟤',stage:'果期',symp:'果實出現圓形凹陷水漬斑，逐漸轉黑褐並產生橙色黏性孢子',prev:'採收後清除所有殘株；避免機械傷害果實；噴時均勻覆蓋',tx:'凡得生（Mancozeb）或免賴得（Benomyl），發病初期噴施效果佳'},
+    {name:'疫病（Phytophthora）',em:'💧',stage:'各階段',symp:'莖基部突然出現水漬腐爛，植株急速萎凋；高溫多濕積水最危險',prev:'高床栽培避免積水；通氣良好介質；每批次消毒介質',tx:'達滅芬灌根（莖基部灌注）；移除嚴重病株'},
+    {name:'細菌性斑點病',em:'🟫',stage:'生長期',symp:'葉片出現油漬狀小斑點，後轉為褐色不規則斑，嚴重落葉',prev:'避免葉面積水；農具使用前消毒；噴藥時由下往上',tx:'多保鏈黴素（Streptomycin）或銅製劑，連續下雨前預防噴施'},
+  ],
+  '高山草莓':[
+    {name:'灰黴病',em:'🔘',stage:'花期/果期',symp:'成熟果實出現灰色黴層腐爛，草莓最主要的病害，損失可達 30–50%',prev:'果實不貼地（高架栽培）；採收後立即清除病果；保持通風',tx:'腐黴利或甲基多保淨（Thiophanate-methyl），花期後輪替用藥，注意 PHI'},
+    {name:'炭疽病',em:'🟤',stage:'苗期/生長期',symp:'葉柄或匍匐莖出現橢圓形黑色潰瘍斑，高溫多濕梅雨季爆發',prev:'選購無病健康種苗；高床避免淋雨；清除發病植株',tx:'免賴得（Benomyl）或三泰芬（Triadimefon），發現立即用藥'},
+    {name:'白粉病',em:'⬜',stage:'生長期/花果期',symp:'葉背白色粉末、果實受感染後縮小白化，溫差大時嚴重',prev:'加強通風；選用抗病品種；氮肥不過量',tx:'硫黃懸浮劑（苗期慎用）或碳酸氫鉀溶液，花期後注意 PHI'},
+    {name:'根腐病',em:'🌑',stage:'各階段',symp:'植株突然萎凋，根系呈褐色腐爛，新根稀少，高濕積水誘發',prev:'排水良好介質；避免過度澆水；每批次更換或消毒介質',tx:'滅達樂（Metalaxyl）灌根；嚴重植株立即拔除，局部消毒'},
+  ],
+  '高麗菜':[
+    {name:'黑腐病',em:'⬛',stage:'生長期/結球期',symp:'葉緣出現 V 字形黃化病斑，葉脈變黑，嚴重導致結球腐爛',prev:'使用健康種子（溫水消毒）；農具消毒；避免傷口；輪作',tx:'氫氧化銅製劑或多保鏈黴素，傷口處理後立即噴施保護'},
+    {name:'根腫病',em:'🌿',stage:'苗期/生長期',symp:'植株矮化黃化萎凋，根部長出不規則腫瘤（十字花科最難纏的病）',prev:'土壤 pH 調至 7.2 以上（撒石灰）；避免連作超過 3 年',tx:'無有效藥劑；嚴重地塊休耕並種植非十字花科作物'},
+    {name:'菌核病',em:'🔮',stage:'結球期',symp:'莖基部水漬腐爛，內有白色棉絮狀菌絲及黑色小粒菌核',prev:'加強溫室通風；植株間距充足；避免積水',tx:'賽普護汰寧（Cyprodinil）或腐黴利，發病初期用藥；拔除病株'},
+    {name:'軟腐病',em:'💧',stage:'結球期',symp:'葉球出現惡臭水漬腐爛，高溫多雨加上害蟲傷口後最嚴重',prev:'防治夜蛾/蚜蟲（病蟲共病）；避免機械傷害',tx:'銅製劑噴施；嚴重時移除病株並消毒'},
+  ],
+  '敏豆':[
+    {name:'鏽病',em:'🟠',stage:'生長期/結莢期',symp:'葉背出現橙紅色粉末狀孢子堆，嚴重時葉片黃化早落',prev:'抗病品種；通風良好；避免密植；葉面不積水',tx:'三泰芬（Triadimefon）或三唑類殺菌劑，發病初期噴葉背'},
+    {name:'炭疽病',em:'🟤',stage:'結莢期',symp:'莢果出現紅褐色橢圓凹陷斑，種子受感染後斑紋明顯',prev:'健康種子；輪作（避免連續種豆科）；採收後清除殘株',tx:'凡得生（Mancozeb）或免賴得，採收前注意 PHI'},
+    {name:'花葉病毒（Bean Mosaic）',em:'🟡',stage:'各階段',symp:'葉片出現黃綠花斑、皺縮畸形，由蚜蟲傳播，發病後不可逆',prev:'控制蚜蟲（見 IPM 卡）；隔離病株；礦物油阻斷蚜蟲傳播',tx:'無藥可治；立即拔除病株；加強防蚜'},
+    {name:'根腐病',em:'🌑',stage:'苗期/生長期',symp:'幼苗猝倒或成株突然萎凋，根系褐腐，介質積水時最嚴重',prev:'排水良好介質；種子消毒（溫水 50°C 10 分）；不過濕',tx:'滅達樂或普克利（Propiconazole）灌根；拔除病株'},
+  ],
+};
+function renderDiseaseGuide(r,c,age){
+  if(age<0)return'';
+  const key=stageGuideKey(c,age);
+  if(key==='定植前')return'';
+  const diseases=DISEASE_GUIDE[r.crop];
+  if(!diseases)return'';
+  const uid='dg-'+Date.now();
+  /* check if any disease is hot for current stage */
+  const hotNames=diseases.filter(d=>d.stage.includes(key)||d.stage==='各階段').map(d=>d.name);
+  const hotBadge=hotNames.length
+    ?'<span style="font-size:.68rem;background:var(--warn-bg);color:var(--warn);border-radius:20px;padding:2px 8px;margin-left:6px">⚠️ 本階段注意 '+hotNames.slice(0,2).join('、')+'</span>'
+    :'';
+  const itemsHtml=diseases.map(d=>{
+    const isHot=d.stage.includes(key)||d.stage==='各階段';
+    const iid='dg-'+Date.now()+'-'+Math.random().toString(36).slice(2,6);
+    return '<div class="dg-item">'+
+      '<div class="dg-item-hd" onclick="var b=document.getElementById(\''+iid+'\');b.classList.toggle(\'open\')">'+
+      '<span class="dg-emoji">'+d.em+'</span>'+
+      '<span class="dg-name">'+d.name+'</span>'+
+      '<span class="dg-stage-tag'+(isHot?' hot':'')+'">'+d.stage+(isHot?' ⚠️':'')+'</span>'+
+      '</div>'+
+      '<div class="dg-item-body" id="'+iid+'">'+
+      '<div class="dg-row"><span class="dg-lbl">症狀</span><span class="dg-symp-txt">'+d.symp+'</span></div>'+
+      '<div class="dg-row"><span class="dg-lbl">預防</span><span class="dg-prev-txt">'+d.prev+'</span></div>'+
+      '<div class="dg-row"><span class="dg-lbl">用藥/處理</span><span class="dg-tx-txt">'+d.tx+'</span></div>'+
+      '</div></div>';
+  }).join('');
+  return'<div class="dg-card">'+
+    '<div class="dg-hd" onclick="var b=document.getElementById(\''+uid+'\');b.classList.toggle(\'open\');this.querySelector(\'.dg-arr\').classList.toggle(\'open\')">'+
+    '<span style="font-size:1.1rem">🦠</span>'+
+    '<span class="dg-title">常見病害識別</span>'+hotBadge+
+    '<span class="dg-arr">▶</span></div>'+
+    '<div class="dg-body" id="'+uid+'">'+
+    '<div class="dg-intro">點擊各病害查看症狀 / 預防 / 用藥。橙色標籤表示本生長階段需特別警戒。🔴 優先拔除病株避免傳播；🟡 預防比治療更重要。</div>'+
+    itemsHtml+
+    '</div></div>';
+}
 function renderIpmTrendCard(r,c,age){
   if(age<0)return'';
   const recs=(r.records||[]).filter(x=>x.type==='ipm').sort((a,b)=>a.date<b.date?-1:1);
@@ -3385,6 +3482,7 @@ function renderPlots(){
     renderWeekPlan(r,c,age)+
     renderPollinationGuide(r,c,age)+
     renderSprayGuide(r,c,age)+
+    renderDiseaseGuide(r,c,age)+
     renderIpmTrendCard(r,c,age)+
     renderHarvestGuide(r,c,age)+
     renderPostHarvestGuide(r,c,age)+
