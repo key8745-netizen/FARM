@@ -628,6 +628,27 @@ nav button.on{color:var(--accent);}
 .pc-done-banner{background:var(--grow);color:#fff;border-radius:10px;padding:11px 14px;text-align:center;font-size:.85rem;font-weight:800;margin-top:10px;display:none;}
 .pc-done-banner.show{display:block;}
 .pc-reset{font-size:.72rem;color:var(--ink-soft);background:none;border:none;cursor:pointer;margin-top:8px;padding:0;}
+.phg-card{background:var(--card);border:1.5px solid var(--harv);border-radius:13px;margin:8px 0;overflow:hidden;}
+.phg-hd{display:flex;align-items:center;gap:9px;padding:11px 14px;cursor:pointer;}
+.phg-title{flex:1;font-size:.88rem;font-weight:800;color:var(--harv);}
+.phg-arr{font-size:.85rem;color:var(--harv);transition:transform .2s;}
+.phg-arr.open{transform:rotate(90deg);}
+.phg-body{display:none;padding:0 14px 14px;}
+.phg-body.open{display:block;}
+.phg-grades{display:grid;gap:6px;margin-bottom:10px;}
+.phg-grade{border-radius:9px;padding:8px 11px;border:1px solid var(--line);}
+.phg-grade-hd{font-size:.73rem;font-weight:800;margin-bottom:3px;}
+.phg-grade.ga{background:var(--grow-bg);border-color:var(--grow);}
+.phg-grade.ga .phg-grade-hd{color:var(--grow);}
+.phg-grade.gb{background:var(--card2);}
+.phg-grade.gb .phg-grade-hd{color:var(--blue);}
+.phg-grade.gc{background:var(--card2);opacity:.85;}
+.phg-grade.gc .phg-grade-hd{color:var(--ink-soft);}
+.phg-grade-txt{font-size:.73rem;color:var(--ink-soft);line-height:1.5;}
+.phg-row{display:flex;gap:8px;font-size:.76rem;color:var(--ink-soft);line-height:1.6;margin-bottom:4px;align-items:flex-start;}
+.phg-row b{color:var(--ink);font-weight:700;flex:none;min-width:46px;}
+.phg-channels{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px;}
+.phg-channel{font-size:.7rem;background:var(--card2);border:1px solid var(--line);border-radius:20px;padding:2px 9px;color:var(--ink-soft);}
 </style>
 
 </head>
@@ -1711,6 +1732,107 @@ function renderHarvestGuide(r,c,age){
     '<div class="hg-text">'+g.post+'</div>'+
     '<div class="hg-section-hd" style="color:var(--blue)">📋 契作規格提醒</div>'+
     '<div class="hg-text" style="color:var(--blue)">'+g.spec+'</div>'+
+    '</div></div>';
+}
+const POSTHARVEST={
+ '牛番茄':{
+  grades:[
+   {cls:'ga',grade:'A 級（契作/超市）',criteria:'果重 ≥ 200g、果形圓正、轉色 ≥ 80%、無裂果、無蟲傷、無疤痕'},
+   {cls:'gb',grade:'B 級（傳統市場）',criteria:'果重 150–199g 或輕微小疤痕（直徑 < 1cm）、仍可食用'},
+   {cls:'gc',grade:'C / 等外（加工）',criteria:'裂果、蟲傷深入、轉色 < 50%、畸形、壓傷'},
+  ],
+  cooling:'採後 2 小時內移入陰涼通風處（< 25°C）；有預冷設備者降至 12–15°C 最佳',
+  storage:'12–15°C 可保 10–14 天；不可低於 10°C（冷害出現水浸斑）',
+  package:'6 顆裝（約 1.5–2 kg）或 12 顆裝；泡棉墊或廢報紙隔離，蒂頭朝上排列',
+  channels:['超市/量販（A級）','傳統市場（A+B級）','加工廠/番茄醬廠（C+等外）','農會共同運銷'],
+  tip:'未轉色時不要採再催熟——自然轉色的糖度比催熟高 15–20%，契作驗收也看轉色率。',
+ },
+ '彩椒':{
+  grades:[
+   {cls:'ga',grade:'A 級（超市/出口）',criteria:'果重 ≥ 150g、果形端正、著色均勻、果壁厚 > 5mm、無凹陷軟斑'},
+   {cls:'gb',grade:'B 級（傳統市場）',criteria:'果重 120–149g 或輕微色差、小刮痕，品質仍佳'},
+   {cls:'gc',grade:'C / 等外（加工）',criteria:'軟爛、果壁薄、嚴重色斑、蟲傷'},
+  ],
+  cooling:'採後立刻移入 8–10°C 冷藏，彩椒對乙烯敏感，勿與番茄蘋果同放',
+  storage:'8–10°C 保 2–3 週；常溫（< 25°C）最多 5 天',
+  package:'每盒 4–6 顆（約 800g–1kg）；保鮮膜包裹或開孔袋包裝，蒂頭完整保留',
+  channels:['超市/量販（A級）','餐廳直供（A+B）','傳統市場（A+B）','食品加工（C）'],
+  tip:'蒂頭剪斷時留 0.5–1 cm 的梗，可延長保存期；蒂頭脫落的保存時間減半。',
+ },
+ '玉女番茄':{
+  grades:[
+   {cls:'ga',grade:'A 級（禮盒/超市）',criteria:'果重 15–25g、飽滿、色澤鮮亮、同串大小均一、無裂痕'},
+   {cls:'gb',grade:'B 級（散裝/市場）',criteria:'大小略有差異或輕微裂紋（不超過 3mm）'},
+   {cls:'gc',grade:'C / 等外',criteria:'嚴重裂果、蟲傷、軟爛、色澤過暗'},
+  ],
+  cooling:'採後忌強制冷藏（< 10°C 影響甜度）；陰涼通風 15–20°C 最佳',
+  storage:'15–20°C 保 5–7 天；切勿直接日曬，會加速軟化',
+  package:'串狀採收者連枝包裝（每串 500g–1kg）；散果每盒 250–500g 淺盤包裝',
+  channels:['超市禮盒（A級串裝）','傳統市場（A+B）','網路宅配（A級）','農遊體驗採果'],
+  tip:'玉女番茄採後不要水洗！表面蠟質是自然保護層，洗掉後保存期縮短一半。出售前才沖洗。',
+ },
+ '高山草莓':{
+  grades:[
+   {cls:'ga',grade:'A 級（禮盒/高端）',criteria:'果重 ≥ 20g、果形端正、色澤均勻鮮紅、無壓傷、無霉點'},
+   {cls:'gb',grade:'B 級（一般市售）',criteria:'果重 15–19g 或輕微形狀不規則，品質仍好'},
+   {cls:'gc',grade:'C / 等外',criteria:'破皮、霉菌、嚴重形變、過熟軟爛'},
+  ],
+  cooling:'採後 1 小時內必須進冷藏！2–4°C 保 2–3 天；常溫超過 4 小時開始劣變',
+  storage:'2–4°C 最多 3 天；忌零度以下冷凍（解凍後出水軟爛）',
+  package:'單層排列（嚴禁堆疊！），底部鋪白紙或泡棉；每盒 250–300g；蒂頭保留完整',
+  channels:['高端超市/百貨（A級禮盒）','農夫市集（A+B）','預購宅配（A級）','U-pick採果體驗'],
+  tip:'草莓採摘時握住梗扭轉採下（不是拉果），避免壓到果實。採後低溫冷鏈是最關鍵的一環。',
+ },
+ '高麗菜':{
+  grades:[
+   {cls:'ga',grade:'A 級（超市/契作）',criteria:'球重 1.5–3 kg、結球緊實飽滿、外葉完整翠綠、無腐爛害蟲'},
+   {cls:'gb',grade:'B 級（市場/傳統）',criteria:'球重 1–1.4 kg 或外葉輕微黃化，內葉正常'},
+   {cls:'gc',grade:'C / 等外',criteria:'結球鬆散、蟲孔多、腐爛、破裂'},
+  ],
+  cooling:'採後移陰涼通風處（< 20°C）；若有冷藏設備 1–3°C 可大幅延長保存',
+  storage:'1–3°C 保 1–2 個月；常溫（< 20°C）保 2–3 週；切忌悶熱潮濕',
+  package:'外葉保留 2–3 層當保護（出售前再剝）；每箱 10–15 顆整齊排列；重量標示',
+  channels:['超市/量販（A級）','傳統市場/小販（A+B）','學校/團膳（B+C）','農會共同運銷'],
+  tip:'採收時留 3–5 cm 梗段，比從根部切更耐放。外層老葉不要剝掉，是天然包裝材。',
+ },
+ '敏豆':{
+  grades:[
+   {cls:'ga',grade:'A 級（超市/餐廳）',criteria:'豆莢長 12–15cm、色澤翠綠、無纖維感、筆直、豆粒不凸出'},
+   {cls:'gb',grade:'B 級（傳統市場）',criteria:'略彎曲、豆莢長 10–11cm 或小刮痕，品質仍嫩'},
+   {cls:'gc',grade:'C / 等外',criteria:'豆粒凸出（過老）、纖維化、蟲洞、折斷'},
+  ],
+  cooling:'採後立刻入 7–10°C 冷藏；常溫超過 6 小時纖維化加速，豆粒繼續膨大',
+  storage:'7–10°C 保 5–7 天；不可低於 5°C（冷害出現褐化）',
+  package:'每袋 250–500g；以保鮮膜或開孔袋包裝；避免壓傷豆莢頭尾',
+  channels:['超市/量販（A級）','傳統市場（A+B）','餐廳直供（A級）','冷凍食品廠（B+C）'],
+  tip:'敏豆豆莢黏板後纖維化迅速，最好每 2 天採一次，不要讓豆莢留在植株超過 4 天。',
+ },
+};
+function renderPostHarvestGuide(r,c,age){
+  const key=stageGuideKey(c,age);
+  if(key!=='採收期'&&key!=='果期')return'';
+  const g=POSTHARVEST[r.crop];if(!g)return'';
+  const uid='phg-'+Date.now();
+  const gradesHtml=g.grades.map(gr=>
+    '<div class="phg-grade '+gr.cls+'">'+
+    '<div class="phg-grade-hd">'+gr.grade+'</div>'+
+    '<div class="phg-grade-txt">'+gr.criteria+'</div></div>'
+  ).join('');
+  const channelHtml=g.channels.map(ch=>'<span class="phg-channel">'+ch+'</span>').join('');
+  return'<div class="phg-card">'+
+    '<div class="phg-hd" onclick="var b=document.getElementById(\''+uid+'\');b.classList.toggle(\'open\');this.querySelector(\'.phg-arr\').classList.toggle(\'open\')">'+
+    '<span style="font-size:1.1rem">📦</span>'+
+    '<span class="phg-title">採後分級 & 包裝指引</span>'+
+    '<span class="phg-arr">▶</span></div>'+
+    '<div class="phg-body" id="'+uid+'">'+
+    '<div style="font-size:.76rem;font-weight:800;color:var(--ink);margin-bottom:6px">🏷️ 分級標準</div>'+
+    '<div class="phg-grades">'+gradesHtml+'</div>'+
+    '<div class="phg-row"><b>❄️ 降溫</b>'+g.cooling+'</div>'+
+    '<div class="phg-row"><b>🗄️ 保存</b>'+g.storage+'</div>'+
+    '<div class="phg-row"><b>📤 包裝</b>'+g.package+'</div>'+
+    '<div style="font-size:.76rem;font-weight:800;color:var(--ink);margin:8px 0 5px">🛒 銷售通路</div>'+
+    '<div class="phg-channels">'+channelHtml+'</div>'+
+    '<div style="background:var(--harv-bg);border-radius:8px;padding:7px 10px;margin-top:9px;font-size:.73rem;color:var(--harv);line-height:1.6">💡 '+g.tip+'</div>'+
     '</div></div>';
 }
 function renderSeasonEndGuide(r,c,age){
@@ -2875,6 +2997,7 @@ function renderPlots(){
     renderPollinationGuide(r,c,age)+
     renderSprayGuide(r,c,age)+
     renderHarvestGuide(r,c,age)+
+    renderPostHarvestGuide(r,c,age)+
     renderSeasonEndGuide(r,c,age)+
     renderPlotDailyTasks(r.plot)+
     dynHtml+
