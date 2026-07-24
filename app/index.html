@@ -693,6 +693,27 @@ nav button.on{color:var(--accent);}
 .fpc-tank-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
 .fpc-tank-row label{font-size:.74rem;color:var(--ink-soft);flex:none;}
 .fpc-tank-row input{width:80px;font-size:.84rem;font-weight:700;text-align:center;padding:4px 6px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--ink);}
+/* 整季行事曆 */
+.sca-card{background:var(--card);border:1.5px solid var(--accent);border-radius:13px;margin:8px 0;overflow:hidden;}
+.sca-hd{display:flex;align-items:center;gap:9px;padding:11px 14px;cursor:pointer;}
+.sca-title{flex:1;font-size:.88rem;font-weight:800;color:var(--accent);}
+.sca-arr{font-size:.85rem;color:var(--accent);transition:transform .2s;}
+.sca-arr.open{transform:rotate(90deg);}
+.sca-body{display:none;padding:0 14px 14px;max-height:420px;overflow-y:auto;}
+.sca-body.open{display:block;}
+.sca-section{margin-bottom:10px;}
+.sca-section-lbl{font-size:.66rem;font-weight:800;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.07em;padding:4px 6px;background:var(--card2);border-radius:6px;margin-bottom:5px;display:inline-block;}
+.sca-ev{display:flex;align-items:flex-start;gap:8px;padding:5px 4px;border-bottom:1px dashed var(--line);}
+.sca-ev:last-child{border-bottom:none;}
+.sca-ev.sca-today{background:var(--accent-soft);border-radius:9px;padding:6px 10px;margin:3px -8px;border-bottom:none;}
+.sca-ev.sca-past{opacity:.45;}
+.sca-ev-date{font-size:.7rem;font-weight:700;color:var(--ink);text-align:right;min-width:38px;flex:none;padding-top:1px;}
+.sca-ev-dff{font-size:.62rem;color:var(--ink-soft);font-weight:400;}
+.sca-ev-dot{width:7px;height:7px;border-radius:50%;margin-top:5px;flex:none;}
+.sca-ev-txt{font-size:.76rem;color:var(--ink);line-height:1.45;flex:1;}
+.sca-legend{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px;padding:6px 8px;background:var(--card2);border-radius:8px;}
+.sca-leg-item{display:flex;align-items:center;gap:4px;font-size:.68rem;color:var(--ink-soft);}
+.sca-leg-dot{width:8px;height:8px;border-radius:50%;flex:none;}
 /* 病害識別卡 */
 .dg-card{background:var(--card);border:1px solid var(--warn);border-radius:13px;margin:8px 0;overflow:hidden;}
 .dg-hd{display:flex;align-items:center;gap:9px;padding:11px 14px;cursor:pointer;}
@@ -1645,6 +1666,74 @@ function renderEnvGuide(r,c,age){
     '<div class="env-tip-row"><b>🌬️ 通風：</b>'+g.vent+'</div>'+
     '<div class="env-warn-hd">⚠️ 注意異常</div>'+
     warns+'</div></div>';
+}
+function renderSeasonCalendar(r,c,age){
+  if(age<-30)return'';
+  const uid='sca-'+Date.now();
+  const plant=parseD(r.date);
+  const tdy=today();
+  const EV_COLS={work:'var(--blue)',stage:'var(--accent)',harv:'var(--harv)',end:'var(--ink-soft)'};
+  const events=[];
+  function push(dayNum,text,type,emoji){
+    const d=addD(plant,dayNum);
+    const dff=Math.round((d-tdy)/DAY);
+    if(dff>=-3&&dff<=180)events.push({d,dff,text,type,emoji});
+  }
+  /* crop scheduled tasks */
+  c.sched.forEach(([day,t])=>{
+    if(day>age-3)push(day,t,'work','📋');
+  });
+  /* stage transitions */
+  push(0,'苗期開始（定植後保根護苗）','stage','🌱');
+  push(15,'進入生長期（開始正常追肥）','stage','🌿');
+  push(Math.round(c.grow*0.5),'進入花期（降氮提磷鉀、注意授粉）','stage','🌸');
+  push(Math.round(c.grow*0.7),'進入果期（高鉀轉色、補鈣防裂）','stage','🍅');
+  push(c.grow,'採收期開始（按熟度分批採收）','harv','🌾');
+  push(c.grow+Math.round(c.dur/2),'採收旺季');
+  push(c.grow+c.dur,'採收期結束／清園、準備下一批','end','✅');
+  /* remove duplicates from scheduled tasks vs stage markers */
+  const seen=new Set();
+  const uniq=events.filter(e=>{const k=e.d.getTime()+'_'+e.text.slice(0,6);if(seen.has(k))return false;seen.add(k);return true;});
+  uniq.sort((a,b)=>a.d-b.d);
+  if(!uniq.length)return'';
+  /* group by time horizon */
+  const buckets=[
+    {label:'今天 / 本週',items:uniq.filter(e=>e.dff>=-1&&e.dff<=7)},
+    {label:'下週（8–14 天）',items:uniq.filter(e=>e.dff>=8&&e.dff<=14)},
+    {label:'本月內（15–30 天）',items:uniq.filter(e=>e.dff>=15&&e.dff<=30)},
+    {label:'30–90 天後',items:uniq.filter(e=>e.dff>30&&e.dff<=90)},
+    {label:'90 天以後',items:uniq.filter(e=>e.dff>90)},
+  ].filter(b=>b.items.length);
+  const dffLabel=dff=>dff===0?'今天':dff<0?Math.abs(dff)+'天前':dff+'天後';
+  const rowCls=dff=>dff===0?' sca-today':dff<0?' sca-past':'';
+  const bodyHtml=buckets.map(b=>
+    '<div class="sca-section">'+
+    '<span class="sca-section-lbl">'+b.label+'</span>'+
+    b.items.map(e=>
+      '<div class="sca-ev'+rowCls(e.dff)+'">'+
+      '<div class="sca-ev-date">'+md(e.d)+'<br><span class="sca-ev-dff">'+dffLabel(e.dff)+'</span></div>'+
+      '<div class="sca-ev-dot" style="background:'+(EV_COLS[e.type]||EV_COLS.work)+'"></div>'+
+      '<div class="sca-ev-txt">'+(e.emoji||'📋')+' '+e.text+'</div>'+
+      '</div>'
+    ).join('')+
+    '</div>'
+  ).join('');
+  const legend='<div class="sca-legend">'+
+    '<span class="sca-leg-item"><span class="sca-leg-dot" style="background:var(--accent)"></span>階段轉換</span>'+
+    '<span class="sca-leg-item"><span class="sca-leg-dot" style="background:var(--blue)"></span>農事作業</span>'+
+    '<span class="sca-leg-item"><span class="sca-leg-dot" style="background:var(--harv)"></span>採收</span>'+
+    '</div>';
+  /* next event highlight for header */
+  const nxt=uniq.find(e=>e.dff>=0);
+  const nxtBadge=nxt?'<span style="font-size:.68rem;background:var(--accent-soft);color:var(--accent);border-radius:20px;padding:2px 9px;margin-left:6px">下一事：'+md(nxt.d)+' '+nxt.text.slice(0,8)+'</span>':'';
+  return'<div class="sca-card">'+
+    '<div class="sca-hd" onclick="var b=document.getElementById(\''+uid+'\');b.classList.toggle(\'open\');this.querySelector(\'.sca-arr\').classList.toggle(\'open\')">'+
+    '<span style="font-size:1.1rem">📅</span>'+
+    '<span class="sca-title">整季農事行事曆</span>'+nxtBadge+
+    '<span class="sca-arr">▶</span></div>'+
+    '<div class="sca-body" id="'+uid+'">'+
+    legend+bodyHtml+
+    '</div></div>';
 }
 function renderStageGuide(r,c,age){
   const key=stageGuideKey(c,age);
@@ -3473,6 +3562,7 @@ function renderPlots(){
     renderActivityStrip(r)+
     renderStageTimeline(r,c,age)+
     renderStageGuide(r,c,age)+
+    renderSeasonCalendar(r,c,age)+
     renderPrePlantChecklist(r,c,age)+
     renderPruningGuide(r,c,age)+
     renderFertPlanCard(r,c,age)+
