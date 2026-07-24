@@ -3096,6 +3096,8 @@ function renderTools(){
     '<div id="mk-res"></div></div>'+
     '<h2 style="margin-top:22px">產銷履歷紀錄簿</h2><p class="note">依台灣安全農業（TGAP）匯出用藥/施肥/採收紀錄，供驗證稽核與追溯。</p>'+
     '<div class="card"><button class="btn" id="rb-go">匯出履歷紀錄簿 CSV</button><div id="rb-res"></div></div>'+
+    '<h2 style="margin-top:22px">每日農場作業時程</h2><p class="note">依目前田區生育階段，生成今天的建議作業時程表。進到溫室前先看一遍，確保不遺漏重要工作。</p>'+
+    '<div class="card" id="sched-card"><button class="btn" id="sched-go">生成今日作業時程</button><div id="sched-res"></div></div>'+
     '<h2 style="margin-top:22px">剩餘季節採購預算試算</h2><p class="note">依目前各田區作物、株數、剩餘天數，估算還需要採購哪些農資與預算。</p>'+
     '<div class="card"><button class="btn" id="bud-go">試算各田區採購清單</button><div id="bud-res"></div></div>'+
     '<h2 style="margin-top:22px">資料備份 / 還原</h2><p class="note">App 資料存在瀏覽器，清除快取會消失。定期備份 JSON 檔到手機相簿或雲端，需要時可還原。</p>'+
@@ -3370,6 +3372,52 @@ function renderTools(){
     try{const ts=await cloudPull();_lastPushSnap=JSON.stringify(snapshot());
       res.innerHTML='<div class="info">✓ 已從雲端下載（'+(ts?new Date(ts).toLocaleString():"")+'）。回總覽查看。</div>';}
     catch(e){res.innerHTML='<div class="info" style="color:var(--warn)">下載失敗：'+e.message+'</div>';}
+  };
+  // 每日農場作業時程
+  v.querySelector("#sched-go").onclick=()=>{
+    const plots=load();const res=v.querySelector("#sched-res");
+    const active=plots.filter(r=>{const c=CROPS[r.crop];if(!c||!r.date)return false;const[,,age]=stageOf(r);return age>=0&&age<=c.grow+c.dur;});
+    const stages=active.map(r=>{const c=CROPS[r.crop];const[,,age]=stageOf(r);return{plot:r.plot,crop:r.crop,key:stageGuideKey(c,age),age};});
+    const hasFlower=stages.some(s=>s.key==='花期');
+    const hasHarv=stages.some(s=>s.key==='果期'||s.key==='採收期');
+    const hasGrow=stages.some(s=>s.key==='生長期'||s.key==='苗期');
+    // 基礎時程 + 動態插入
+    const slots=[
+      {time:"06:30",icon:"🌡️",task:"量最低溫計，記錄昨夜最低溫",note:"若低於 15°C：推遲開窗，確認保溫設施正常"},
+      {time:"07:00",icon:"🌬️",task:"開天窗 / 側窗通風",note:"晴天全開；雨天或強風天保留小縫，避免植株受涼"},
+      {time:"07:15",icon:"💧",task:"第一次灌溉（含肥）",note:"觀察滴頭出水是否均勻，檢查幫浦運作"},
+      {time:"07:30",icon:"🌡️",task:"EC / pH 量測",note:"排液 EC 和 pH 對比目標值，異常立刻記錄到 App"},
+      {time:"08:00",icon:"👁️",task:"植株全面巡查",detail:["葉色：正常深綠？黃化先記下位置","生長點：有沒有畸形或停止生長","根部：有沒有異味或積水","黏板：各板蟲數是否超過門檻"].join('｜')},
+      ...(hasGrow?[{time:"08:30",icon:"✂️",task:"整枝 / 摘側芽",note:"每 5–7 天一次，每次控制在 30 分鐘內完成"}]:[]),
+      ...(hasFlower?[{time:"09:00",icon:"🌸",task:"授粉操作（最重要！）",note:"振動棒或彈花穗，日溫 > 32°C 改為 07:30 操作，每穗振動 1–2 秒",urgent:true}]:[]),
+      {time:"11:00",icon:"💧",task:"第二次灌溉",note:"觀察排液率，目標 20–30%；晴天熱可提早到 10:30"},
+      {time:"12:00",icon:"☀️",task:"午巡：確認通風",note:"棚內超過 32°C 要加大天窗開幅；發現午後萎凋立刻噴水降溫"},
+      {time:"13:00",icon:"💧",task:"第三次灌溉",note:"晴天高溫必要；陰天或雨天可跳過"},
+      ...(hasHarv?[{time:"14:00",icon:"🧺",task:"採收作業",note:"早晨採最佳，下午採時注意保鮮：採後立刻入陰涼處，勿日曬"}]:[]),
+      {time:"15:00",icon:"📝",task:"農資補充 / 特殊作業",note:"計畫噴藥、施肥、整枝等非每日工作安排在此時段"},
+      {time:"16:00",icon:"💧",task:"最後一次灌溉",note:"日落前 1.5 小時完成，讓植株夜間介質不過濕"},
+      {time:"17:00",icon:"🌬️",task:"關側窗（視天氣）",note:"秋冬夜間低溫時需關窗；春夏可開小縫保持通氣"},
+      {time:"17:30",icon:"📱",task:"更新 App 記錄",note:"把今天的 EC/pH、發現的問題、採收量記入「田區」紀錄，5 分鐘即可完成"},
+    ];
+    const stageNote=stages.length?'<div style="font-size:.74rem;color:var(--ink-soft);background:var(--card2);border-radius:8px;padding:8px 10px;margin-bottom:10px">'+
+      '目前進行中田區：'+stages.map(s=>'<b>'+s.plot+'</b>（'+s.crop+' · '+s.key+'）').join('、')+'</div>':'';
+    const rows=slots.map(s=>{
+      const bg=s.urgent?'background:var(--harv-bg);border-left:3px solid var(--harv);':'border-left:3px solid var(--line);';
+      return'<div style="display:flex;gap:10px;padding:8px 10px;border-radius:9px;margin-bottom:5px;'+bg+'">'+
+        '<div style="min-width:42px;font-size:.72rem;font-weight:800;color:var(--ink-soft);padding-top:2px">'+s.time+'</div>'+
+        '<div style="font-size:1rem;flex:none">'+s.icon+'</div>'+
+        '<div style="flex:1">'+
+        '<div style="font-size:.82rem;font-weight:700;color:var(--ink)'+(s.urgent?';color:var(--harv)':'')+'">'+(s.urgent?'⭐ ':'')+s.task+'</div>'+
+        (s.detail?'<div style="font-size:.7rem;color:var(--ink-soft);margin-top:2px;line-height:1.5">'+s.detail+'</div>':'')+
+        (s.note?'<div style="font-size:.71rem;color:var(--ink-soft);margin-top:2px">💬 '+s.note+'</div>':'')+
+        '</div></div>';
+    }).join('');
+    const dt=new Date();const weekdays=['日','一','二','三','四','五','六'];
+    res.innerHTML='<div style="margin-top:10px"><div style="font-size:.86rem;font-weight:800;color:var(--ink);margin-bottom:6px">📅 '+
+      dt.getFullYear()+'年'+(dt.getMonth()+1)+'月'+dt.getDate()+'日（週'+weekdays[dt.getDay()]+'）作業時程</div>'+
+      stageNote+rows+
+      '<div style="font-size:.71rem;color:var(--ink-soft);margin-top:8px;padding:7px 10px;background:var(--card2);border-radius:8px;line-height:1.6">'+
+      '⭐ 黃框為當前生育階段最重要工作 · 時程供參考，依實際天氣與田區狀況彈性調整 · 噴藥日程請錯開灌溉時段至少 1 小時</div></div>';
   };
   // 採購預算試算
   v.querySelector("#bud-go").onclick=()=>{
