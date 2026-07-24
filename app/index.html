@@ -479,6 +479,18 @@ nav button.on{color:var(--accent);}
 .env-tip-row b{color:var(--ink);font-weight:700;flex:none;}
 .env-warn-hd{font-size:.75rem;font-weight:700;color:var(--warn);margin:9px 0 5px;}
 .env-warn-item{font-size:.72rem;color:var(--ink-soft);background:var(--warn-bg);border-radius:7px;padding:5px 9px;margin-bottom:4px;line-height:1.5;}
+/* 採收判斷指引 */
+.hg-card{background:var(--harv-bg);border:1.5px solid var(--harv);border-radius:13px;margin:8px 0;overflow:hidden;}
+.hg-hd{display:flex;align-items:center;gap:9px;padding:11px 14px;cursor:pointer;}
+.hg-emoji{font-size:1.2rem;flex:none;}
+.hg-title{flex:1;font-size:.88rem;font-weight:800;color:var(--harv);}
+.hg-arr{font-size:.85rem;color:var(--harv);transition:transform .2s;}
+.hg-arr.open{transform:rotate(90deg);}
+.hg-body{display:none;padding:0 14px 14px;}
+.hg-body.open{display:block;}
+.hg-section-hd{font-size:.76rem;font-weight:800;color:var(--ink);margin:10px 0 5px;}
+.hg-check{display:flex;gap:7px;font-size:.76rem;color:var(--ink-soft);line-height:1.5;margin-bottom:4px;align-items:baseline;}
+.hg-text{font-size:.76rem;color:var(--ink-soft);line-height:1.6;background:var(--card);border-radius:8px;padding:8px 10px;}
 </style>
 
 </head>
@@ -1121,6 +1133,69 @@ const SUBSTRATE_STEPS=[
   {b:"空床消毒",s:"覆蓋透明塑膠薄膜密封棚床曝曬 14 天（太陽能消毒），殺死殘留病原與線蟲"},
   {b:"定植前複測",s:"揭膜通風 1 天，再澆水測排液：EC < 1.0、pH 5.8–6.5 合格才能定植新苗"},
 ];
+/* ────── 採收判斷指引（依作物） ────── */
+const HARVEST_GUIDE={
+ "牛番茄":{emoji:"🍅",
+  ready:["果面 70–90% 轉紅（遠途出貨 70%，在地銷售 85% 以上再採）","手指輕壓有微微彈性（不硬實也不軟爛）","果肩（蒂頭周圍）已轉橘色","單果重達 180–250g（約成人拳頭大）"],
+  when:"早晨 6–9 點採收，溫度低、保鮮最久",
+  how:"一手托果，另一手從節點把蒂頭折斷（不用剪刀）；保留蒂頭完整，賣相較佳。勿用力扯拉傷到莖幹。",
+  post:"放入有蓋塑膠周轉箱，單層排放，置陰涼通風處（不冷藏），常溫保鮮 5–7 天。",
+  spec:"契作規格：均勻紅熟、蒂頭完整、無裂果/病斑，單粒重 > 150g。"},
+ "彩椒":{emoji:"🫑",
+  ready:["果面 90% 以上呈現品種色（紅/黃/橙）","表皮緊繃有光澤（無皺縮）","單果重達 150–250g","果面無凹陷或褪色"],
+  when:"早晨 7–10 點採收",
+  how:"乾淨剪刀剪斷果梗，留 2–3 公分果梗在果上（延長保鮮）；剪前噴酒精消毒防病菌傳播。",
+  post:"平放周轉箱，蒂頭朝上，常溫保存 5 天；冷藏（8–10°C）可保 2–3 週。勿與蘋果同放（乙烯加速後熟）。",
+  spec:"契作規格：全色均勻、無傷痕/裂口、果梗保留，不接受青果。"},
+ "玉女番茄":{emoji:"🍒",
+  ready:["果面完全轉紅或呈品種色","整串 80% 以上轉色","果實彈性適中（不硬不軟）","果串整齊，無大量落果（落果多代表過熟）"],
+  when:"早晨採收，避免正午高溫（熱脹易裂果）",
+  how:"整串剪下（賣相佳）；或逐粒輕轉摘下。勿用力拉扯，傷到穗梗影響後續產量。",
+  post:"果串平放勿堆疊，常溫 3–5 天。忌採後水洗（加速腐敗），出售前才洗。",
+  spec:"契作規格：整串形態完整，轉色 > 80%，無落果、無裂果。"},
+ "高山草莓":{emoji:"🍓",
+  ready:["果面 90% 轉紅（果肩/蒂頭周圍也需轉紅，不可留白）","果實飽滿，表面有光澤","輕觸有微微彈性（不硬不軟爛）","單果重 > 20g"],
+  when:"早晨 7–9 點（露水乾後），氣溫涼爽保鮮最好",
+  how:"拇指與食指捏住果梗，旋轉 90° 後輕拉；帶 0.5cm 果梗採收。勿直接捏果實（破皮）。",
+  post:"立刻進冷藏（2–4°C）！草莓常溫 3 小時開始軟化。鋪底墊紙，單層排列，蓋蓋冷藏。",
+  spec:"契作規格：全紅無白肩、果梗完整、無軟爛/壓傷，採後 2 小時內低溫處理。"},
+ "高麗菜":{emoji:"🥬",
+  ready:["結球緊實：手掌下壓球頂感覺堅硬無彈性","外圍葉片開始少許黃化（球心養分充實完成的信號）","球徑 20–25cm（橄欖球大小）","重量達 1–2 公斤"],
+  when:"早晨露水乾後採收，避免切口積水",
+  how:"鋒利菜刀從基部平切，保留 2–3 片外葉保護球體；切完立放（切口朝下）。",
+  post:"常溫可保 7–10 天；冷藏（1–3°C）可保 1–2 個月。外層葉有效保護內部水分。",
+  spec:"契作規格：球型完整、結球緊實、無裂球/蟲孔，帶 2 片外葉，外觀清潔。"},
+ "敏豆":{emoji:"🫘",
+  ready:["豆莢長度 10–14cm","顏色翠綠有光澤（轉黃代表過老）","表面平滑，豆粒輪廓不明顯","輕折有脆斷感（非纖維拉絲）"],
+  when:"每天早晨巡查採收（敏豆生長快，隔天就可能過老）",
+  how:"一手握莖，另一手將豆莢從梗端輕折斷；或用剪刀剪。勿拉扯整株（傷根影響後續產量）。",
+  post:"裝袋後冷藏（7–10°C）保鮮 5–7 天；常溫不超過 2 天。勿堆疊壓損。",
+  spec:"契作規格：翠綠均勻、長度 10–14cm、無蟲咬/病斑，不接受過老豆莢。"}
+};
+function renderHarvestGuide(r,c,age){
+  const key=stageGuideKey(c,age);
+  if(key!=='果期'&&key!=='採收期')return'';
+  const g=HARVEST_GUIDE[r.crop];if(!g)return'';
+  const uid='hg-'+Date.now();
+  const readyHtml=g.ready.map(t=>'<div class="hg-check"><span>✅</span><span>'+t+'</span></div>').join('');
+  return'<div class="hg-card">'+
+    '<div class="hg-hd" onclick="var b=document.getElementById(\''+uid+'\');b.classList.toggle(\'open\');this.querySelector(\'.hg-arr\').classList.toggle(\'open\')">'+
+    '<span class="hg-emoji">'+g.emoji+'</span>'+
+    '<span class="hg-title">採收判斷指引</span>'+
+    '<span class="hg-arr">▶</span></div>'+
+    '<div class="hg-body" id="'+uid+'">'+
+    '<div class="hg-section-hd">✅ 達到這些條件才採</div>'+
+    readyHtml+
+    '<div class="hg-section-hd">⏰ 最佳採收時段</div>'+
+    '<div class="hg-text">'+g.when+'</div>'+
+    '<div class="hg-section-hd">✂️ 採收手法</div>'+
+    '<div class="hg-text">'+g.how+'</div>'+
+    '<div class="hg-section-hd">📦 採後處理</div>'+
+    '<div class="hg-text">'+g.post+'</div>'+
+    '<div class="hg-section-hd" style="color:var(--blue)">📋 契作規格提醒</div>'+
+    '<div class="hg-text" style="color:var(--blue)">'+g.spec+'</div>'+
+    '</div></div>';
+}
 function renderSeasonEndGuide(r,c,age){
   if(age<c.grow)return'';
   const rot=ROTATION_MAP[r.crop]||{next:[],avoid:[],rest:30,tip:""};
@@ -2277,6 +2352,7 @@ function renderPlots(){
     renderStageGuide(r,c,age)+
     renderEnvGuide(r,c,age)+
     renderWeekPlan(r,c,age)+
+    renderHarvestGuide(r,c,age)+
     renderSeasonEndGuide(r,c,age)+
     renderPlotDailyTasks(r.plot)+
     dynHtml+
