@@ -1606,6 +1606,39 @@ function renderIpmGuide(){
     '<div class="ipm-pest-grid">'+cards+'</div>'+
     '</div></div>';
 }
+/* 施肥階段指引 */
+const FERT_STAGE_GUIDE={
+  "苗期":{npk:"N:P:K = 1:1:1（均衡）",focus:"促根定著，低濃度開始，切勿過肥",ec:"1.0–1.5 dS/m",tips:["苗期最忌高濃度，燒根後很難救回","每2天測一次EC，偏高立即補清水","定植後3天先澆清水讓根系適應環境"]},
+  "生長期":{npk:"N:P:K = 2:1:1（高氮促葉）",focus:"促莖葉生長、建立健壯植株骨架",ec:"1.5–2.5 dS/m",tips:["氮過多會徒長（莖細葉大），易倒伏","同時補硝酸鈣，預防後期底腐病","早晨施肥讓根系有充足時間吸收"]},
+  "花期":{npk:"N:P:K = 1:2:2（高磷鉀促花）",focus:"降氮補磷鉀，促花芽分化提高著果率",ec:"2.0–2.8 dS/m",tips:["花期氮肥過多 → 花少果少（徒長）","磷酸二氫鉀是花期最好用的單品","開花期間避免中午高溫時施肥"]},
+  "花果期":{npk:"N:P:K = 1:2:2（高磷鉀）",focus:"持續促花兼顧果實初期發育",ec:"2.0–2.8 dS/m",tips:["同時兼顧花芽與果實，平衡補給","硝酸鈣持續補充預防BER底腐","避免過乾過濕，維持穩定EC"]},
+  "果期":{npk:"N:P:K = 1:1:3（高鉀增糖色）",focus:"高鉀促果實轉色、增甜、提硬度",ec:"2.5–3.2 dS/m",tips:["採收前7天可略降EC讓果實濃縮糖分","持續補鈣（硝酸鈣）防裂果","高溫期早晚各施一次，避免午間燒根"]},
+  "採收期":{npk:"N:P:K = 1:1:3（維持高鉀）",focus:"維持品質、延長採收期",ec:"2.5–3.0 dS/m",tips:["採收後植株消耗大，注意補充鎂和鈣","若有下一批果則繼續正常施肥","採收期末可逐漸降低施肥量準備結束"]},
+  "結球期":{npk:"N:P:K = 1:1:2（鉀促結球）",focus:"補鉀促結球紮實、提高重量",ec:"2.0–2.5 dS/m",tips:["過多氮肥會導致結球鬆散","保持水分均勻避免裂球","可適量補充硼素改善結球緊實度"]},
+  "結莢期":{npk:"N:P:K = 1:1:2（磷鉀促莢）",focus:"促莢充實、豆粒飽滿",ec:"1.8–2.5 dS/m",tips:["結莢期需水量大，確保灌溉足量","過高EC影響豆莢質地","適時摘除老莢讓新莢繼續發育"]}
+};
+const MIX_STEPS=["加入計算好的水量（RO水或沉澱自來水）","先加 A 液（含鈣鎂），充分攪拌","再加 B 液（含磷鉀），充分攪拌","加入微量元素液肥","測 EC / pH，調整後再施用"];
+function renderFertGuide(stageKey){
+  const g=FERT_STAGE_GUIDE[stageKey]||FERT_STAGE_GUIDE["生長期"];
+  const uid='fert-g-'+Date.now();
+  const tips=g.tips.map(t=>'<li style="margin-bottom:3px;font-size:.72rem;color:var(--ink-soft)">'+t+'</li>').join('');
+  const steps=MIX_STEPS.map((s,i)=>'<div style="display:flex;gap:7px;align-items:baseline;margin-bottom:5px"><span style="background:var(--accent);color:#fff;border-radius:50%;width:17px;height:17px;font-size:.63rem;display:inline-flex;align-items:center;justify-content:center;flex:none;font-weight:700">'+(i+1)+'</span><span style="font-size:.73rem;color:var(--ink-soft)">'+s+'</span></div>').join('');
+  return'<div style="margin:4px 0 10px">'+
+    '<div class="ecguide-q" id="'+uid+'" onclick="var b=document.getElementById(\''+uid+'-b\');b.classList.toggle(\'open\');this.classList.toggle(\'open\')">💧 '+stageKey+' 配肥指引</div>'+
+    '<div class="ecguide-body" id="'+uid+'-b">'+
+    '<div style="background:var(--accent-soft);border-radius:9px;padding:9px 11px;margin-bottom:8px">'+
+    '<div style="font-size:.75rem;font-weight:700;color:var(--accent-d);margin-bottom:3px">📊 本階段 N:P:K 建議比例</div>'+
+    '<div style="font-size:.86rem;font-weight:800;color:var(--ink);margin-bottom:2px">'+g.npk+'</div>'+
+    '<div style="font-size:.72rem;color:var(--ink-soft);margin-bottom:3px">'+g.focus+'</div>'+
+    '<div style="font-size:.73rem;color:var(--accent-d);font-weight:700">EC 目標：'+g.ec+'</div>'+
+    '</div>'+
+    '<div style="font-size:.76rem;font-weight:700;color:var(--ink);margin-bottom:6px">⚗️ A/B 液正確混合順序</div>'+
+    steps+
+    '<div style="background:var(--warn-bg);border-radius:8px;padding:6px 9px;margin:6px 0 8px;font-size:.72rem;color:var(--warn);line-height:1.5">⚠️ A液與B液濃縮液<b>絕對不可直接混合</b>，會生成磷酸鈣白色沉澱，堵塞滴管！</div>'+
+    '<div style="font-size:.76rem;font-weight:700;color:var(--ink);margin-bottom:4px">💡 本階段施肥要點</div>'+
+    '<ul style="margin:0;padding-left:16px">'+tips+'</ul>'+
+    '</div></div>';
+}
 /* 整枝/作業 快選晶片 + 指引 */
 const WORK_CHIPS={
   "牛番茄":["摘側芽（主幹整枝）","引蔓固定","摘老葉（下位3–4片）","輔助授粉（輕搖花穗）","疏果 每串留5果","整理支架鐵線","打頂（主蔓超2m）"],
@@ -2003,10 +2036,14 @@ function logModal(type){
   }
   else if(type==="fert"){
     const crop=load()[CUR]?load()[CUR].crop:"";
+    const fertRec=load()[CUR];const fertCrop=fertRec?CROPS[fertRec.crop]:null;
+    const[,,fertAge]=fertRec&&fertCrop?stageOf(fertRec):[0,0,0];
+    const fertSk=fertCrop?stageGuideKey(fertCrop,fertAge):"生長期";
     const fertOpts=FERTDB.filter(f=>!crop||f.crop.includes(crop.replace(/牛|玉女/,"").trim())||f.crop==="番茄/彩椒");
     const byStage={};fertOpts.forEach(f=>{(byStage[f.stage]=byStage[f.stage]||[]).push(f);});
     const ddOpts=Object.entries(byStage).map(([s,fs])=>'<optgroup label="'+s+'">'+fs.map(f=>'<option value="'+f.name+'|'+f.dose+'|'+f.note+'">'+f.name+'</option>').join("")+'</optgroup>').join("");
-    fields+='<label class="f">快選推薦肥料（依生育階段）</label>'+
+    fields+=renderFertGuide(fertSk)+
+    '<label class="f">快選推薦肥料（依生育階段）</label>'+
     '<select class="t" id="m-fq"><option value="">── 請選擇或手動填寫 ──</option>'+ddOpts+'</select>'+
     '<div id="fert-plants-hint" style="display:none;font-size:.76rem;background:var(--accent-soft);color:var(--accent-d);border-radius:8px;padding:6px 10px;margin-top:5px"></div>'+
     '<label class="f">施肥內容（肥料、用量、方式）</label><textarea class="t" id="m-note" placeholder="例如 台肥46號 稀釋500倍 灌根 每株500ml"></textarea>';
