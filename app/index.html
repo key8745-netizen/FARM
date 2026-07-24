@@ -3344,6 +3344,26 @@ function renderTools(){
     '<button class="btn" id="ab-go">計算 A/B 用量</button>'+
     '<div id="ab-res"></div>'+
     '</div>'+
+    '<h2 style="margin-top:22px">🧴 農藥安全施用計算機</h2><p class="note">確認稀釋量、安全裝備和混藥步驟。農藥用錯不是沒效就是傷作物，每次施藥前花 30 秒確認一次。</p>'+
+    '<div class="card" id="spray-calc-card">'+
+    '<div class="row2">'+
+    '<div><label class="f">藥劑劑型</label>'+
+    '<select class="t" id="sc-type">'+
+    '<option value="liquid">液劑（SC/EC/SL/水溶液）</option>'+
+    '<option value="powder">粉劑（WP/WG/DF 可濕性粉劑）</option>'+
+    '</select></div>'+
+    '<div><label class="f">包裝標示稀釋倍數</label><input class="t" id="sc-ratio" type="number" min="1" placeholder="如 1000"></div>'+
+    '</div>'+
+    '<div class="row2">'+
+    '<div><label class="f">桶 / 噴霧器容量（公升）</label><input class="t" id="sc-vol" type="number" min="1" placeholder="如 20"></div>'+
+    '<div><label class="f">噴藥面積（坪，選填）</label><input class="t" id="sc-area" type="number" min="1" placeholder="如 100"></div>'+
+    '</div>'+
+    '<div style="margin-bottom:8px"><label class="f">目前有哪些田區進入採收期？<span style="font-weight:400;color:var(--ink-soft)">（勾選後顯示 PHI 安全提醒）</span></label>'+
+    '<div id="sc-phi-plots" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">'+
+    (()=>{const plots=load();const harv=plots.filter(r=>{const c=CROPS[r.crop];if(!c||!r.date)return false;const[,,age]=stageOf(r);const key=stageGuideKey(c,age);return key==='採收期'||key==='果期';});return harv.length?harv.map((r,i)=>'<label style="font-size:.74rem;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" value="'+r.plot+'" id="scphi'+i+'"><span>'+r.plot+' '+r.crop+'</span></label>').join(''):'<span style="font-size:.74rem;color:var(--ink-soft)">目前無採收期田區</span>'})()+'</div></div>'+
+    '<button class="btn" id="sc-go">計算用量 & 顯示安全程序</button>'+
+    '<div id="sc-res"></div>'+
+    '</div>'+
     '<h2 style="margin-top:22px">作物計算</h2><p class="note">輸入作物、定植日、株數 → 採收日、肥料、作業排程。</p>'+
     '<div class="card"><label class="f">作物</label><select class="t" id="c-crop">'+opts+'</select>'+
     '<div class="row2"><div><label class="f">定植日</label><input class="t" id="c-date" type="date" value="'+fmtD(today())+'"></div><div><label class="f">株數</label><input class="t" id="c-plants" type="number" value="500"></div></div>'+
@@ -3490,6 +3510,60 @@ function renderTools(){
         '或：今日灌溉改為純清水（不加肥），排液後 EC 自然下降。'+
         '</div></div>';
     }
+  };
+  // 農藥安全施用計算機
+  v.querySelector("#sc-go").onclick=()=>{
+    const type=v.querySelector("#sc-type").value;
+    const ratio=+v.querySelector("#sc-ratio").value;
+    const vol=+v.querySelector("#sc-vol").value;
+    const area=+v.querySelector("#sc-area").value||0;
+    const res=v.querySelector("#sc-res");
+    if(!ratio||!vol){res.innerHTML='<div class="info" style="color:var(--warn)">請填入稀釋倍數和桶容量。</div>';return;}
+    const isLiq=type==='liquid';
+    const amount=Math.round(vol*1000/ratio);  // mL or g
+    const amtDisp=isLiq?amount+' mL':amount+' g';
+    const unit=isLiq?'mL':'g';
+    // PHI checked plots
+    const plots=load();
+    const checked=[...v.querySelectorAll("#sc-phi-plots input:checked")].map(cb=>cb.value);
+    const phiRows=checked.map(plotName=>{
+      const r=plots.find(p=>p.plot===plotName);if(!r)return'';
+      const c=CROPS[r.crop];if(!c)return'';
+      const[,,age]=stageOf(r);
+      const harvEnd=addD(parseD(r.date),c.grow+c.dur);
+      const daysLeft=Math.max(0,Math.floor((harvEnd-today())/864e5));
+      return'<div style="font-size:.74rem;padding:5px 9px;border-radius:7px;background:var(--warn-bg);color:var(--warn);margin-bottom:4px">'+
+        '⚠️ <b>'+plotName+' '+r.crop+'</b> 還有約 '+daysLeft+' 天可採收。噴藥前確認該藥劑的 PHI 不超過 '+daysLeft+' 天。若超過，選 PHI 較短的替代藥劑。</div>';
+    }).join('');
+    const steps=[
+      {n:1,txt:'穿戴防護裝備後再碰任何農藥容器（順序：口罩→護目鏡→手套→長袖防護衣）'},
+      {n:2,txt:'在桶中先加入 <b>一半的水量（'+Math.round(vol/2)+' L）</b>'},
+      {n:3,txt:(isLiq?'量取 '+amtDisp+' 農藥，沿桶壁緩慢加入水中':'量取 '+amtDisp+' 粉劑，先在小杯中加少量水攪成糊狀再倒入桶中')+'（切勿先加藥再加水！容易濺出且混合不均）'},
+      {n:4,txt:'補入剩餘清水至 '+vol+' L，緩慢攪拌 1–2 分鐘直到均勻'},
+      {n:5,txt:'噴藥後：用清水沖洗所有器具和噴頭，洗手後才可脫手套，殘液及空桶依廢棄物規定處理'},
+    ];
+    const stepsHtml=steps.map(s=>'<div class="diag-fix-step"><span class="diag-fix-num">'+s.n+'</span><span>'+s.txt+'</span></div>').join('');
+    const ppeList=[
+      {icon:'😷',name:'農藥防護口罩（非一般外科口罩）'},
+      {icon:'🥽',name:'護目鏡或防護面罩'},
+      {icon:'🧤',name:'防水手套（橡膠或乳膠，非棉手套）'},
+      {icon:'🥼',name:'長袖長褲防護衣（噴藥後換洗）'},
+    ];
+    const ppeHtml=ppeList.map(p=>'<div style="display:flex;align-items:center;gap:7px;font-size:.75rem;color:var(--ink-soft);margin-bottom:4px"><span style="font-size:1rem">'+p.icon+'</span>'+p.name+'</div>').join('');
+    const coverageNote=area?'<div class="r"><span>面積估算</span><b>'+area+' 坪 ÷ 約 0.2 L/坪 ≈ 需 '+(Math.round(area*0.2*10)/10)+' L 稀釋藥液</b></div>':'';
+    res.innerHTML='<div class="res" style="margin-top:8px">'+
+      '<div class="r"><span>桶容量</span><b>'+vol+' L</b></div>'+
+      '<div class="r"><span>稀釋倍數</span><b>1 : '+ratio+'</b></div>'+
+      '<div class="r"><span>需加入農藥量</span><b style="color:var(--warn);font-size:1.15rem">'+amtDisp+'</b></div>'+
+      '<div style="font-size:.72rem;color:var(--ink-soft);margin:2px 0 8px">計算式：'+vol+' L × 1000 ÷ '+ratio+' = '+amount+' '+unit+'</div>'+
+      coverageNote+'</div>'+
+      (phiRows?'<div style="margin:8px 0">'+phiRows+'</div>':'')+
+      '<div style="font-size:.78rem;font-weight:800;color:var(--ink);margin:10px 0 5px">🛡️ 施藥前必備防護裝備（缺一不可）</div>'+ppeHtml+
+      '<div style="font-size:.78rem;font-weight:800;color:var(--ink);margin:10px 0 5px">📋 正確混藥步驟</div>'+stepsHtml+
+      '<div style="background:var(--warn-bg);border-radius:8px;padding:8px 11px;margin-top:8px;font-size:.73rem;color:var(--warn);line-height:1.6">'+
+      '⚠️ <b>合法性確認</b>：每種農藥只能用在核准登記的作物和病蟲害上。<br>'+
+      '查詢網站：農業部植物保護資訊系統（pesticide.baphiq.gov.tw）→ 依作物+病蟲害搜尋。<br>'+
+      '噴藥後在 App 田區記錄「用藥紀錄」，PHI 到才能採收。</div>';
   };
   v.querySelector("#c-go").onclick=()=>{
     const c=CROPS[v.querySelector("#c-crop").value];const ds=v.querySelector("#c-date").value;const n=+v.querySelector("#c-plants").value;
