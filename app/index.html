@@ -1984,10 +1984,37 @@ function renderPlots(){
       const bg=warn?'var(--warn-bg)':ok?'var(--accent-soft)':'transparent';
       return '<div class="chart-ph-v" style="color:'+col+';background:'+bg+'">'+(x.ph||'—')+'</div>';
     }).join('');
+    // EC 趨勢解讀
+    const ecVals=ecHist.map(x=>+x.ec);
+    const latest=ecVals[ecVals.length-1];
+    const earlyAvg=ecVals.slice(0,Math.min(3,ecVals.length-1)).reduce((a,b)=>a+b,0)/Math.min(3,ecVals.length-1)||latest;
+    const recentAvg=ecVals.slice(-3).reduce((a,b)=>a+b,0)/Math.min(3,ecVals.length);
+    const drift=ecVals.length>=3?recentAvg-earlyAvg:0;
+    let statusMsg='',statusCol='var(--accent)';
+    if(latest>ecTarget*1.3){statusMsg='目前 EC '+latest+' 明顯高於目標 '+ecTarget+'，建議增加清水灌溉次數、降低施肥濃度。';statusCol='var(--warn)';}
+    else if(latest<ecTarget*0.65){statusMsg='目前 EC '+latest+' 低於目標 '+ecTarget+'，建議提高施肥濃度或增加施肥頻率。';statusCol='var(--grow)';}
+    else{statusMsg='目前 EC '+latest+' 在目標範圍（目標 '+ecTarget+'），水肥管理良好。';}
+    let trendMsg='';
+    if(ecVals.length>=3){
+      if(drift>0.35)trendMsg=' EC 呈上升趨勢（+'+drift.toFixed(1)+'），持續升高時須加大清水比例。';
+      else if(drift<-0.35)trendMsg=' EC 呈下降趨勢（'+drift.toFixed(1)+'），注意補充養分避免缺肥。';
+      else trendMsg=' 趨勢穩定，一致性良好。';
+    }
+    const latestPh=ecHist[ecHist.length-1].ph?+ecHist[ecHist.length-1].ph:null;
+    let phMsg='';
+    if(latestPh){
+      if(latestPh<5.5)phMsg=' pH '+latestPh+' 偏低，建議加入少量石灰水調高。';
+      else if(latestPh>7.0)phMsg=' pH '+latestPh+' 偏高，建議用磷酸溶液調低至 6.0–6.5。';
+      else phMsg=' pH '+latestPh+' 正常。';
+    }
+    const analysis='<div style="background:var(--card2);border-radius:9px;padding:9px 11px;margin-top:8px;border-left:3px solid '+statusCol+'">'+
+      '<div style="font-size:.76rem;font-weight:700;color:var(--ink);margin-bottom:3px">📊 系統解讀</div>'+
+      '<div style="font-size:.74rem;color:var(--ink-soft);line-height:1.65">'+statusMsg+trendMsg+phMsg+'</div></div>';
     ecChart='<div class="res"><h4>EC / pH 趨勢（近 '+ecHist.length+' 筆）</h4>'+
       '<div style="font-size:.7rem;color:var(--ink-soft);margin-bottom:4px">目標 EC <b style="color:var(--accent)">'+ecTarget+'</b> dS/m　pH 目標 <b style="color:var(--blue)">6.0–6.8</b></div>'+
       '<div class="chart">'+bars+'</div>'+
-      '<div class="chart-ph"><span class="chart-ph-lbl">pH</span>'+phRow+'</div></div>';
+      '<div class="chart-ph"><span class="chart-ph-lbl">pH</span>'+phRow+'</div>'+
+      analysis+'</div>';
   }
 
   let harvHist=(r.records||[]).filter(x=>x.type==="harv"&&(+x.qty||0)>0).slice(-10);
