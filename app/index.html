@@ -529,6 +529,32 @@ nav button.on{color:var(--accent);}
 .prune-num{width:18px;height:18px;border-radius:50%;background:var(--grow);color:#fff;font-size:.65rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;margin-top:2px;}
 .prune-dont{background:var(--warn-bg);border-radius:8px;padding:7px 10px;font-size:.73rem;color:var(--warn);line-height:1.6;margin-top:7px;}
 .prune-tip{background:var(--grow-bg);border-radius:8px;padding:7px 10px;font-size:.73rem;color:var(--grow);line-height:1.6;margin-top:6px;}
+/* 噴藥預防計畫 */
+.spray-guide{background:var(--card);border:1px solid var(--line);border-radius:13px;margin:8px 0;overflow:hidden;}
+.spray-guide-hd{display:flex;align-items:center;gap:9px;padding:11px 14px;cursor:pointer;}
+.spray-guide-icon{font-size:1.1rem;flex:none;}
+.spray-guide-title{flex:1;font-size:.88rem;font-weight:800;color:var(--ink);}
+.spray-guide-status{font-size:.72rem;font-weight:700;border-radius:20px;padding:2px 9px;white-space:nowrap;}
+.spray-guide-status.ok{background:var(--grow-bg);color:var(--grow);}
+.spray-guide-status.due{background:var(--harv-bg);color:var(--harv);}
+.spray-guide-status.over{background:var(--warn-bg);color:var(--warn);}
+.spray-guide-status.new{background:var(--card2);color:var(--ink-soft);}
+.spray-guide-arr{font-size:.85rem;color:var(--ink-soft);transition:transform .2s;margin-left:4px;}
+.spray-guide-arr.open{transform:rotate(90deg);}
+.spray-guide-body{display:none;padding:0 14px 14px;}
+.spray-guide-body.open{display:block;}
+.spray-status-bar{border-radius:9px;padding:9px 12px;margin-bottom:10px;font-size:.76rem;line-height:1.6;}
+.spray-status-bar.ok{background:var(--grow-bg);color:var(--grow);}
+.spray-status-bar.due{background:var(--harv-bg);color:var(--harv);}
+.spray-status-bar.over{background:var(--warn-bg);color:var(--warn);}
+.spray-status-bar.new{background:var(--card2);color:var(--ink-soft);}
+.spray-risk-hd{font-size:.75rem;font-weight:800;color:var(--ink);margin:8px 0 5px;}
+.spray-risk-item{display:flex;gap:8px;margin-bottom:6px;align-items:flex-start;}
+.spray-risk-badge{font-size:.68rem;font-weight:700;border-radius:10px;padding:2px 7px;white-space:nowrap;flex:none;margin-top:1px;}
+.spray-risk-badge.hi{background:var(--warn-bg);color:var(--warn);}
+.spray-risk-badge.md{background:var(--harv-bg);color:var(--harv);}
+.spray-risk-note{font-size:.73rem;color:var(--ink-soft);line-height:1.5;}
+.spray-phi-note{font-size:.71rem;color:var(--ink-soft);background:var(--card2);border-radius:8px;padding:7px 10px;margin-top:8px;line-height:1.6;}
 </style>
 
 </head>
@@ -1065,6 +1091,91 @@ const IRRIG_GUIDE={
   over:["採收果實水分過多、保鮮期短","糖度下降"],
   under:["植株老化加速","剩餘果實皮質變差"]}
 };
+/* ────── 噴藥預防計畫（依科別×生育階段） ────── */
+const SPRAY_GUIDE={
+ "茄科":{  // 牛番茄, 玉女番茄, 彩椒
+  intervals:{"定植前":0,"苗期":14,"生長期":10,"花期":7,"果期":10,"採收期":14},
+  risks:{
+   "苗期":[{n:"猝倒病/根腐病",lv:"hi",note:"定植後前 2 週最高風險；以灌根方式預防（詳查植保系統）"},{n:"白粉病",lv:"md",note:"乾冷不通風時易發；以通風管理為主，輔以預防噴施"}],
+   "生長期":[{n:"白粉病",lv:"hi",note:"生長期最常見，葉背最先出現白粉；發現跡象立刻處置"},{n:"灰黴病",lv:"md",note:"高濕低溫易發；摘除病葉加強通風是首要措施"}],
+   "花期":[{n:"灰黴病",lv:"hi",note:"花瓣是感染門戶，花期風險最高！花後 3 天是最佳噴藥時機"},{n:"葉黴病",lv:"hi",note:"溫室封閉濕熱時易爆發；確保頂窗通風"}],
+   "果期":[{n:"晚疫病",lv:"hi",note:"多雨濕冷時用藥；葉面出現水漬狀病斑立刻噴藥"},{n:"炭疽病",lv:"md",note:"果實轉色期風險升高；重點噴果實表面"}],
+   "採收期":[{n:"炭疽病",lv:"md",note:"持續監控，嚴守農藥 PHI 才能採收"},{n:"晚疫病",lv:"md",note:"雨季注意，採收期 PHI 不足時改用低 PHI 藥劑"}]
+  },
+  interval_note:"建議預防間隔：花期 7 天、生長期 10 天、果期 10 天",
+  phi_note:"⚠️ 茄科農藥 PHI 依藥品不同為 3–14 天。採收前務必確認安全期已過。"
+ },
+ "薔薇科":{ // 高山草莓
+  intervals:{"定植前":0,"苗期":14,"生長期":7,"花果期":7,"採收期":10},
+  risks:{
+   "苗期":[{n:"灰黴病",lv:"hi",note:"草莓最大敵人，任何季節都需預防，高濕時最高風險"},{n:"根腐病",lv:"md",note:"基質過濕時，以控水和通風預防"}],
+   "生長期":[{n:"灰黴病",lv:"hi",note:"每 7 天預防性噴施一次，輪換不同成分避免抗藥"},{n:"白粉病",lv:"md",note:"乾燥天氣易發；葉面出現白色粉末立刻處置"}],
+   "花期":[{n:"灰黴病",lv:"hi",note:"花期感染→果實腐爛，是最高風險期"},{n:"白粉病",lv:"md",note:"花期避免正午噴藥影響授粉"}],
+   "果期":[{n:"灰黴病",lv:"hi",note:"採收前 5 天停噴（PHI），結果期頻繁巡查"},{n:"炭疽病",lv:"md",note:"高溫多雨時易發，果實上出現褐色凹陷"}],
+   "採收期":[{n:"灰黴病",lv:"hi",note:"採後殘留果柄是感染源，每次採收後清潔是關鍵"}]
+  },
+  interval_note:"建議預防間隔：全生育期 7 天，採收期停藥（查 PHI）",
+  phi_note:"⚠️ 草莓農藥 PHI 通常 1–5 天，採收頻繁時選低 PHI 藥劑。"
+ },
+ "十字花科":{ // 高麗菜
+  intervals:{"定植前":0,"苗期":14,"生長期":10,"結球期":14},
+  risks:{
+   "苗期":[{n:"小菜蛾",lv:"hi",note:"十字花科最主要害蟲，幼苗即開始監控黏板"},{n:"猝倒病",lv:"md",note:"育苗後期幼苗易發"}],
+   "生長期":[{n:"小菜蛾",lv:"hi",note:"每 7–10 天巡查葉背蟲卵，超門檻立刻用藥"},{n:"黑腐病",lv:"md",note:"雨後潮濕時細菌性黑腐病易發，重點排水"}],
+   "結球期":[{n:"軟腐病",lv:"hi",note:"結球期排水不良積水最易發"},{n:"夜蛾",lv:"md",note:"夜間鑽食結球，造成嚴重損傷"}]
+  },
+  interval_note:"建議預防間隔：生長期 10 天、結球期 14 天（採收前停藥）",
+  phi_note:"⚠️ 高麗菜農藥 PHI 通常 3–7 天，結球飽滿後多數需停藥等待。"
+ },
+ "豆科":{ // 敏豆
+  intervals:{"定植前":0,"苗期":14,"生長期":10,"結莢期":7},
+  risks:{
+   "苗期":[{n:"立枯病",lv:"md",note:"前期澆水過多或介質帶菌時易發"}],
+   "生長期":[{n:"白粉病",lv:"hi",note:"敏豆中後期白粉病常見，注意通風"},{n:"薊馬",lv:"md",note:"嫩梢期吸食，黃板監測超標再用藥"}],
+   "結莢期":[{n:"豆莢螟",lv:"hi",note:"直接鑽入豆莢，造成落莢，是結莢期最大威脅"},{n:"炭疽病",lv:"md",note:"雨後果面黑斑，嚴守 PHI"}]
+  },
+  interval_note:"建議預防間隔：生長期 10 天、結莢期 7 天",
+  phi_note:"⚠️ 豆科農藥 PHI 通常 1–7 天，採收頻繁需特別注意。"
+ }
+};
+function renderSprayGuide(r,c,age){
+  if(age<0)return'';
+  const key=stageGuideKey(c,age);
+  const sg=SPRAY_GUIDE[c['科']];if(!sg)return'';
+  const risks=sg.risks[key];if(!risks||!risks.length)return'';
+  const interval=sg.intervals[key]||10;
+  const sprays=(r.records||[]).filter(x=>x.type==='spray').sort((a,b)=>b.date<a.date?-1:1);
+  const last=sprays[0];
+  const daysSince=last?Math.round((today()-parseD(last.date))/DAY):-1;
+  let stCode,stLabel,stMsg;
+  if(daysSince<0){
+    stCode='new';stLabel='未有噴藥記錄';
+    stMsg='本田區目前沒有噴藥記錄。依目前生育階段（'+key+'），建議每 '+interval+' 天進行一次預防性噴藥，在症狀出現前主動防護。';
+  }else if(daysSince<interval*0.6){
+    stCode='ok';stLabel='✓ 噴藥頻率正常';
+    stMsg='距上次噴藥 '+daysSince+' 天（'+md(parseD(last.date))+'）。按 '+interval+' 天間隔計畫，下次預防噴藥約在 '+md(addD(parseD(last.date),interval))+' 前後。';
+  }else if(daysSince<interval){
+    stCode='due';stLabel='即將到噴藥時機';
+    stMsg='距上次噴藥已 '+daysSince+' 天，建議 '+interval+' 天間隔。下次預防噴藥 '+md(addD(parseD(last.date),interval))+' 即到，請做好準備。';
+  }else{
+    stCode='over';stLabel='⚠ 已超過建議間隔';
+    stMsg='距上次噴藥已 '+daysSince+' 天，超過建議的 '+interval+' 天間隔。請確認是否需要安排一次預防性噴藥（查植保系統確認用藥）。';
+  }
+  const uid='sp-'+Date.now();
+  const riskHtml=risks.map(ri=>'<div class="spray-risk-item"><span class="spray-risk-badge '+ri.lv+'">'+(ri.lv==='hi'?'高風險':'中風險')+'</span><div><b style="font-size:.76rem;color:var(--ink)">'+ri.n+'</b><div class="spray-risk-note">'+ri.note+'</div></div></div>').join('');
+  return'<div class="spray-guide">'+
+    '<div class="spray-guide-hd" onclick="var b=document.getElementById(\''+uid+'\');b.classList.toggle(\'open\');this.querySelector(\'.spray-guide-arr\').classList.toggle(\'open\')">'+
+    '<span class="spray-guide-icon">🧴</span>'+
+    '<span class="spray-guide-title">噴藥預防計畫 — '+key+'</span>'+
+    '<span class="spray-guide-status '+stCode+'">'+stLabel+'</span>'+
+    '<span class="spray-guide-arr">▶</span></div>'+
+    '<div class="spray-guide-body" id="'+uid+'">'+
+    '<div class="spray-status-bar '+stCode+'">'+stMsg+'</div>'+
+    '<div class="spray-risk-hd">🦠 此階段主要防治目標</div>'+
+    riskHtml+
+    '<div class="spray-phi-note">📋 '+sg.phi_note+'<br>'+sg.interval_note+'<br><br>🔗 農藥選用：查詢「農業部植物保護資訊系統」，依作物+病蟲害搜尋合法登記藥劑。</div>'+
+    '</div></div>';
+}
 /* ────── 整枝誘引操作指引（依作物） ────── */
 const PRUNE_GUIDE={
  "牛番茄":{
@@ -2526,6 +2637,7 @@ function renderPlots(){
     renderIrrigGuide(r,c,age)+
     renderEnvGuide(r,c,age)+
     renderWeekPlan(r,c,age)+
+    renderSprayGuide(r,c,age)+
     renderHarvestGuide(r,c,age)+
     renderSeasonEndGuide(r,c,age)+
     renderPlotDailyTasks(r.plot)+
