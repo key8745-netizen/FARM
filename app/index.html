@@ -555,6 +555,24 @@ nav button.on{color:var(--accent);}
 .spray-risk-badge.md{background:var(--harv-bg);color:var(--harv);}
 .spray-risk-note{font-size:.73rem;color:var(--ink-soft);line-height:1.5;}
 .spray-phi-note{font-size:.71rem;color:var(--ink-soft);background:var(--card2);border-radius:8px;padding:7px 10px;margin-top:8px;line-height:1.6;}
+/* 授粉操作指引 */
+.poll-card{background:linear-gradient(135deg,var(--harv-bg) 0%,var(--card) 80%);border:1.5px solid var(--harv);border-radius:13px;margin:8px 0;overflow:hidden;}
+.poll-hd{display:flex;align-items:center;gap:9px;padding:11px 14px;cursor:pointer;}
+.poll-hd-icon{font-size:1.15rem;flex:none;}
+.poll-hd-title{flex:1;font-size:.88rem;font-weight:800;color:var(--harv);}
+.poll-hd-arr{font-size:.85rem;color:var(--harv);transition:transform .2s;}
+.poll-hd-arr.open{transform:rotate(90deg);}
+.poll-body{display:none;padding:0 14px 14px;}
+.poll-body.open{display:block;}
+.poll-method-hd{font-size:.78rem;font-weight:800;color:var(--ink);margin:10px 0 6px;display:flex;align-items:center;gap:5px;}
+.poll-step{display:flex;gap:8px;font-size:.76rem;color:var(--ink-soft);line-height:1.6;margin-bottom:5px;align-items:baseline;}
+.poll-step-num{background:var(--harv);color:#fff;border-radius:50%;width:18px;height:18px;font-size:.64rem;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex:none;margin-top:2px;}
+.poll-tip{background:var(--grow-bg);border-radius:8px;padding:7px 10px;font-size:.73rem;color:var(--grow);line-height:1.6;margin-top:7px;}
+.poll-warn{background:var(--warn-bg);border-radius:8px;padding:7px 10px;font-size:.73rem;color:var(--warn);line-height:1.6;margin-top:6px;}
+.poll-timing{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0;}
+.poll-timing-cell{background:var(--card2);border:1px solid var(--line);border-radius:9px;padding:7px 8px;text-align:center;}
+.poll-timing-lbl{font-size:.6rem;color:var(--ink-soft);margin-bottom:3px;}
+.poll-timing-val{font-size:.82rem;font-weight:800;color:var(--harv);}
 </style>
 
 </head>
@@ -1091,6 +1109,83 @@ const IRRIG_GUIDE={
   over:["採收果實水分過多、保鮮期短","糖度下降"],
   under:["植株老化加速","剩餘果實皮質變差"]}
 };
+/* ────── 授粉操作指引（依作物，僅花期顯示） ────── */
+const POLLINATION_GUIDE={
+ "牛番茄":{
+  icon:"🌸",best:"09:00–11:00",freq:"每天一次（花朵開放期間）",tools:"電動授粉棒（振動棒）或輕搖莖幹",
+  method:"電動振動棒",
+  steps:["早上 9–11 點，花粉最活躍（溫度 20–27°C，濕度 60–70%）","將電動授粉棒（振動棒）輕觸花穗梗（不是花瓣），啟動振動 1–2 秒","花粉會從花葯彈出落到柱頭上完成自花授粉","沿著每個開花穗依序操作，每穗振動 1–2 次即可","授粉後的花朵：花瓣微微垂下或開始脫落 = 授粉成功"],
+  fallback:"沒有振動棒：用手指輕輕彈花穗莖 2–3 下；或每天上午開天窗讓微風流動，也有輔助效果",
+  warn:"授粉後 1 小時避免灌溉（水霧會沖掉花粉）；日溫 > 32°C 花粉失活，需改成清晨 7–9 點操作",
+  tip:"一把 NT$300–600 的電動牙刷頭就可當振動棒使用，效果與專業授粉棒相同。"
+ },
+ "玉女番茄":{
+  icon:"🍒",best:"08:30–11:00",freq:"每天一次",tools:"電動振動棒或輕彈莖幹",
+  method:"電動振動棒",
+  steps:["玉女番茄花穗密集，授粉效率更高","振動棒輕觸每個花穗的梗（不直接碰花瓣）","一個花穗有 10–20 朵花，每次振動 2–3 秒可同時授粉","授粉後 3–5 天確認是否坐果：花瓣脫落、子房膨大 = 成功","連續陰天 3 天以上：加強振動頻率，改為每天 2 次"],
+  fallback:"通風良好的溫室可靠微風自然授粉；若坐果率低於 60% 則需加強人工輔助",
+  warn:"果穗過長（> 15 朵）時疏花，留 10–12 朵授粉，可讓果實均勻且品質提升",
+  tip:"玉女番茄果串長，授粉良好時整串坐果率可達 80% 以上，是契作品質的關鍵。"
+ },
+ "彩椒":{
+  icon:"🫑",best:"08:00–11:00",freq:"隔天一次（或每天通風代替）",tools:"開頂窗/風扇製造微風（首選），或細毛刷輔助",
+  method:"通風輔助授粉",
+  steps:["彩椒花朵垂下，花粉自然落到柱頭（自花授粉結構），主要靠振動","每天上午 8–11 點開天窗與側窗，讓棚內有 微風循環（植株輕微搖動即可）","補充：用電風扇（遠距低速）吹過花穗，增加振動效果","人工輔助：隔天用細軟毛刷輕刷花朵中心，轉移花粉","授粉成功標誌：花瓣脫落，子房（花後小球）開始膨大"],
+  fallback:"若坐果率不佳：增加通風時間 → 引入熊蜂 → 改用振動棒輔助",
+  warn:"花期溫度 > 30°C 時花粉活力下降；濕度 > 80% 花粉黏結難以傳播",
+  tip:"彩椒落花通常不是授粉問題，而是溫度壓力（夜溫 < 13°C 或日溫 > 30°C），先確認溫度。"
+ },
+ "高山草莓":{
+  icon:"🍓",best:"08:00–11:00",freq:"每天（放蜂）或隔天（人工）",tools:"熊蜂箱（最佳）或軟毛刷",
+  method:"熊蜂 + 軟毛刷",
+  steps:["熊蜂授粉（最佳選擇）：溫室內放置 1 箱熊蜂（可租用），蜂自動完成所有授粉","人工授粉：早上用細軟毛刷輕刷每朵草莓花中心，讓花粉轉移到柱頭","草莓花中心有多個柱頭（看起來像黃色顆粒群），須讓每個柱頭都沾到花粉","授粉不均勻的草莓：形狀扭曲（畸形果）= 部分柱頭未授粉","每朵花授粉期 3–5 天，需持續到全部花朵凋謝為止"],
+  fallback:"無熊蜂時每天人工刷花，雖費工但可達 70–80% 坐果率（熊蜂可達 90–95%）",
+  warn:"花期不噴農藥（殺蜂）！若有蜂箱在棚內，任何農藥都不能噴；噴藥前先將蜂箱移出",
+  tip:"畸形草莓 = 授粉不完全，多從花刷方式或通風改善。草莓花期持續 2–3 個月，不要鬆懈。"
+ },
+ "高麗菜":{
+  icon:"🥬",best:"—",freq:"—",tools:"不需人工授粉",
+  method:"自然授粉（不適用）",
+  steps:["高麗菜採收的是「結球葉片」，不依賴花朵授粉","溫室種植不讓高麗菜抽薹開花（開花後葉球品質下降）","若發現植株開始抽薹（從球心長出花莖），應立刻採收，否則品質迅速下降"],
+  fallback:"",
+  warn:"高麗菜抽薹通常因為長時間低溫（春化）引起；信義鄉冬季需注意",
+  tip:"高麗菜管理重點在「結球緊實度」和「防蟲」，授粉不在管理項目內。"
+ },
+ "敏豆":{
+  icon:"🫘",best:"自然進行",freq:"不需人工，確保通風即可",tools:"通風管理",
+  method:"自花授粉（不需人工）",
+  steps:["敏豆為自花授粉作物，花朵閉合時就完成授粉","溫室需保持通風（防止悶熱高溫影響授粉成功率）","花開後 7–10 天即可看到豆莢伸長，確認坐果成功","若落花率高（> 30%）：通常是高溫（> 32°C）或根系問題，先測 EC 和通風"],
+  fallback:"",
+  warn:"敏豆耐熱性差，持續 > 30°C 落花率大幅上升；高溫期需加強通風降溫",
+  tip:"敏豆一旦開始採收就要每天巡查，過熟的豆莢會讓植株停止開花結莢。"
+ }
+};
+function renderPollinationGuide(r,c,age){
+  const key=stageGuideKey(c,age);
+  if(key!=='花期')return'';
+  const g=POLLINATION_GUIDE[r.crop];if(!g)return'';
+  const uid='poll-'+Date.now();
+  const steps=g.steps.map((s,i)=>'<div class="poll-step"><span class="poll-step-num">'+(i+1)+'</span><span>'+s+'</span></div>').join('');
+  const fallbackHtml=g.fallback?'<div class="poll-warn">🔄 替代方案：'+g.fallback+'</div>':'';
+  const tipHtml=g.tip?'<div class="poll-tip">💡 '+g.tip+'</div>':'';
+  return'<div class="poll-card">'+
+    '<div class="poll-hd" onclick="var b=document.getElementById(\''+uid+'\');b.classList.toggle(\'open\');this.querySelector(\'.poll-hd-arr\').classList.toggle(\'open\')">'+
+    '<span class="poll-hd-icon">'+g.icon+'</span>'+
+    '<span class="poll-hd-title">授粉操作指引 — '+g.method+'</span>'+
+    '<span class="poll-hd-arr">▶</span></div>'+
+    '<div class="poll-body" id="'+uid+'">'+
+    '<div class="poll-timing">'+
+    '<div class="poll-timing-cell"><div class="poll-timing-lbl">⏰ 最佳時段</div><div class="poll-timing-val">'+g.best+'</div></div>'+
+    '<div class="poll-timing-cell"><div class="poll-timing-lbl">📅 頻率</div><div class="poll-timing-val" style="font-size:.72rem">'+g.freq+'</div></div>'+
+    '<div class="poll-timing-cell"><div class="poll-timing-lbl">🔧 工具</div><div class="poll-timing-val" style="font-size:.68rem">'+g.tools+'</div></div>'+
+    '</div>'+
+    '<div class="poll-method-hd">📋 操作步驟</div>'+
+    steps+
+    fallbackHtml+
+    '<div class="poll-warn" style="margin-top:6px">⚠️ '+g.warn+'</div>'+
+    tipHtml+
+    '</div></div>';
+}
 /* ────── 噴藥預防計畫（依科別×生育階段） ────── */
 const SPRAY_GUIDE={
  "茄科":{  // 牛番茄, 玉女番茄, 彩椒
@@ -2637,6 +2732,7 @@ function renderPlots(){
     renderIrrigGuide(r,c,age)+
     renderEnvGuide(r,c,age)+
     renderWeekPlan(r,c,age)+
+    renderPollinationGuide(r,c,age)+
     renderSprayGuide(r,c,age)+
     renderHarvestGuide(r,c,age)+
     renderSeasonEndGuide(r,c,age)+
