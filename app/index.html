@@ -491,6 +491,29 @@ nav button.on{color:var(--accent);}
 .hg-section-hd{font-size:.76rem;font-weight:800;color:var(--ink);margin:10px 0 5px;}
 .hg-check{display:flex;gap:7px;font-size:.76rem;color:var(--ink-soft);line-height:1.5;margin-bottom:4px;align-items:baseline;}
 .hg-text{font-size:.76rem;color:var(--ink-soft);line-height:1.6;background:var(--card);border-radius:8px;padding:8px 10px;}
+/* 灌溉水量管理指引 */
+.irr-card{background:var(--card);border:1px solid var(--blue);border-radius:13px;margin:8px 0;overflow:hidden;}
+.irr-hd{display:flex;align-items:center;gap:9px;padding:11px 14px;cursor:pointer;}
+.irr-hd-icon{font-size:1.1rem;flex:none;}
+.irr-hd-title{flex:1;font-size:.88rem;font-weight:800;color:var(--ink);}
+.irr-hd-arr{font-size:.85rem;color:var(--ink-soft);transition:transform .2s;}
+.irr-hd-arr.open{transform:rotate(90deg);}
+.irr-body{display:none;padding:0 14px 14px;}
+.irr-body.open{display:block;}
+.irr-params{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px;}
+.irr-param{background:var(--card2);border:1px solid var(--line);border-radius:9px;padding:7px 8px;text-align:center;}
+.irr-param-lbl{font-size:.6rem;color:var(--ink-soft);font-weight:600;margin-bottom:3px;}
+.irr-param-val{font-size:.82rem;font-weight:800;color:var(--blue);}
+.irr-rule{font-size:.75rem;color:var(--ink-soft);line-height:1.6;margin-bottom:4px;display:flex;gap:6px;}
+.irr-rule b{color:var(--ink);flex:none;}
+.irr-state{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px;}
+.irr-state-card{border-radius:9px;padding:8px 10px;}
+.irr-state-card.ok{background:var(--grow-bg);}
+.irr-state-card.bad{background:var(--warn-bg);}
+.irr-state-hd{font-size:.72rem;font-weight:800;margin-bottom:4px;}
+.irr-state-card.ok .irr-state-hd{color:var(--grow);}
+.irr-state-card.bad .irr-state-hd{color:var(--warn);}
+.irr-state-item{font-size:.7rem;color:var(--ink-soft);line-height:1.5;}
 </style>
 
 </head>
@@ -988,6 +1011,71 @@ const ENV_GUIDE={
   vent:"採收後清理植株殘體前保持通風，降低病原在棚內滯留",
   warns:["低溫（< 12°C）著色遲緩，延後採收計畫","高溫多濕加速果實後熟，須每天巡視提早採收"]}
 };
+/* ────── 灌溉水量管理指引（依生育階段） ────── */
+const IRRIG_GUIDE={
+ "定植前":{freq:"2–3 次/天",dur:"15–20 分",drain:"15–25%",
+  timing:"第一次 7:00，第二次 11:00，第三次（視需要）14:00",
+  firstLast:"定植當天澆一次大水（定根水）讓介質完全濕透，傍晚不需再澆",
+  adj:"天晴蒸散強→增加 1 次；陰雨天→減少至 1 次並縮短時長",
+  over:["排液 EC 偏低（< 1.5）","介質表面長青苔/藻類","根部褐色軟爛"],
+  under:["介質白化乾燥","下午植株葉緣捲曲萎凋","排液量極少（< 10%）"]},
+ "苗期":{freq:"2–3 次/天",dur:"15–20 分",drain:"15–25%",
+  timing:"第一次 7:00，第二次 11:30，第三次（晴天）14:30",
+  firstLast:"第一次灌溉前先量介質 EC；最後一次在 15:30 前結束（避免夜間過濕）",
+  adj:"定植後前 3 天加頻（讓根系快速接觸水分）；第 4 天後視排液量調整",
+  over:["排液 EC < 1.0（肥料被稀釋太多）","植株莖基部發黑潮濕","午後介質仍飽和不排液"],
+  under:["苗期葉片捲曲（最警訊！立刻補水）","植株午前就萎軟","排液量 < 5%"]},
+ "生長期":{freq:"3–4 次/天",dur:"20–30 分",drain:"20–30%",
+  timing:"7:00, 10:00, 13:00, 16:00（天晴）；減少最後一次（陰天）",
+  firstLast:"日出後 30 分開始第一次（光合作用啟動再澆），日落前 1.5 小時結束",
+  adj:"高溫（>30°C）日增加 1 次；每次量測排液率，低於 20% 表示量不足要增加時長",
+  over:["排液 EC 明顯低於給液 EC","介質含水量 > 80%","根部悶熱易感根腐"],
+  under:["排液 EC 高於給液 EC 超過 1.5 dS/m","葉片向內捲成湯匙狀","植株傍晚不能回復挺立"]},
+ "花期":{freq:"3–4 次/天",dur:"20–25 分",drain:"20–25%",
+  timing:"與生長期相同；開花當天避免在上午 9–11 點花粉最活躍時段開始灌溉",
+  firstLast:"授粉後 1 小時可灌溉；花期水分穩定最重要，忌忽多忽少",
+  adj:"花期需穩定——若排液率忽高忽低超過 10%，立刻找出原因（堵管/pump故障）",
+  over:["花瓣提早脫落（水分過多根系缺氧）","果實膨大但皮薄（充水過多）"],
+  under:["落花率上升（缺水壓力）","花苞顏色偏暗（花期水分不足）"]},
+ "果期":{freq:"4–5 次/天",dur:"25–35 分",drain:"25–35%",
+  timing:"7:00, 9:30, 12:00, 14:30, 17:00（晴天標準）",
+  firstLast:"果期植株需水量最大；最後一次在日落前 1.5 小時，讓介質有時間稍乾",
+  adj:"果實膨大期多一次；接近採收前 5–7 天「適度控水」——減少 1 次讓糖分濃縮、提升品質",
+  over:["裂果（水分驟增）","果實大但淡而無味","根系浸水易感病"],
+  under:["尻腐病（缺鈣通常源於水分不穩定）","果實偏小且皮厚","植株午間萎軟無法回復"]},
+ "採收期":{freq:"3–4 次/天",dur:"20–30 分",drain:"20–30%",
+  timing:"與果期相同，但採收前 1 週開始減少",
+  firstLast:"採收前 3 天控水（減少 1–2 次灌溉）讓果實甜度與硬度提升",
+  adj:"採收期以「維持」為主，不再大幅增加；已採收側枝可減少對應灌溉量",
+  over:["採收果實水分過多、保鮮期短","糖度下降"],
+  under:["植株老化加速","剩餘果實皮質變差"]}
+};
+function renderIrrigGuide(r,c,age){
+  if(age<0)return'';
+  const key=stageGuideKey(c,age);
+  const g=IRRIG_GUIDE[key];if(!g)return'';
+  const uid='irr-'+Date.now();
+  const overHtml=g.over.map(t=>'<div class="irr-state-item">⚠️ '+t+'</div>').join('');
+  const underHtml=g.under.map(t=>'<div class="irr-state-item">⚠️ '+t+'</div>').join('');
+  return'<div class="irr-card">'+
+    '<div class="irr-hd" onclick="var b=document.getElementById(\''+uid+'\');b.classList.toggle(\'open\');this.querySelector(\'.irr-hd-arr\').classList.toggle(\'open\')">'+
+    '<span class="irr-hd-icon">💧</span>'+
+    '<span class="irr-hd-title">灌溉管理 — '+key+'</span>'+
+    '<span class="irr-hd-arr">▶</span></div>'+
+    '<div class="irr-body" id="'+uid+'">'+
+    '<div class="irr-params">'+
+    '<div class="irr-param"><div class="irr-param-lbl">每日次數</div><div class="irr-param-val">'+g.freq+'</div></div>'+
+    '<div class="irr-param"><div class="irr-param-lbl">每次時長</div><div class="irr-param-val">'+g.dur+'</div></div>'+
+    '<div class="irr-param"><div class="irr-param-lbl">目標排液率</div><div class="irr-param-val">'+g.drain+'</div></div>'+
+    '</div>'+
+    '<div class="irr-rule"><b>🕐 時段：</b>'+g.timing+'</div>'+
+    '<div class="irr-rule"><b>📌 首末：</b>'+g.firstLast+'</div>'+
+    '<div class="irr-rule"><b>🔧 調整：</b>'+g.adj+'</div>'+
+    '<div class="irr-state">'+
+    '<div class="irr-state-card bad"><div class="irr-state-hd">💧 澆太多的徵兆</div>'+overHtml+'</div>'+
+    '<div class="irr-state-card ok"><div class="irr-state-hd">🏜️ 澆太少的徵兆</div>'+underHtml+'</div>'+
+    '</div></div></div>';
+}
 function renderEnvGuide(r,c,age){
   const key=stageGuideKey(c,age);
   const g=ENV_GUIDE[key];if(!g)return'';
@@ -2350,6 +2438,7 @@ function renderPlots(){
     renderActivityStrip(r)+
     renderStageTimeline(r,c,age)+
     renderStageGuide(r,c,age)+
+    renderIrrigGuide(r,c,age)+
     renderEnvGuide(r,c,age)+
     renderWeekPlan(r,c,age)+
     renderHarvestGuide(r,c,age)+
