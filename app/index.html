@@ -820,6 +820,24 @@ nav button.on{color:var(--accent);}
 .mix-compat-tbl td.no{background:#fff0f0;}
 .mix-compat-tbl td.sl{background:var(--card2);color:var(--ink-soft);}
 .mix-emg{background:var(--warn-bg);border:1px solid var(--warn);border-radius:9px;padding:9px 12px;font-size:.73rem;line-height:1.65;margin-top:10px;}
+/* 果實管理指引 */
+.fmg-card{background:var(--card);border:1px solid var(--harv);border-radius:13px;margin:8px 0;overflow:hidden;}
+.fmg-hd{display:flex;align-items:center;gap:9px;padding:11px 14px;cursor:pointer;}
+.fmg-title{flex:1;font-size:.88rem;font-weight:800;color:var(--harv);}
+.fmg-arr{font-size:.85rem;color:var(--harv);transition:transform .2s;}
+.fmg-arr.open{transform:rotate(90deg);}
+.fmg-body{display:none;padding:0 14px 14px;}
+.fmg-body.open{display:block;}
+.fmg-rule{background:var(--harv-bg,#fff8e6);border:1px solid var(--harv);border-radius:9px;padding:9px 12px;margin-bottom:10px;font-size:.78rem;line-height:1.6;}
+.fmg-rule b{color:var(--harv);display:block;margin-bottom:3px;font-size:.82rem;}
+.fmg-cols{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
+.fmg-col{border-radius:9px;padding:9px 11px;font-size:.73rem;line-height:1.65;}
+.fmg-col.keep{background:#e6f9f0;border:1px solid var(--grow);}
+.fmg-col.cut{background:#fff0f0;border:1px solid var(--warn);}
+.fmg-col-hd{font-size:.76rem;font-weight:900;margin-bottom:4px;}
+.fmg-col.keep .fmg-col-hd{color:var(--grow);}
+.fmg-col.cut .fmg-col-hd{color:var(--warn);}
+.fmg-tip{background:var(--card2);border-radius:8px;padding:8px 10px;font-size:.73rem;color:var(--ink-soft);line-height:1.6;border-left:3px solid var(--harv);}
 /* 環境逆境應對手冊 */
 .stress-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:12px;}
 .stress-btn{border:1.5px solid var(--line);background:var(--card2);border-radius:10px;padding:8px 4px;cursor:pointer;text-align:center;transition:border-color .15s,background .15s;}
@@ -1707,6 +1725,67 @@ function renderIrrigGuide(r,c,age){
     '<div class="irr-state-card bad"><div class="irr-state-hd">💧 澆太多的徵兆</div>'+overHtml+'</div>'+
     '<div class="irr-state-card ok"><div class="irr-state-hd">🏜️ 澆太少的徵兆</div>'+underHtml+'</div>'+
     '</div></div></div>';
+}
+/* 果實管理指引資料 */
+const FRUIT_MGMT={
+  '牛番茄':{stages:['花期','果期'],
+    rule:'每串花序保留 4–5 顆，疏去過小、歪型、重疊的果實',
+    when:'果實直徑達 1–2 cm 時疏果，效果最佳；太晚疏果養分已被佔用',
+    keep:['大小均勻的圓形果','第 2–4 位的果（位置最好）','果梗粗壯飽滿的'],
+    cut:['序列第 1 顆（常為尖頭果）','末端過小的果（直徑 < 1cm）','歪型或扭曲的','有病斑或裂縫的'],
+    tip:'疏果後每串重量集中，單果可達 180–250g，契作規格更好達標'},
+  '玉女番茄':{stages:['花期','果期'],
+    rule:'每串保留 12–18 顆，不需強制疏果，但摘除明顯異型果',
+    when:'果實著色前觀察果串，去除影響通風的過密部分',
+    keep:['排列整齊均勻的果','果面光亮無傷的'],
+    cut:['末端直徑 < 1cm 的過小果','雙合果（兩果相黏）','有裂痕或傷口的'],
+    tip:'玉女番茄自然串型佳，輕度疏果即可；主要靠整枝控制全株負荷'},
+  '彩椒':{stages:['花期','果期'],
+    rule:'每株同時最多保留 4–6 顆正在發育的果，超過時摘除多餘花蕾',
+    when:'果實長到乒乓球大小時，評估全株負荷再決定是否疏果',
+    keep:['主叉（Y型分枝）以上正位的果','發育均勻飽滿的'],
+    cut:['第一叉以下側枝的早期果（影響主幹生長）','超過 6 顆時最晚著果的小果','歪型或過小的'],
+    tip:'彩椒單果養分需求高，同時掛果超過 6 顆會導致全部偏小、著色不佳'},
+  '高山草莓':{stages:['花期','果期'],
+    rule:'定植後前 4 週花朵全部摘除，之後每株保留 3–5 顆正常發育果',
+    when:'定植後第一個月摘花不例外；之後每採收後重新評估留果數量',
+    keep:['錐型端正的果','花萼完整、果面光亮的','位置朝外通風好的'],
+    cut:['定植後第一個月的所有花芽','歪型、扭曲或多合果','有明顯病斑的果'],
+    tip:'前期摘花雖然可惜，但讓根系夠強壯後的果實甜度和大小都會顯著提升'},
+  '高麗菜':{stages:['生長期','結球期'],
+    rule:'每株只結一顆球，不需疏果；重點是定期去除外葉增加通風',
+    when:'外葉超過 20 片時，每次摘除最外 2–3 片老化葉',
+    keep:['所有正在包球的心葉（絕對不可摘）','包球期外層保護葉'],
+    cut:['嚴重老化黃化的最外層葉','病葉或蟲害嚴重的葉片'],
+    tip:'高麗菜不需疏果，重點是疏葉通風，防止濕度過高引發黑腐病'},
+  '敏豆':{stages:['結莢期','採收期'],
+    rule:'不需疏果，重點是及時採收；老莢留越久越影響後續結莢',
+    when:'莢長 10–12 cm、莢面微膨但豆粒未過大時立即採收',
+    keep:['所有正常發育的莢果'],
+    cut:['豆粒已明顯鼓脹的過老莢（留著消耗養分）','病蟲害嚴重的畸型莢'],
+    tip:'敏豆越勤採越多收；植株一旦感覺「種子已成熟」就會停止繼續結莢'}
+};
+function renderFruitMgmtCard(r,c,age){
+  const key=stageGuideKey(c,age);
+  const g=FRUIT_MGMT[r.crop];
+  if(!g||!g.stages.includes(key))return'';
+  const uid='fmg-'+Date.now();
+  const keepHtml=g.keep.map(function(s){return'<div>✅ '+s+'</div>';}).join('');
+  const cutHtml=g.cut.map(function(s){return'<div>✂️ '+s+'</div>';}).join('');
+  return'<div class="fmg-card">'+
+    '<div class="fmg-hd" onclick="var b=document.getElementById(\''+uid+'\');b.classList.toggle(\'open\');this.querySelector(\'.fmg-arr\').classList.toggle(\'open\')">'+
+    '<span style="font-size:1.1rem">🍅</span>'+
+    '<span class="fmg-title">果實管理指引 — '+key+'</span>'+
+    '<span class="fmg-arr">▶</span></div>'+
+    '<div class="fmg-body" id="'+uid+'">'+
+    '<div class="fmg-rule"><b>📌 管理原則</b>'+g.rule+'</div>'+
+    '<div style="font-size:.76rem;font-weight:700;color:var(--ink);margin-bottom:6px">⏱️ 最佳時機：'+g.when+'</div>'+
+    '<div class="fmg-cols">'+
+    '<div class="fmg-col keep"><div class="fmg-col-hd">✅ 保留這些</div>'+keepHtml+'</div>'+
+    '<div class="fmg-col cut"><div class="fmg-col-hd">✂️ 摘除這些</div>'+cutHtml+'</div>'+
+    '</div>'+
+    '<div class="fmg-tip">💡 '+g.tip+'</div>'+
+    '</div></div>';
 }
 /* 灌溉量計算機資料 */
 const IRRIG_BASE_ML={'牛番茄':400,'彩椒':350,'玉女番茄':300,'高山草莓':200,'高麗菜':450,'敏豆':250};
@@ -3696,6 +3775,7 @@ function renderPlots(){
     renderEnvGuide(r,c,age)+
     renderWeekPlan(r,c,age)+
     renderPollinationGuide(r,c,age)+
+    renderFruitMgmtCard(r,c,age)+
     renderSprayGuide(r,c,age)+
     renderDiseaseGuide(r,c,age)+
     renderIpmTrendCard(r,c,age)+
