@@ -608,6 +608,26 @@ nav button.on{color:var(--accent);}
 .wx-step-num.orange{background:var(--harv);}
 .wx-step-num.green{background:var(--grow);}
 .wx-note{background:var(--card2);border-radius:8px;padding:7px 10px;font-size:.73rem;color:var(--ink-soft);line-height:1.6;margin-top:8px;border-left:3px solid var(--blue);}
+.pc-card{background:var(--card);border:1.5px solid var(--grow);border-radius:13px;margin:8px 0;overflow:hidden;}
+.pc-hd{display:flex;align-items:center;gap:9px;padding:11px 14px;cursor:pointer;}
+.pc-title{flex:1;font-size:.88rem;font-weight:800;color:var(--grow);}
+.pc-arr{font-size:.85rem;color:var(--grow);transition:transform .2s;}
+.pc-arr.open{transform:rotate(90deg);}
+.pc-body{display:none;padding:0 14px 14px;}
+.pc-body.open{display:block;}
+.pc-bar-wrap{background:var(--line);border-radius:20px;height:6px;margin:6px 0 12px;overflow:hidden;}
+.pc-bar{background:var(--grow);height:6px;border-radius:20px;transition:width .3s;}
+.pc-section-hd{font-size:.72rem;font-weight:800;color:var(--ink);letter-spacing:.5px;margin:10px 0 5px;display:flex;align-items:center;gap:6px;}
+.pc-item{display:flex;align-items:flex-start;gap:8px;padding:7px 8px;border-radius:8px;cursor:pointer;transition:background .15s;margin-bottom:3px;}
+.pc-item:hover{background:var(--card2);}
+.pc-item.done{background:var(--grow-bg);}
+.pc-cb{width:18px;height:18px;border:2px solid var(--line);border-radius:5px;flex:none;margin-top:1px;display:flex;align-items:center;justify-content:center;font-size:.7rem;transition:all .15s;}
+.pc-item.done .pc-cb{background:var(--grow);border-color:var(--grow);color:#fff;}
+.pc-item-text{font-size:.77rem;color:var(--ink-soft);line-height:1.5;}
+.pc-item.done .pc-item-text{color:var(--ink);text-decoration:line-through;opacity:.7;}
+.pc-done-banner{background:var(--grow);color:#fff;border-radius:10px;padding:11px 14px;text-align:center;font-size:.85rem;font-weight:800;margin-top:10px;display:none;}
+.pc-done-banner.show{display:block;}
+.pc-reset{font-size:.72rem;color:var(--ink-soft);background:none;border:none;cursor:pointer;margin-top:8px;padding:0;}
 </style>
 
 </head>
@@ -1354,6 +1374,90 @@ const PRUNE_GUIDE={
   }
  }
 };
+const PC_SECTIONS=[
+  {icon:'🏗️',hd:'溫室 & 硬體',items:[
+    '溫室薄膜 / 防蟲網完整，無破洞、破口（破口是害蟲入侵的主要途徑）',
+    '天窗、側窗開關正常，可遠端或手動操作',
+    '主灌水管已鋪設，幫浦通電正常出水',
+    '每株位置已插好滴頭，逐株檢查出水均勻（堵塞的先疏通）',
+    '定時器設定完成：每天至少 2 次、每次 15–20 分鐘',
+    '誘引鐵線已拉好（高度約地面 1.8–2 m），整排水平拉緊',
+    '支架 / 誘引夾 / 束帶備妥（每株需 2–3 個夾）',
+  ]},
+  {icon:'🪴',hd:'栽培介質準備',items:[
+    '椰纖或介質已膨脹充分，均勻混合（椰纖：珍珠石 ≈ 3:1 或 1:1 皆可）',
+    '栽培袋底部已剪排水孔（直徑 1 cm，每袋 2–3 個），避免積水',
+    '介質填袋完成，已用清水淋洗至少 3 次',
+    '排液 EC 測量 < 1.0 dS/m（若偏高繼續淋洗）',
+    '排液 pH 在 5.8–6.5（偏鹼加磷酸調整，偏酸加石灰或碳酸鉀）',
+    '介質預濕完成（含水量 60–70%，用手握成團再開）',
+  ]},
+  {icon:'🌡️',hd:'環境條件確認',items:[
+    'EC 計 & pH 計已備妥，並用標準液校正（至少每月校正一次）',
+    '溫度計安裝在溫室最冷角落，確認可記錄昨夜最低溫',
+    '遮光網已備妥（遮光率 30–40% 適合苗期）',
+    '晴天日溫可維持 22–28°C，夜溫 > 15°C（冬季須確認保溫措施）',
+    '黃色黏蟲板已掛好（每 50 株 1 張，高度與植株頂端齊）',
+    'A/B 液備妥，按田區 EC 目標配好第一批肥液（EC 1.5 dS/m）',
+  ]},
+  {icon:'🌱',hd:'種苗選購 & 接收',items:[
+    '苗齡適當：番茄/彩椒 28–35 天苗，草莓 45–60 天苗，高麗菜/敏豆 21–28 天苗',
+    '選苗標準：莖幹粗壯（> 4 mm）、葉色深綠均勻、無病斑，根系白色緊密',
+    '拒絕：徒長細軟苗、黃化葉片苗、根域積水腐爛苗',
+    '苗到場後放陰涼處，當天或次日完成定植（不要拖超過 48 小時）',
+    '定植前一晚充分澆水，讓根球吸飽水，減少移植衝擊',
+  ]},
+  {icon:'✅',hd:'定植當天操作',items:[
+    '選在早上 08:00 前或傍晚 16:00 後定植，避免高溫曝曬',
+    '每株挖洞深度略大於根球，種植深度以子葉以上不碰介質為原則',
+    '定植後立刻輕灌一次（確認每個滴頭正常，讓根系接觸介質）',
+    '定植後 3 天只給 EC 1.0–1.5 的低濃度肥液（根系還在適應）',
+    '當天在 App 記錄「定植日期」（這是之後所有排程的基準）',
+    '拍照記錄初始植株狀況，方便未來比對生長情況',
+  ]},
+];
+function renderPrePlantChecklist(r,c,age){
+  const key=stageGuideKey(c,age);
+  if(key!=='定植前')return'';
+  const uid='pc-'+r.plot.replace(/\s/g,'_');
+  const storeKey='pc_'+r.plot;
+  const saved=JSON.parse(localStorage.getItem(storeKey)||'[]');
+  const total=PC_SECTIONS.reduce((a,s)=>a+s.items.length,0);
+  const checked=saved.length;
+  const pct=Math.round(checked/total*100);
+  const sections=PC_SECTIONS.map((sec,si)=>{
+    const rows=sec.items.map((item,ii)=>{
+      const idx=PC_SECTIONS.slice(0,si).reduce((a,s)=>a+s.items.length,0)+ii;
+      const done=saved.includes(idx);
+      return'<div class="pc-item'+(done?' done':'')+'" data-idx="'+idx+'" onclick="(function(el,key,tot){'+
+        'const s=JSON.parse(localStorage.getItem(key)||\'[]\');'+
+        'const i=+el.dataset.idx;const pos=s.indexOf(i);'+
+        'if(pos>-1)s.splice(pos,1);else s.push(i);'+
+        'localStorage.setItem(key,JSON.stringify(s));'+
+        'const done=s.length;const pct=Math.round(done/tot*100);'+
+        'const bar=document.getElementById(\''+uid+'-bar\');if(bar)bar.style.width=pct+\'%\';'+
+        'const prog=document.getElementById(\''+uid+'-prog\');if(prog)prog.textContent=done+\'/\'+tot+\' 完成（\'+pct+\'%）\';'+
+        'el.classList.toggle(\'done\');el.querySelector(\'.pc-cb\').textContent=s.includes(i)?\'✓\':\'\';'+
+        'const banner=document.getElementById(\''+uid+'-banner\');if(banner)banner.className=\'pc-done-banner\'+(s.length>=tot?\' show\':\'\');'+
+        '})(this,\''+storeKey+'\','+total+')">'+
+        '<span class="pc-cb">'+(done?'✓':'')+'</span>'+
+        '<span class="pc-item-text">'+item+'</span></div>';
+    }).join('');
+    return'<div class="pc-section-hd"><span>'+sec.icon+'</span>'+sec.hd+'</div>'+rows;
+  }).join('');
+  return'<div class="pc-card">'+
+    '<div class="pc-hd" onclick="var b=document.getElementById(\''+uid+'-body\');b.classList.toggle(\'open\');this.querySelector(\'.pc-arr\').classList.toggle(\'open\')">'+
+    '<span style="font-size:1.1rem">📋</span>'+
+    '<span class="pc-title">定植前備料清單</span>'+
+    '<span style="font-size:.72rem;font-weight:700;color:var(--ink-soft);margin-right:6px" id="'+uid+'-prog\">'+checked+'/'+total+' 完成（'+pct+'%）</span>'+
+    '<span class="pc-arr open">▶</span></div>'+
+    '<div class="pc-body open" id="'+uid+'-body">'+
+    '<div class="pc-bar-wrap"><div class="pc-bar" id="'+uid+'-bar" style="width:'+pct+'%"></div></div>'+
+    sections+
+    '<div class="pc-done-banner'+(checked>=total?' show':'')+'" id="'+uid+'-banner">🎉 所有項目完成！可以定植了！</div>'+
+    '<button class="pc-reset" onclick="if(confirm(\'清除此清單所有勾選？\')){localStorage.removeItem(\''+storeKey+'\');var p=this.closest(\'.pc-card\');if(p){var b=p.querySelector(\'.pc-body\');var open=b.classList.contains(\'open\');p.outerHTML=p.outerHTML;}}">重置清單</button>'+
+    '</div></div>';
+}
 function renderPruningGuide(r,c,age){
   if(age<0||age>c.grow)return'';
   const key=stageGuideKey(c,age);
@@ -2763,6 +2867,7 @@ function renderPlots(){
     renderActivityStrip(r)+
     renderStageTimeline(r,c,age)+
     renderStageGuide(r,c,age)+
+    renderPrePlantChecklist(r,c,age)+
     renderPruningGuide(r,c,age)+
     renderIrrigGuide(r,c,age)+
     renderEnvGuide(r,c,age)+
