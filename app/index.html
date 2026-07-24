@@ -2073,7 +2073,30 @@ function renderTools(){
   const v=document.getElementById("view-tools");
   let opts=Object.keys(CROPS).map(n=>'<option>'+n+'</option>').join("");
   const nowM=new Date();
-  v.innerHTML='<h2>作物計算</h2><p class="note">輸入作物、定植日、株數 → 採收日、肥料、作業排程。</p>'+
+  v.innerHTML='<h2>新手必備計算</h2><p class="note">施肥、EC 調配兩個常用小計算器，幫你快速算出正確用量。</p>'+
+    '<div class="card">'+
+    '<h3 style="margin:0 0 4px;font-size:1rem">💊 稀釋倍數計算器</h3>'+
+    '<p class="note" style="margin:0 0 10px">包裝上寫「稀釋 X 倍」，你有 Y 公升水，要加多少 mL 原液？</p>'+
+    '<div class="row2">'+
+    '<div><label class="f">稀釋倍數（倍）</label><input class="t" id="dl-ratio" type="number" min="1" placeholder="如 500"></div>'+
+    '<div><label class="f">水量（公升）</label><input class="t" id="dl-vol" type="number" min="1" placeholder="如 100"></div>'+
+    '</div>'+
+    '<button class="btn" id="dl-go">計算用量</button>'+
+    '<div id="dl-res"></div>'+
+    '</div>'+
+    '<div class="card">'+
+    '<h3 style="margin:0 0 4px;font-size:1rem">🌡️ EC 調配計算器</h3>'+
+    '<p class="note" style="margin:0 0 10px">目前 EC 不對？算出要加多少濃縮液或清水。假設每 mL/L 濃縮液可提升 EC 約 0.9 dS/m（依廠商規格調整）。</p>'+
+    '<div class="row2">'+
+    '<div><label class="f">目前 EC（dS/m）</label><input class="t" id="ec-cur" type="number" step="0.1" placeholder="如 1.8"></div>'+
+    '<div><label class="f">目標 EC（dS/m）</label><input class="t" id="ec-tgt" type="number" step="0.1" placeholder="如 2.5"></div>'+
+    '</div>'+
+    '<label class="f">水槽 / 灌溉桶容積（公升）</label>'+
+    '<input class="t" id="ec-vol" type="number" min="1" placeholder="如 200">'+
+    '<button class="btn" id="ec-go">計算</button>'+
+    '<div id="ec-res"></div>'+
+    '</div>'+
+    '<h2 style="margin-top:22px">作物計算</h2><p class="note">輸入作物、定植日、株數 → 採收日、肥料、作業排程。</p>'+
     '<div class="card"><label class="f">作物</label><select class="t" id="c-crop">'+opts+'</select>'+
     '<div class="row2"><div><label class="f">定植日</label><input class="t" id="c-date" type="date" value="'+fmtD(today())+'"></div><div><label class="f">株數</label><input class="t" id="c-plants" type="number" value="500"></div></div>'+
     '<button class="btn" id="c-go">計算</button><div id="c-res"></div></div>'+
@@ -2104,6 +2127,55 @@ function renderTools(){
     '<div id="sy-res"></div>'+
     '<div class="foot" style="text-align:left">取得設定：Firebase 主控台 → 專案設定 → 你的應用程式 → SDK 設定與設定 → Config。需啟用 Firestore Database。首次請設定安全規則（見 docs/雲端同步設定.md）。</div>'+
     '</div>';
+  v.querySelector("#dl-go").onclick=()=>{
+    const ratio=+v.querySelector("#dl-ratio").value;
+    const vol=+v.querySelector("#dl-vol").value;
+    const res=v.querySelector("#dl-res");
+    if(!ratio||!vol){res.innerHTML='<div class="info" style="color:var(--warn)">請填入稀釋倍數和水量。</div>';return;}
+    const ml=Math.round(vol*1000/ratio);
+    const g=Math.round(ml*1.05)/10; // approximate g if density ~1 (for powder: similar)
+    res.innerHTML='<div class="res">'+
+      '<div class="r"><span>需要加入</span><b style="color:var(--accent);font-size:1.1rem">'+ml+' mL</b></div>'+
+      '<div class="r"><span>水量</span><b>'+vol+' L</b></div>'+
+      '<div class="r"><span>稀釋倍數</span><b>1 : '+ratio+'</b></div>'+
+      '<div style="font-size:.74rem;color:var(--ink-soft);margin-top:6px;line-height:1.6">'+
+      '💡 計算式：'+vol+' L × 1000 ÷ '+ratio+' = <b>'+ml+' mL</b><br>'+
+      '若是粉狀肥料（密度≈1）：約 '+ml+' g。<br>'+
+      '建議用量秤或量杯量取，不要用目測估計。'+
+      '</div></div>';
+  };
+  v.querySelector("#ec-go").onclick=()=>{
+    const cur=+v.querySelector("#ec-cur").value;
+    const tgt=+v.querySelector("#ec-tgt").value;
+    const vol=+v.querySelector("#ec-vol").value;
+    const res=v.querySelector("#ec-res");
+    if(!cur||!tgt||!vol){res.innerHTML='<div class="info" style="color:var(--warn)">請填入三個數值。</div>';return;}
+    const diff=Math.round((tgt-cur)*10)/10;
+    if(Math.abs(diff)<0.05){res.innerHTML='<div class="res"><div class="r"><span>狀態</span><b style="color:var(--accent)">EC 已達目標，無需調整 ✓</b></div></div>';return;}
+    if(diff>0){
+      // need to add concentrate: assume 0.9 EC per mL/L
+      const mlPerL=Math.round(diff/0.9*10)/10;
+      const totalMl=Math.round(mlPerL*vol);
+      res.innerHTML='<div class="res">'+
+        '<div class="r"><span>EC 差距</span><b>+'+diff+' dS/m 偏低</b></div>'+
+        '<div class="r"><span>每公升需加</span><b>'+mlPerL+' mL 濃縮液</b></div>'+
+        '<div class="r"><span>'+vol+'L 水桶共需加</span><b style="color:var(--accent);font-size:1.05rem">約 '+totalMl+' mL</b></div>'+
+        '<div style="font-size:.74rem;color:var(--ink-soft);margin-top:6px;line-height:1.6">'+
+        '⚠️ 以每 mL/L 提升 EC 0.9 估算（依你的肥料規格調整比例）<br>'+
+        '💡 建議每次調整 ≤ 0.3 dS/m，加完攪勻後再量，分次微調。'+
+        '</div></div>';
+    }else{
+      // EC too high, need to dilute with clean water
+      const addVol=Math.round(vol*(cur/tgt-1)*10)/10;
+      res.innerHTML='<div class="res">'+
+        '<div class="r"><span>EC 差距</span><b style="color:var(--warn)">'+Math.abs(diff)+' dS/m 偏高</b></div>'+
+        '<div class="r"><span>需加入清水</span><b style="color:var(--accent);font-size:1.05rem">約 '+addVol+' L</b></div>'+
+        '<div style="font-size:.74rem;color:var(--ink-soft);margin-top:6px;line-height:1.6">'+
+        '💡 計算式：'+vol+' L × ('+cur+' ÷ '+tgt+' − 1) = <b>'+addVol+' L 清水</b><br>'+
+        '或：今日灌溉改為純清水（不加肥），排液後 EC 自然下降。'+
+        '</div></div>';
+    }
+  };
   v.querySelector("#c-go").onclick=()=>{
     const c=CROPS[v.querySelector("#c-crop").value];const ds=v.querySelector("#c-date").value;const n=+v.querySelector("#c-plants").value;
     if(!ds||!n)return;const plant=parseD(ds);const first=addD(plant,c.grow);const last=addD(first,c.dur);const ratio=n/c.density;
