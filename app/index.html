@@ -326,6 +326,12 @@ nav button.on{color:var(--accent);}
 .ipm-pest-row{font-size:.72rem;color:var(--ink-soft);line-height:1.55;margin-bottom:2px;}
 .ipm-pest-row b{color:var(--ink);font-weight:600;}
 .ipm-pest-act{font-size:.71rem;background:var(--grow-bg);color:var(--grow);border-radius:7px;padding:4px 7px;margin-top:5px;line-height:1.5;}
+/* 田區健康評分 */
+.hs-badge{display:inline-flex;align-items:center;gap:4px;border-radius:20px;padding:3px 10px;font-size:.72rem;font-weight:800;white-space:nowrap;}
+.hs-badge.hs-ok{background:var(--grow-bg);color:var(--grow);}
+.hs-badge.hs-good{background:var(--accent-soft);color:var(--accent-d);}
+.hs-badge.hs-warn{background:var(--harv-bg);color:var(--harv);}
+.hs-badge.hs-bad{background:var(--warn-bg);color:var(--warn);}
 /* 今日行動摘要卡 */
 .ta-card{background:var(--card);border:1.5px solid var(--accent);border-radius:14px;padding:12px 14px;margin-bottom:12px;}
 .ta-hd{font-size:.85rem;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:8px;margin-bottom:8px;}
@@ -1845,6 +1851,35 @@ function renderStageTimeline(r,c,age){
     nextHtml+'</div>';
 }
 
+/* ---------- 田區健康評分 ---------- */
+function plotHealthScore(r){
+  const c=CROPS[r.crop];if(!c)return{score:0,label:'未知',cls:'hs-bad'};
+  const[,,age]=stageOf(r);if(age<0)return{score:100,label:'待定植',cls:'hs-ok'};
+  const recs=r.records||[];const tdy=today();
+  const diff=d=>Math.floor((tdy-parseD(d))/864e5);
+  const srt=arr=>arr.slice().sort((a,b)=>b.date>a.date?1:-1);
+  let score=100;
+  // EC 量測（最多扣 30 分）
+  if(age>7){const lastEc=srt(recs.filter(x=>x.type==='ecph'))[0];
+    const ecD=lastEc?diff(lastEc.date):99;
+    score-=!lastEc?30:ecD>10?30:ecD>7?18:ecD>4?8:0;}
+  // 任何記錄（最多扣 25 分）
+  if(age>3){const lastAny=srt(recs)[0];
+    const anyD=lastAny?diff(lastAny.date):99;
+    score-=!lastAny?25:anyD>7?25:anyD>5?14:anyD>3?6:0;}
+  // IPM 黏板巡查（最多扣 20 分）
+  if(age>14){const lastIpm=srt(recs.filter(x=>x.type==='ipm'))[0];
+    const ipmD=lastIpm?diff(lastIpm.date):99;
+    score-=!lastIpm?20:ipmD>14?20:ipmD>10?12:ipmD>7?5:0;}
+  // 施肥記錄（最多扣 15 分）
+  if(age>14){const lastFert=srt(recs.filter(x=>x.type==='fert'))[0];
+    const fertD=lastFert?diff(lastFert.date):99;
+    score-=!lastFert?15:fertD>14?15:fertD>10?8:0;}
+  score=Math.max(0,Math.min(100,score));
+  const label=score>=85?'優良':score>=65?'良好':score>=45?'需注意':'待改善';
+  const cls=score>=85?'hs-ok':score>=65?'hs-good':score>=45?'hs-warn':'hs-bad';
+  return{score,label,cls};
+}
 /* ---------- 今日行動摘要 ---------- */
 function renderTodayActions(plots){
   if(!plots.length)return'';
@@ -1891,8 +1926,12 @@ function renderPlots(){
   const plots=load();const v=document.getElementById("view-plots");
   if(CUR===null){ // 列表 + 新增
     let opts=Object.keys(CROPS).map(n=>'<option>'+n+'</option>').join("");
-    let list=plots.length?plots.map((r,i)=>{const[st,cls,age]=stageOf(r);
-      return '<div class="card tap" data-i="'+i+'"><div class="card-top"><h3>'+r.plot+'　<span class="crop">'+r.crop+'</span></h3><span class="stage '+cls+'">'+st+'</span></div><div class="sub">定植 '+r.date+'　·　'+(r.plants||"?")+' 株　·　'+(age>=0?"第 "+age+" 天":"未定植")+'　·　紀錄 '+((r.records||[]).length)+' 筆</div></div>';}).join(""):'<div class="empty">尚無田區，用下方表單新增。</div>';
+    let list=plots.length?plots.map((r,i)=>{const[st,cls,age]=stageOf(r);const hs=plotHealthScore(r);
+      return '<div class="card tap" data-i="'+i+'"><div class="card-top"><h3>'+r.plot+'　<span class="crop">'+r.crop+'</span></h3><span class="stage '+cls+'">'+st+'</span></div>'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px">'+
+      '<div class="sub" style="margin:0">定植 '+r.date+'　·　'+(r.plants||"?")+' 株　·　'+(age>=0?"第 "+age+" 天":"未定植")+'　·　紀錄 '+((r.records||[]).length)+' 筆</div>'+
+      (age>=0?'<span class="hs-badge '+hs.cls+'">'+hs.score+' '+hs.label+'</span>':'')+
+      '</div></div>';}).join(""):'<div class="empty">尚無田區，用下方表單新增。</div>';
     v.innerHTML='<h2>我的田區</h2><p class="note">點田區可登錄施肥/用藥/採收等紀錄。資料存在你的手機。</p>'+renderTodayActions(plots)+list+
       '<div class="card"><h3 style="margin:0 0 2px">＋ 新增田區</h3>'+
       '<label class="f">畦區名稱</label><input class="t" id="np" placeholder="例如 A區">'+
