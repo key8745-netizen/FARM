@@ -649,6 +649,30 @@ nav button.on{color:var(--accent);}
 .phg-row b{color:var(--ink);font-weight:700;flex:none;min-width:46px;}
 .phg-channels{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px;}
 .phg-channel{font-size:.7rem;background:var(--card2);border:1px solid var(--line);border-radius:20px;padding:2px 9px;color:var(--ink-soft);}
+.ipm-card{background:var(--card);border:1px solid var(--line);border-radius:13px;margin:8px 0;overflow:hidden;}
+.ipm-hd{display:flex;align-items:center;gap:9px;padding:11px 14px;cursor:pointer;}
+.ipm-title{flex:1;font-size:.88rem;font-weight:800;color:var(--ink);}
+.ipm-arr{font-size:.85rem;color:var(--ink-soft);transition:transform .2s;}
+.ipm-arr.open{transform:rotate(90deg);}
+.ipm-body{display:none;padding:0 14px 14px;}
+.ipm-body.open{display:block;}
+.ipm-pest{margin-bottom:10px;}
+.ipm-pest-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+.ipm-pest-name{font-size:.76rem;font-weight:700;color:var(--ink);}
+.ipm-pest-badge{font-size:.68rem;font-weight:700;border-radius:20px;padding:2px 8px;}
+.ipm-pest-badge.ok{background:var(--grow-bg);color:var(--grow);}
+.ipm-pest-badge.warn{background:var(--harv-bg);color:var(--harv);}
+.ipm-pest-badge.over{background:var(--warn-bg);color:var(--warn);}
+.ipm-bars{display:flex;align-items:flex-end;gap:3px;height:40px;margin-bottom:3px;}
+.ipm-bar-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;}
+.ipm-bar-fill{width:100%;border-radius:3px 3px 0 0;min-height:2px;position:relative;}
+.ipm-bar-val{font-size:.6rem;color:var(--ink-soft);margin-top:2px;}
+.ipm-thr-line{width:100%;height:1px;border-top:1.5px dashed var(--warn);opacity:.7;margin:0 0 2px;}
+.ipm-action{border-radius:8px;padding:7px 10px;font-size:.73rem;line-height:1.6;margin-top:4px;}
+.ipm-action.ok{background:var(--grow-bg);color:var(--grow);}
+.ipm-action.warn{background:var(--harv-bg);color:var(--harv);}
+.ipm-action.over{background:var(--warn-bg);color:var(--warn);}
+.ipm-empty{font-size:.76rem;color:var(--ink-soft);padding:8px 0;line-height:1.6;}
 </style>
 
 </head>
@@ -1835,6 +1859,74 @@ function renderPostHarvestGuide(r,c,age){
     '<div style="background:var(--harv-bg);border-radius:8px;padding:7px 10px;margin-top:9px;font-size:.73rem;color:var(--harv);line-height:1.6">💡 '+g.tip+'</div>'+
     '</div></div>';
 }
+function renderIpmTrendCard(r,c,age){
+  if(age<0)return'';
+  const recs=(r.records||[]).filter(x=>x.type==='ipm').sort((a,b)=>a.date<b.date?-1:1);
+  const uid='ipm-'+Date.now();
+  const lastRec=recs[recs.length-1]||null;
+  const daysSinceLast=lastRec?Math.floor((today()-parseD(lastRec.date))/864e5):null;
+  const schedBadge=daysSinceLast===null
+    ?'<span class="ipm-pest-badge warn">尚未記錄</span>'
+    :daysSinceLast>10
+    ?'<span class="ipm-pest-badge over">⚠️ 已 '+daysSinceLast+' 天未巡查</span>'
+    :daysSinceLast>6
+    ?'<span class="ipm-pest-badge warn">'+daysSinceLast+' 天前巡查</span>'
+    :'<span class="ipm-pest-badge ok">'+daysSinceLast+' 天前巡查</span>';
+  const PESTS=[
+    {key:'wf',name:'🟡 粉蝨',thr:IPM_THR.粉蝨,ctrl:'黃色黏板誘殺；噴苦楝油或皂液；引入麗蚜小蜂（生物防治）；達門檻查植保系統選藥'},
+    {key:'th',name:'🔵 薊馬',thr:IPM_THR.薊馬,ctrl:'藍色黏板（薊馬偏好藍色）；多殺黴素（Spinosad）；花期用藥需特別注意傷蜂'},
+    {key:'sm',name:'🔴 葉蟎',thr:IPM_THR.葉蟎,ctrl:'提高環境濕度（葉蟎偏好乾燥）；噴硫黃懸浮劑；放捕食蟎；避免高溫乾燥環境'},
+    {key:'ap',name:'🟢 蚜蟲',thr:IPM_THR.蚜蟲,ctrl:'黃板誘殺；苦楝油或皂液噴葉背；蚜蟲是病毒病媒介，發現即處置；天敵保護（瓢蟲、草蛉）'},
+  ];
+  const last8=recs.slice(-8);
+  let anyOver=false;
+  const pestHtml=PESTS.map(pest=>{
+    const vals=last8.map(x=>+x[pest.key]||0);
+    const latest=vals.length?vals[vals.length-1]:null;
+    const maxV=Math.max(...vals,pest.thr*1.5,1);
+    const isOver=latest!==null&&latest>=pest.thr;
+    const isWarn=latest!==null&&latest>=pest.thr*0.6&&!isOver;
+    if(isOver)anyOver=true;
+    const badgeCls=isOver?'over':isWarn?'warn':'ok';
+    const badgeTxt=latest===null?'無資料':isOver?'⚠️ 達門檻（'+latest+'）':isWarn?'接近門檻（'+latest+'）':'正常（'+latest+'）';
+    const bars=vals.length>=1?vals.map(v=>{
+      const pct=Math.min(100,Math.round(v/maxV*100));
+      const col=v>=pest.thr?'var(--warn)':v>=pest.thr*0.6?'var(--harv)':'var(--blue)';
+      return'<div class="ipm-bar-item">'+
+        '<div class="ipm-bar-fill" style="height:'+pct+'%;background:'+col+';width:100%"></div>'+
+        '<div class="ipm-bar-val">'+v+'</div></div>';
+    }).join(''):'';
+    const thrPct=Math.min(100,Math.round(pest.thr/maxV*100));
+    const actionCls=isOver?'over':isWarn?'warn':'ok';
+    const actionTxt=isOver
+      ?'⚠️ 已達防治門檻（門檻：'+pest.thr+' 隻/板）。本週內施用：'+pest.ctrl
+      :isWarn
+      ?'接近門檻，本週加強監測（縮短巡查間隔至 3 天）。門檻為 '+pest.thr+' 隻/板。'
+      :'在安全範圍內（門檻：'+pest.thr+' 隻/板）。維持每 7 天一次黏板巡查即可。';
+    return'<div class="ipm-pest">'+
+      '<div class="ipm-pest-hd"><span class="ipm-pest-name">'+pest.name+'</span><span class="ipm-pest-badge '+badgeCls+'">'+badgeTxt+'</span></div>'+
+      (vals.length>=1?'<div class="ipm-bars" style="position:relative">'+
+        '<div style="position:absolute;bottom:'+thrPct+'%;left:0;right:0;border-top:1.5px dashed var(--warn);opacity:.5;font-size:.58rem;color:var(--warn);padding-left:2px">門檻</div>'+
+        bars+'</div>':'')+
+      '<div class="ipm-action '+actionCls+'">'+actionTxt+'</div></div>';
+  }).join('');
+  const headerBadge=anyOver
+    ?'<span style="font-size:.7rem;font-weight:700;background:var(--warn-bg);color:var(--warn);border-radius:20px;padding:2px 8px">⚠️ 有蟲超標</span>'
+    :'<span style="font-size:.7rem;font-weight:700;background:var(--grow-bg);color:var(--grow);border-radius:20px;padding:2px 8px">正常</span>';
+  const emptyNote=recs.length===0?'<div class="ipm-empty">🪤 目前沒有黏板巡查紀錄。建議每 7 天記錄一次黏板數量（快速登錄 → 黏板巡查），才能及時掌握蟲害趨勢。</div>':'';
+  return'<div class="ipm-card">'+
+    '<div class="ipm-hd" onclick="var b=document.getElementById(\''+uid+'\');b.classList.toggle(\'open\');this.querySelector(\'.ipm-arr\').classList.toggle(\'open\')">'+
+    '<span style="font-size:1.1rem">🪤</span>'+
+    '<span class="ipm-title">IPM 黏板蟲害趨勢</span>'+
+    headerBadge+'　'+schedBadge+
+    '<span class="ipm-arr">▶</span></div>'+
+    '<div class="ipm-body" id="'+uid+'">'+
+    (emptyNote||pestHtml)+
+    '<div style="font-size:.7rem;color:var(--ink-soft);margin-top:8px;line-height:1.6;background:var(--card2);border-radius:7px;padding:6px 9px">'+
+    '📌 黃板：每 50 株 1 張，高度與植株頂端齊。每 7–10 天換板（舊板黏性大幅下降）。<br>'+
+    '薊馬偏好藍色黏板；粉蝨/蚜蟲/葉蟎偏好黃色。兩種都放最全面。'+
+    '</div></div></div>';
+}
 function renderSeasonEndGuide(r,c,age){
   if(age<c.grow)return'';
   const rot=ROTATION_MAP[r.crop]||{next:[],avoid:[],rest:30,tip:""};
@@ -2996,6 +3088,7 @@ function renderPlots(){
     renderWeekPlan(r,c,age)+
     renderPollinationGuide(r,c,age)+
     renderSprayGuide(r,c,age)+
+    renderIpmTrendCard(r,c,age)+
     renderHarvestGuide(r,c,age)+
     renderPostHarvestGuide(r,c,age)+
     renderSeasonEndGuide(r,c,age)+
