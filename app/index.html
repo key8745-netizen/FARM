@@ -673,6 +673,26 @@ nav button.on{color:var(--accent);}
 .ipm-action.warn{background:var(--harv-bg);color:var(--harv);}
 .ipm-action.over{background:var(--warn-bg);color:var(--warn);}
 .ipm-empty{font-size:.76rem;color:var(--ink-soft);padding:8px 0;line-height:1.6;}
+.fpc-card{background:var(--card);border:1px solid var(--grow);border-radius:13px;margin:8px 0;overflow:hidden;}
+.fpc-hd{display:flex;align-items:center;gap:9px;padding:11px 14px;cursor:pointer;}
+.fpc-title{flex:1;font-size:.88rem;font-weight:800;color:var(--grow);}
+.fpc-arr{font-size:.85rem;color:var(--grow);transition:transform .2s;}
+.fpc-arr.open{transform:rotate(90deg);}
+.fpc-body{display:none;padding:0 14px 14px;}
+.fpc-body.open{display:block;}
+.fpc-npk{background:var(--grow-bg);border-radius:9px;padding:8px 11px;margin-bottom:10px;}
+.fpc-npk-ratio{font-size:.9rem;font-weight:800;color:var(--ink);margin-bottom:2px;}
+.fpc-npk-sub{font-size:.72rem;color:var(--ink-soft);line-height:1.5;}
+.fpc-prod{border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin-bottom:6px;background:var(--card2);}
+.fpc-prod-name{font-size:.78rem;font-weight:700;color:var(--ink);margin-bottom:3px;}
+.fpc-prod-rows{display:grid;grid-template-columns:1fr 1fr;gap:3px;}
+.fpc-prod-row{font-size:.7rem;color:var(--ink-soft);display:flex;gap:4px;}
+.fpc-prod-row b{color:var(--ink);font-weight:700;flex:none;}
+.fpc-prod-note{font-size:.7rem;color:var(--grow);margin-top:3px;}
+.fpc-last-fert{background:var(--card2);border-radius:8px;padding:8px 10px;margin-top:8px;font-size:.74rem;color:var(--ink-soft);line-height:1.6;}
+.fpc-tank-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.fpc-tank-row label{font-size:.74rem;color:var(--ink-soft);flex:none;}
+.fpc-tank-row input{width:80px;font-size:.84rem;font-weight:700;text-align:center;padding:4px 6px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--ink);}
 </style>
 
 </head>
@@ -1857,6 +1877,115 @@ function renderPostHarvestGuide(r,c,age){
     '<div style="font-size:.76rem;font-weight:800;color:var(--ink);margin:8px 0 5px">🛒 銷售通路</div>'+
     '<div class="phg-channels">'+channelHtml+'</div>'+
     '<div style="background:var(--harv-bg);border-radius:8px;padding:7px 10px;margin-top:9px;font-size:.73rem;color:var(--harv);line-height:1.6">💡 '+g.tip+'</div>'+
+    '</div></div>';
+}
+const FERT_FREQ={
+  '定植前':'—','苗期':'每 2–3 天施一次（定植後前 3 天只給清水）',
+  '生長期':'每 2–3 天施一次','花期':'每 2 天施一次',
+  '果期':'每天 1–2 次（少量多次）','採收期':'每 2 天施一次',
+  '花果期':'每 2 天施一次','結球期':'每 2–3 天施一次','結莢期':'每 2–3 天施一次',
+};
+// Map crop name to FERTDB crop filter string
+const CROP_FERT_KEY={
+  '牛番茄':'番茄','玉女番茄':'番茄','彩椒':'彩椒','高山草莓':'草莓','高麗菜':'高麗菜','敏豆':'敏豆',
+};
+// Per-crop supplemental fert plans for crops not in FERTDB
+const FERT_SUPP={
+  '高山草莓':[
+    {stage:'苗期',name:'磷酸二氫鉀（MKP）',dose:'稀釋2000倍',freq:'每週1次',note:'促根定著，低磷有助花芽分化'},
+    {stage:'生長期',name:'台肥43號液肥',dose:'稀釋800倍',freq:'每3天1次',note:'生長期補充均衡氮磷鉀'},
+    {stage:'花果期',name:'硝酸鈣',dose:'每株2g溶水灌',freq:'每週1次',note:'補鈣提升果實硬度'},
+    {stage:'果期',name:'硫酸鉀',dose:'稀釋1000倍',freq:'每週1次',note:'高鉀增甜、提升著色'},
+  ],
+  '高麗菜':[
+    {stage:'苗期',name:'台肥43號液肥（N7-P5-K5）',dose:'稀釋800倍',freq:'每3天1次',note:'苗期均衡補肥'},
+    {stage:'生長期',name:'尿素（N 46%）',dose:'每坪5g溶水澆施',freq:'每2週1次',note:'高氮促葉片生長，結球前最重要'},
+    {stage:'結球期',name:'硫酸鉀（K 50%）',dose:'每坪8g溶水澆施',freq:'每週1次',note:'鉀促結球緊實，提升重量'},
+    {stage:'結球期',name:'磷酸二氫鉀',dose:'稀釋1500倍',freq:'每10天1次',note:'磷鉀均衡，結球期最後衝刺'},
+  ],
+  '敏豆':[
+    {stage:'苗期',name:'台肥43號液肥',dose:'稀釋1000倍',freq:'每3天1次',note:'豆科根瘤菌已能固氮，施肥量比番茄少'},
+    {stage:'生長期',name:'磷酸二氫鉀',dose:'稀釋1500倍',freq:'每週1次',note:'促根系和莢果發育'},
+    {stage:'結莢期',name:'硫酸鉀',dose:'稀釋1000倍',freq:'每週1次',note:'高鉀促豆莢充實，提升品質'},
+    {stage:'結莢期',name:'硼砂',dose:'0.1%葉面噴施',freq:'每2週1次',note:'硼促花莢著生，防落莢'},
+  ],
+};
+function renderFertPlanCard(r,c,age){
+  if(age<0)return'';
+  const key=stageGuideKey(c,age);
+  if(key==='定植前'||key==='採收期')return'';
+  const sg=FERT_STAGE_GUIDE[key]||FERT_STAGE_GUIDE['生長期'];
+  const uid='fpc-'+Date.now();
+  const tankId='fpc-tank-'+uid;
+  const resId='fpc-prods-'+uid;
+  // Filter FERTDB by crop
+  const ck=CROP_FERT_KEY[r.crop]||'';
+  const dbItems=FERTDB.filter(x=>(x.stage===key||x.stage==='追肥')&&(x.crop.includes(ck)||x.crop.includes(r.crop)));
+  // Use supplemental if no FERTDB match
+  const suppItems=(FERT_SUPP[r.crop]||[]).filter(x=>x.stage===key);
+  const allItems=dbItems.length?dbItems:suppItems;
+  // Parse dose ratio for tank calculation
+  function parseDose(dose,tankVol){
+    const m=dose.match(/稀釋(\d+)倍/);
+    if(m){const ml=Math.round(tankVol*1000/+m[1]);return tankVol+'L 桶加 <b>'+ml+' mL</b>';}
+    const m2=dose.match(/每株(\d+(?:\.\d+)?)g/);
+    if(m2){const g=Math.round(+m2[1]*(r.plants||0));return (r.plants||'?')+' 株共需 <b>'+g+' g</b> 溶水施入';}
+    return dose;
+  }
+  function buildProds(tankVol){
+    if(!allItems.length)return'<div style="font-size:.76rem;color:var(--ink-soft);padding:6px 0">此階段參考 A/B 液配製計算機，依目標 EC 調配基礎營養液。</div>';
+    return allItems.map(x=>
+      '<div class="fpc-prod">'+
+      '<div class="fpc-prod-name">'+x.name+'</div>'+
+      '<div class="fpc-prod-rows">'+
+      '<div class="fpc-prod-row"><b>用量：</b>'+parseDose(x.dose,tankVol)+'</div>'+
+      '<div class="fpc-prod-row"><b>頻率：</b>'+(x.freq||FERT_FREQ[key]||'每3天1次')+'</div>'+
+      '</div>'+
+      '<div class="fpc-prod-note">→ '+x.note+'</div></div>'
+    ).join('');
+  }
+  // Last 3 fert records
+  const lastFerts=(r.records||[]).filter(x=>x.type==='fert').slice(-3).reverse();
+  const lastFertHtml=lastFerts.length
+    ?lastFerts.map(f=>'<div>'+md(parseD(f.date))+'：'+(f.note||'施肥記錄')+'</div>').join('')
+    :'<div>尚無施肥記錄。建議施肥後用快速登錄→施肥記下來。</div>';
+  const daysSinceFert=lastFerts.length?Math.floor((today()-parseD(lastFerts[0].date))/864e5):null;
+  const fertAlert=daysSinceFert!==null&&daysSinceFert>5
+    ?'<span style="font-size:.7rem;background:var(--harv-bg);color:var(--harv);border-radius:20px;padding:2px 8px;margin-left:6px">'+daysSinceFert+' 天未施肥</span>'
+    :daysSinceFert===null
+    ?'<span style="font-size:.7rem;background:var(--warn-bg);color:var(--warn);border-radius:20px;padding:2px 8px;margin-left:6px">尚未記錄</span>':'';
+  return'<div class="fpc-card">'+
+    '<div class="fpc-hd" onclick="var b=document.getElementById(\''+uid+'\');b.classList.toggle(\'open\');this.querySelector(\'.fpc-arr\').classList.toggle(\'open\')">'+
+    '<span style="font-size:1.1rem">💊</span>'+
+    '<span class="fpc-title">本階段施肥方案</span>'+fertAlert+
+    '<span class="fpc-arr">▶</span></div>'+
+    '<div class="fpc-body" id="'+uid+'">'+
+    '<div class="fpc-npk">'+
+    '<div style="font-size:.7rem;font-weight:700;color:var(--grow);margin-bottom:2px">'+key+' NPK 建議比例</div>'+
+    '<div class="fpc-npk-ratio">'+sg.npk+'</div>'+
+    '<div class="fpc-npk-sub">目標 EC：<b>'+sg.ec+'</b>　'+sg.focus+'</div>'+
+    '</div>'+
+    '<div style="font-size:.74rem;font-weight:700;color:var(--ink);margin-bottom:6px">⏰ 施肥頻率：'+FERT_FREQ[key]+'</div>'+
+    '<div style="font-size:.74rem;font-weight:700;color:var(--ink);margin-bottom:5px">📦 本週建議用品（輸入桶容積自動換算用量）</div>'+
+    '<div class="fpc-tank-row">'+
+    '<label for="'+tankId+'">水桶容量：</label>'+
+    '<input id="'+tankId+'" type="number" value="200" min="1" oninput="var el=document.getElementById(\''+resId+'\');el.innerHTML=(\nfunction(tv){'+
+      'var items='+JSON.stringify(allItems)+';'+
+      'if(!items.length)return\'<div style=\\\"font-size:.76rem;color:var(--ink-soft);padding:6px 0\\\">此階段參考 A/B 液配製計算機配製基礎液。</div>\';'+
+      'return items.map(function(x){'+
+        'var dstr=x.dose;var m=dstr.match(/稀釋(\\\\d+)倍/);'+
+        'if(m){var ml=Math.round(tv*1000/m[1]);dstr=tv+\'L 桶加 <b>\'+ml+\' mL</b>\';}'+
+        'var m2=dstr.match(/每株(\\\\d+(?:\\\\.\\\\d+)?)g/);'+
+        'if(m2){var g=Math.round(m2[1]*'+(r.plants||0)+');dstr='+(r.plants||0)+'+\' 株共需 <b>\'+g+\' g</b> 溶水施入\';}'+
+        'return \'<div class=\\\"fpc-prod\\\"><div class=\\\"fpc-prod-name\\\">\'+x.name+\'</div><div class=\\\"fpc-prod-rows\\\"><div class=\\\"fpc-prod-row\\\"><b>用量：</b>\'+dstr+\'</div><div class=\\\"fpc-prod-row\\\"><b>頻率：</b>\'+(x.freq||\''+FERT_FREQ[key]+'\')+ \'</div></div><div class=\\\"fpc-prod-note\\\">→ \'+x.note+\'</div></div>\';'+
+      '}).join(\'\');'+
+    '})(+this.value)"><span style="font-size:.74rem;color:var(--ink-soft)">公升</span></div>'+
+    '<div id="'+resId+'">'+buildProds(200)+'</div>'+
+    '<div class="fpc-last-fert">'+
+    '<div style="font-size:.74rem;font-weight:700;color:var(--ink);margin-bottom:4px">📋 最近施肥記錄</div>'+
+    lastFertHtml+'</div>'+
+    '<div style="font-size:.7rem;color:var(--ink-soft);margin-top:7px;line-height:1.6;background:var(--card2);border-radius:7px;padding:6px 9px">'+
+    sg.tips.map(t=>'💡 '+t).join('<br>')+'</div>'+
     '</div></div>';
 }
 function renderIpmTrendCard(r,c,age){
@@ -3083,6 +3212,7 @@ function renderPlots(){
     renderStageGuide(r,c,age)+
     renderPrePlantChecklist(r,c,age)+
     renderPruningGuide(r,c,age)+
+    renderFertPlanCard(r,c,age)+
     renderIrrigGuide(r,c,age)+
     renderEnvGuide(r,c,age)+
     renderWeekPlan(r,c,age)+
