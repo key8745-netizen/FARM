@@ -326,6 +326,32 @@ nav button.on{color:var(--accent);}
 .ipm-pest-row{font-size:.72rem;color:var(--ink-soft);line-height:1.55;margin-bottom:2px;}
 .ipm-pest-row b{color:var(--ink);font-weight:600;}
 .ipm-pest-act{font-size:.71rem;background:var(--grow-bg);color:var(--grow);border-radius:7px;padding:4px 7px;margin-top:5px;line-height:1.5;}
+/* 農事行事曆 */
+.cal-wrap{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:12px;}
+.cal-nav{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid var(--line);}
+.cal-nav button{background:none;border:1px solid var(--line);border-radius:8px;padding:4px 11px;font-size:.78rem;cursor:pointer;color:var(--ink);}
+.cal-nav button:active{background:var(--card2);}
+.cal-title{font-size:.9rem;font-weight:800;color:var(--ink);}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);}
+.cal-dow{text-align:center;font-size:.6rem;font-weight:700;color:var(--ink-soft);padding:5px 0;background:var(--card2);border-bottom:1px solid var(--line);}
+.cal-cell{min-height:48px;padding:3px 2px 2px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--card);}
+.cal-cell:nth-child(7n){border-right:none;}
+.cal-cell.cal-other{opacity:.3;background:var(--card2);}
+.cal-cell.cal-harv{background:var(--harv-bg);}
+.cal-cell.cal-today .cal-d{background:var(--accent);color:#fff !important;border-radius:50%;}
+.cal-d{font-size:.68rem;font-weight:700;width:20px;height:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 2px;}
+.cal-dots{display:flex;flex-wrap:wrap;gap:2px;justify-content:center;padding:0 2px;}
+.cal-dot{width:6px;height:6px;border-radius:50%;flex:none;}
+.cal-legend{display:flex;flex-wrap:wrap;gap:8px;padding:8px 12px;border-top:1px solid var(--line);background:var(--card2);}
+.cal-leg{display:inline-flex;align-items:center;gap:4px;font-size:.63rem;color:var(--ink-soft);}
+.cal-events-hd{font-size:.82rem;font-weight:800;color:var(--ink);margin:14px 0 8px;}
+.cal-ev-group{margin-bottom:9px;}
+.cal-ev-date{font-size:.7rem;font-weight:700;color:var(--ink-soft);margin-bottom:4px;}
+.cal-ev-item{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--card);border:1px solid var(--line);border-radius:9px;margin-bottom:4px;border-left:3px solid var(--line);}
+.cal-ev-icon{font-size:.85rem;flex:none;}
+.cal-ev-body{min-width:0;}
+.cal-ev-plot{font-size:.78rem;font-weight:700;color:var(--ink);}
+.cal-ev-desc{font-size:.71rem;color:var(--ink-soft);}
 /* 新手入門引導 */
 .ob-card{background:linear-gradient(135deg,var(--accent-soft) 0%,var(--card) 100%);border:1.5px solid var(--accent);border-radius:16px;padding:16px 16px 12px;margin-bottom:14px;}
 .ob-title{font-size:1.05rem;font-weight:900;color:var(--accent-d);margin-bottom:4px;}
@@ -450,12 +476,14 @@ nav button.on{color:var(--accent);}
   <main id="view-contract" class="hidden"></main>
   <main id="view-diag" class="hidden"></main>
   <main id="view-tools" class="hidden"></main>
+  <main id="view-cal" class="hidden"></main>
   <nav>
     <button data-v="dash" class="on"><span class="ic">📊</span>總覽</button>
     <button data-v="plots"><span class="ic">🌱</span>田區</button>
     <button data-v="contract"><span class="ic">🤝</span>契作</button>
     <button data-v="diag"><span class="ic">🔍</span>診斷</button>
     <button data-v="tools"><span class="ic">🧮</span>工具</button>
+    <button data-v="cal"><span class="ic">📅</span>行事曆</button>
   </nav>
 </div>
 <div id="modal-root"></div>
@@ -1867,6 +1895,93 @@ function renderStageTimeline(r,c,age){
     nextHtml+'</div>';
 }
 
+/* ---------- 農事行事曆 ---------- */
+let CAL_MONTH=(()=>{const d=new Date();d.setDate(1);return d;})();
+const CAL_ICONS={fert:'💧',spray:'🧴',harv:'🍅',ecph:'🌡️',ipm:'🪤',obs:'👁️',work:'✂️',cost:'💰'};
+function getMonthEvents(year,month){
+  const plots=load();const events={};const harvRanges=[];
+  const addEv=(ds,ev)=>{if(!events[ds])events[ds]=[];events[ds].push(ev);};
+  plots.forEach(r=>{
+    const c=CROPS[r.crop];if(!c||!r.date)return;
+    const pD=parseD(r.date);
+    // 已有記錄
+    (r.records||[]).forEach(rec=>{
+      const d=parseD(rec.date);
+      if(d.getFullYear()===year&&d.getMonth()===month)
+        addEv(fmtD(d),{plot:r.plot,desc:(RTYPES[rec.type]||{t:rec.type}).t,cls:TYPE_COL[rec.type]||'var(--accent)',icon:CAL_ICONS[rec.type]||'📝',src:'rec'});
+    });
+    // 採收期範圍
+    const hS=addD(pD,c.grow),hE=addD(pD,c.grow+c.dur);
+    harvRanges.push({s:hS,e:hE,plot:r.plot});
+    if(hS.getFullYear()===year&&hS.getMonth()===month)
+      addEv(fmtD(hS),{plot:r.plot,desc:'採收期開始',cls:'var(--harv)',icon:'🍅',src:'sch'});
+    if(hE.getFullYear()===year&&hE.getMonth()===month)
+      addEv(fmtD(hE),{plot:r.plot,desc:'採收期結束',cls:'var(--harv)',icon:'🏁',src:'sch'});
+    // PHI 解除日
+    const lastSpray=(r.records||[]).filter(x=>x.type==='spray'&&+x.phi>0).sort((a,b)=>b.date>a.date?1:-1)[0];
+    if(lastSpray){const phiD=addD(parseD(lastSpray.date),+lastSpray.phi);
+      if(phiD.getFullYear()===year&&phiD.getMonth()===month)
+        addEv(fmtD(phiD),{plot:r.plot,desc:'採收安全期解除（'+lastSpray.note+'）',cls:'var(--warn)',icon:'✅',src:'phi'});}
+    // 生育里程碑
+    (c.sched||[]).forEach(([days,task])=>{
+      const d=addD(pD,days);
+      if(d.getFullYear()===year&&d.getMonth()===month)
+        addEv(fmtD(d),{plot:r.plot,desc:task.replace(/（.*?）/g,'').slice(0,16),cls:'var(--grow)',icon:'📌',src:'sch'});
+    });
+  });
+  return{events,harvRanges};
+}
+function renderCal(){
+  const v=document.getElementById("view-cal");
+  const year=CAL_MONTH.getFullYear(),month=CAL_MONTH.getMonth();
+  const{events,harvRanges}=getMonthEvents(year,month);
+  const tS=fmtD(today());
+  const DOW=['日','一','二','三','四','五','六'];
+  const dows=DOW.map((d,i)=>'<div class="cal-dow" style="'+(i===0?'color:var(--warn)':i===6?'color:var(--blue)':'')+'">'+d+'</div>').join('');
+  // 建立格子
+  const fD=new Date(year,month,1),lD=new Date(year,month+1,0);
+  let cells=[];
+  for(let i=0;i<fD.getDay();i++)cells.push({d:addD(fD,-(fD.getDay()-i)),in:false});
+  for(let i=1;i<=lD.getDate();i++)cells.push({d:new Date(year,month,i),in:true});
+  while(cells.length%7)cells.push({d:addD(cells[cells.length-1].d,1),in:false});
+  const cellsHtml=cells.map(({d,in:inM})=>{
+    const ds=fmtD(d);const isT=ds===tS;
+    const evs=events[ds]||[];
+    const cols=[...new Set(evs.map(e=>e.cls))].slice(0,4);
+    const dots=cols.map(c=>'<span class="cal-dot" style="background:'+c+'"></span>').join('');
+    const dow=d.getDay();
+    const dc=inM?(dow===0?'color:var(--warn)':dow===6?'color:var(--blue)':''):'';
+    const inH=inM&&harvRanges.some(({s,e})=>d>=s&&d<=e);
+    return'<div class="cal-cell'+(inM?'':' cal-other')+(inH?' cal-harv':'')+(isT?' cal-today':'')+'">'+
+      '<div class="cal-d" style="'+dc+'">'+d.getDate()+'</div>'+
+      (dots?'<div class="cal-dots">'+dots+'</div>':'')+
+      '</div>';
+  }).join('');
+  // 事件列表
+  const allDs=Object.keys(events).filter(ds=>{const d=parseD(ds);return d.getFullYear()===year&&d.getMonth()===month;}).sort();
+  let evHtml=allDs.map(ds=>{
+    const evs=events[ds];
+    const d=parseD(ds);
+    const lbl=(month+1)+'/'+d.getDate()+'（'+DOW[d.getDay()]+'）';
+    const items=evs.map(e=>'<div class="cal-ev-item" style="border-left-color:'+e.cls+'">'+
+      '<span class="cal-ev-icon">'+e.icon+'</span>'+
+      '<div class="cal-ev-body"><div class="cal-ev-plot">'+e.plot+'</div>'+
+      '<div class="cal-ev-desc">'+e.desc+'</div></div></div>').join('');
+    return'<div class="cal-ev-group"><div class="cal-ev-date">'+lbl+'</div>'+items+'</div>';
+  }).join('');
+  const leg=[['var(--grow)','里程碑'],['var(--harv)','採收期'],['var(--warn)','PHI/警示'],['var(--accent)','施肥'],['🧴','用藥'],['var(--blue)','EC/pH']];
+  const legHtml=leg.map(([c,n])=>'<div class="cal-leg">'+(c.startsWith('var')||c.startsWith('#')?'<span class="cal-dot" style="background:'+c+'"></span>':'<span style="font-size:.72rem">'+c+'</span>')+n+'</div>').join('');
+  const mn=year+'年'+(month+1)+'月';
+  v.innerHTML='<h2>農事行事曆</h2><p class="note">各田區採收期、施肥里程碑、PHI 解除日一覽。</p>'+
+    '<div class="cal-wrap">'+
+    '<div class="cal-nav"><button id="cal-prev">‹ 上月</button><span class="cal-title">'+mn+'</span><button id="cal-next">下月 ›</button></div>'+
+    '<div class="cal-grid">'+dows+cellsHtml+'</div>'+
+    '<div class="cal-legend">'+legHtml+'</div></div>'+
+    '<div class="cal-events-hd">本月農事事項</div>'+
+    (evHtml||'<div class="empty" style="font-size:.8rem">本月暫無排程事項。</div>');
+  v.querySelector("#cal-prev").onclick=()=>{CAL_MONTH=new Date(year,month-1,1);renderCal();};
+  v.querySelector("#cal-next").onclick=()=>{CAL_MONTH=new Date(year,month+1,1);renderCal();};
+}
 /* ---------- 新手入門引導 ---------- */
 const ONBOARD_STEPS=[
   {title:"準備量測工具",items:["EC 計（導電度計）：量測營養液濃度，最重要的工具，約 NT$500–1500","pH 計：量測酸鹼值，pH 偏差會讓植物無法吸肥，約 NT$300–800","溫度計：監控溫室溫度，超過 35°C 需通風降溫","量筒或量杯（100 mL）：精確量取液肥與農藥，不能目測","定期用標準液（pH 4.0 / 7.0）校正 pH 計，EC 計用 1.413 mS/cm 標準液"]},
@@ -2440,6 +2555,8 @@ function renderTools(){
     '<div id="mk-res"></div></div>'+
     '<h2 style="margin-top:22px">產銷履歷紀錄簿</h2><p class="note">依台灣安全農業（TGAP）匯出用藥/施肥/採收紀錄，供驗證稽核與追溯。</p>'+
     '<div class="card"><button class="btn" id="rb-go">匯出履歷紀錄簿 CSV</button><div id="rb-res"></div></div>'+
+    '<h2 style="margin-top:22px">剩餘季節採購預算試算</h2><p class="note">依目前各田區作物、株數、剩餘天數，估算還需要採購哪些農資與預算。</p>'+
+    '<div class="card"><button class="btn" id="bud-go">試算各田區採購清單</button><div id="bud-res"></div></div>'+
     '<h2 style="margin-top:22px">資料備份 / 還原</h2><p class="note">App 資料存在瀏覽器，清除快取會消失。定期備份 JSON 檔到手機相簿或雲端，需要時可還原。</p>'+
     '<div class="card"><div class="row2">'+
     '<button class="btn" id="bk-exp">⬇ 備份下載 JSON</button>'+
@@ -2674,6 +2791,41 @@ function renderTools(){
       res.innerHTML='<div class="info">✓ 已從雲端下載（'+(ts?new Date(ts).toLocaleString():"")+'）。回總覽查看。</div>';}
     catch(e){res.innerHTML='<div class="info" style="color:var(--warn)">下載失敗：'+e.message+'</div>';}
   };
+  // 採購預算試算
+  v.querySelector("#bud-go").onclick=()=>{
+    const plots=load();const tdy=today();const res=v.querySelector("#bud-res");
+    const active=plots.filter(r=>{const c=CROPS[r.crop];if(!c||!r.date)return false;const[,,age]=stageOf(r);return age>=0&&age<=c.grow+c.dur;});
+    if(!active.length){res.innerHTML='<div class="info" style="color:var(--warn)">目前沒有進行中的田區。</div>';return;}
+    let grandTotal=0;
+    const rows=active.map(r=>{
+      const c=CROPS[r.crop];const[,,age]=stageOf(r);
+      const harvEnd=addD(parseD(r.date),c.grow+c.dur);
+      const remDays=Math.max(0,Math.floor((harvEnd-tdy)/864e5));
+      if(!remDays)return'';
+      const plants=r.plants||0;const ratio=plants/c.density;
+      // 剩餘肥料
+      const totFert=Object.entries(c.fert).filter(([k])=>k!=='堆肥').reduce((a,[,x])=>a+x,0);
+      const remFert=Math.round(totFert*ratio*(1-Math.min(1,age/(c.grow+c.dur)))*10)/10;
+      const fertCost=Math.round(remFert*28);
+      // IPM 黏板
+      const remWeeks=Math.ceil(remDays/7);const boards=Math.max(1,Math.ceil(plants/150));
+      const ipmCost=boards*remWeeks*15;
+      // 農藥防治（每2週估1次，每次600）
+      const sprayCnt=Math.ceil(remWeeks/2);const sprayCost=sprayCnt*600;
+      const sub=fertCost+ipmCost+sprayCost;grandTotal+=sub;
+      return'<div class="res" style="margin-top:8px">'+
+        '<h4 style="margin:0 0 4px">'+r.plot+'　<span style="font-weight:500;font-size:.85rem">'+r.crop+'</span></h4>'+
+        '<div style="font-size:.72rem;color:var(--ink-soft);margin-bottom:6px">剩 '+remDays+' 天・'+plants+' 株</div>'+
+        '<div class="r"><span>💧 肥料（剩餘需求 '+remFert+' kg）</span><b>NT$'+fertCost.toLocaleString()+'</b></div>'+
+        '<div class="r"><span>🪤 IPM 黏板（'+boards+'板×'+remWeeks+'週）</span><b>NT$'+ipmCost.toLocaleString()+'</b></div>'+
+        '<div class="r"><span>🧴 農藥防治（約'+sprayCnt+'次）</span><b>NT$'+sprayCost.toLocaleString()+'</b></div>'+
+        '<div class="r" style="font-weight:800;border-top:1px solid var(--line);padding-top:4px;margin-top:4px"><span>小計</span><b style="color:var(--accent)">NT$'+sub.toLocaleString()+'</b></div></div>';
+    }).join('');
+    res.innerHTML=rows+
+      '<div class="res" style="margin-top:10px;border-color:var(--accent)">'+
+      '<div class="r" style="font-size:1rem;font-weight:800"><span>所有田區剩餘預算合計</span><b style="color:var(--accent)">NT$'+grandTotal.toLocaleString()+'</b></div>'+
+      '<div style="font-size:.68rem;color:var(--ink-soft);margin-top:4px">※ 估算基準：肥料 NT$28/kg、黏板 NT$15/板/週、農藥 NT$600/次，請依實際採購調整。</div></div>';
+  };
 }
 
 /* ---------- 契作管理 ---------- */
@@ -2761,9 +2913,9 @@ function renderContract(){
 /* ---------- 導覽 ---------- */
 function go(v){
   document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("on",x.dataset.v===v));
-  ["dash","plots","contract","diag","tools"].forEach(id=>document.getElementById("view-"+id).classList.toggle("hidden",id!==v));
-  const T={dash:"經營總覽",plots:"我的田區",contract:"契作管理",diag:"診斷",tools:"工具"};document.getElementById("title").textContent=T[v];
-  if(v==="dash")renderDash();if(v==="plots")renderPlots();if(v==="contract")renderContract();if(v==="diag")renderDiag();if(v==="tools")renderTools();
+  ["dash","plots","contract","diag","tools","cal"].forEach(id=>document.getElementById("view-"+id).classList.toggle("hidden",id!==v));
+  const T={dash:"經營總覽",plots:"我的田區",contract:"契作管理",diag:"診斷",tools:"工具",cal:"農事行事曆"};document.getElementById("title").textContent=T[v];
+  if(v==="dash")renderDash();if(v==="plots")renderPlots();if(v==="contract")renderContract();if(v==="diag")renderDiag();if(v==="tools")renderTools();if(v==="cal")renderCal();
 }
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{if(b.dataset.v==="plots")CUR=null;go(b.dataset.v);});
 // 套用已校正的真實月價指數（若有）覆蓋示範值
