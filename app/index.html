@@ -2968,6 +2968,23 @@ function renderTools(){
     '<button class="btn" id="ec-go">計算</button>'+
     '<div id="ec-res"></div>'+
     '</div>'+
+    '<div class="card">'+
+    '<h3 style="margin:0 0 4px;font-size:1rem">🧪 A/B 液配製計算機</h3>'+
+    '<p class="note" style="margin:0 0 10px">從零配製水耕營養液：輸入水箱容量與目標 EC，算出 A 液和 B 液各要加多少。</p>'+
+    (()=>{const plots=load();const plotOpts=plots.length?'<option value="">── 不帶入田區 ──</option>'+plots.map((r,i)=>{const c=CROPS[r.crop];if(!c)return'';const[,,age]=stageOf(r);if(age<0)return'';const[sk,ecT]=ecStage(c,age);return'<option value="'+i+'|'+ecT+'">'+r.plot+' '+r.crop+'（'+sk+' 建議 EC '+ecT+'）</option>';}).filter(Boolean).join(''):'';return plots.length?'<label class="f">帶入田區目標 EC（可選）</label><select class="t" id="ab-plot">'+plotOpts+'</select>':''})()+
+    '<div class="row2">'+
+    '<div><label class="f">目標 EC（dS/m）</label><input class="t" id="ab-ec" type="number" step="0.1" min="0.5" max="5" placeholder="如 2.5"></div>'+
+    '<div><label class="f">水箱容量（公升）</label><input class="t" id="ab-vol" type="number" min="1" placeholder="如 500"></div>'+
+    '</div>'+
+    '<label class="f">A/B 濃縮液濃度<span style="font-weight:400;color:var(--ink-soft)">（看包裝上的倍數）</span></label>'+
+    '<select class="t" id="ab-conc">'+
+    '<option value="100">100 倍濃縮（每 mL/L 提升 EC 約 0.30 dS/m）</option>'+
+    '<option value="200" selected>200 倍濃縮（每 mL/L 提升 EC 約 0.15 dS/m）常見</option>'+
+    '<option value="500">500 倍濃縮（每 mL/L 提升 EC 約 0.06 dS/m）</option>'+
+    '</select>'+
+    '<button class="btn" id="ab-go">計算 A/B 用量</button>'+
+    '<div id="ab-res"></div>'+
+    '</div>'+
     '<h2 style="margin-top:22px">作物計算</h2><p class="note">輸入作物、定植日、株數 → 採收日、肥料、作業排程。</p>'+
     '<div class="card"><label class="f">作物</label><select class="t" id="c-crop">'+opts+'</select>'+
     '<div class="row2"><div><label class="f">定植日</label><input class="t" id="c-date" type="date" value="'+fmtD(today())+'"></div><div><label class="f">株數</label><input class="t" id="c-plants" type="number" value="500"></div></div>'+
@@ -3017,6 +3034,45 @@ function renderTools(){
       '若是粉狀肥料（密度≈1）：約 '+ml+' g。<br>'+
       '建議用量秤或量杯量取，不要用目測估計。'+
       '</div></div>';
+  };
+  // A/B 液帶入田區 EC
+  const abPlotSel=v.querySelector("#ab-plot");
+  if(abPlotSel)abPlotSel.onchange=function(){
+    const val=this.value;if(!val)return;
+    const ecVal=val.split('|')[1];
+    if(ecVal)v.querySelector("#ab-ec").value=ecVal;
+  };
+  v.querySelector("#ab-go").onclick=()=>{
+    const targetEC=+v.querySelector("#ab-ec").value;
+    const vol=+v.querySelector("#ab-vol").value;
+    const concSel=v.querySelector("#ab-conc");
+    const concX=+concSel.value;
+    const res=v.querySelector("#ab-res");
+    if(!targetEC||!vol){res.innerHTML='<div class="info" style="color:var(--warn)">請填入目標 EC 和水箱容量。</div>';return;}
+    if(targetEC<0.5||targetEC>5){res.innerHTML='<div class="info" style="color:var(--warn)">EC 目標請在 0.5–5.0 之間。</div>';return;}
+    // EC factor: for 200x concentrate, ~0.15 dS/m per mL/L per liquid (combined A+B ~0.30)
+    const ecFactor=concX===100?0.30:concX===500?0.06:0.15;
+    const mlPerLEach=Math.round(targetEC/ecFactor*10)/10;
+    const totalA=Math.round(mlPerLEach*vol);
+    const totalB=totalA;
+    const ecActual=Math.round(mlPerLEach*ecFactor*100)/100;
+    const steps=['在乾淨水箱中加入 '+vol+' 公升的 RO 水或沉澱自來水（水先加、肥後加）',
+      '加入 A 液 <b>'+totalA+' mL</b>（約 '+(totalA>=1000?(totalA/1000).toFixed(2)+' 公升':totalA+' mL')+'），充分攪拌至均勻',
+      '再加入 B 液 <b>'+totalB+' mL</b>（同上），再次攪拌',
+      '靜置 1–2 分鐘後用 EC 計量測實際 EC，目標 '+targetEC+' dS/m',
+      '若 EC 偏高：加清水稀釋；若偏低：再補加少量 A+B（等比例）'];
+    res.innerHTML='<div class="res">'+
+      '<h4>🧪 配製結果（'+vol+'L 水箱）</h4>'+
+      '<div class="r"><span>A 液用量</span><b style="color:var(--accent);font-size:1.08rem">'+totalA+' mL</b></div>'+
+      '<div class="r"><span>B 液用量</span><b style="color:var(--accent);font-size:1.08rem">'+totalB+' mL</b></div>'+
+      '<div class="r"><span>A 液每公升加</span><b>'+mlPerLEach+' mL/L</b></div>'+
+      '<div class="r"><span>預估配製後 EC</span><b>≈ '+ecActual+' dS/m</b></div>'+
+      '<div style="font-size:.74rem;color:var(--ink-soft);margin-top:5px">依 '+concX+'x 濃縮液估算（每 mL/L 提升 EC '+ecFactor+' dS/m）。不同品牌略有差異，配製後務必用 EC 計量測確認。</div>'+
+      '</div>'+
+      '<div class="res" style="margin-top:8px"><h4>📋 操作步驟</h4>'+
+      steps.map((s,i)=>'<div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--line);font-size:.78rem;color:var(--ink-soft)"><span style="background:var(--accent);color:#fff;border-radius:50%;width:18px;height:18px;font-size:.65rem;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex:none;margin-top:1px">'+(i+1)+'</span><span>'+s+'</span></div>').join('')+
+      '<div style="font-size:.72rem;color:var(--warn);background:var(--warn-bg);border-radius:7px;padding:6px 9px;margin-top:8px;line-height:1.5">⚠️ A 液（含鈣）與 B 液（含磷/硫酸鹽）<b>絕對不能直接混合濃縮液</b>，會產生沉澱失效。一定要在大量水中分開加入。</div>'+
+      '</div>';
   };
   v.querySelector("#ec-go").onclick=()=>{
     const cur=+v.querySelector("#ec-cur").value;
