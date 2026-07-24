@@ -693,6 +693,26 @@ nav button.on{color:var(--accent);}
 .fpc-tank-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
 .fpc-tank-row label{font-size:.74rem;color:var(--ink-soft);flex:none;}
 .fpc-tank-row input{width:80px;font-size:.84rem;font-weight:700;text-align:center;padding:4px 6px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--ink);}
+/* 灌溉量計算機 */
+.irc-card{background:var(--card);border:1px solid var(--blue);border-radius:13px;margin:8px 0;overflow:hidden;}
+.irc-hd{display:flex;align-items:center;gap:9px;padding:11px 14px;cursor:pointer;}
+.irc-title{flex:1;font-size:.88rem;font-weight:800;color:var(--blue);}
+.irc-arr{font-size:.85rem;color:var(--blue);transition:transform .2s;}
+.irc-arr.open{transform:rotate(90deg);}
+.irc-body{display:none;padding:0 14px 14px;}
+.irc-body.open{display:block;}
+.irc-base{background:var(--card2);border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:.74rem;color:var(--ink-soft);line-height:1.55;}
+.irc-inputs{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:10px;}
+.irc-inp-grp{display:flex;align-items:center;gap:6px;font-size:.76rem;color:var(--ink);}
+.irc-inp-grp label{font-size:.72rem;color:var(--ink-soft);}
+.irc-inp-grp input{width:65px;font-size:.9rem;font-weight:700;text-align:center;padding:5px 6px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--ink);}
+.irc-calc-btn{width:100%;padding:9px;background:var(--blue);color:#fff;border:none;border-radius:9px;font-size:.84rem;font-weight:700;cursor:pointer;margin-bottom:8px;}
+.irc-result{border-radius:9px;background:var(--card2);padding:10px 12px;}
+.irc-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px dashed var(--line);font-size:.76rem;}
+.irc-row:last-child{border-bottom:none;}
+.irc-row span{color:var(--ink-soft);}
+.irc-row b{color:var(--ink);font-size:.88rem;}
+.irc-total b{color:var(--blue);font-size:.96rem;font-weight:900;}
 /* 缺素症速查 */
 .def-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px;}
 .def-btn{border:1.5px solid var(--line);background:var(--card2);border-radius:11px;padding:8px 5px;cursor:pointer;text-align:center;transition:border-color .15s,background .15s;}
@@ -1657,6 +1677,68 @@ function renderIrrigGuide(r,c,age){
     '<div class="irr-state-card bad"><div class="irr-state-hd">💧 澆太多的徵兆</div>'+overHtml+'</div>'+
     '<div class="irr-state-card ok"><div class="irr-state-hd">🏜️ 澆太少的徵兆</div>'+underHtml+'</div>'+
     '</div></div></div>';
+}
+/* 灌溉量計算機資料 */
+const IRRIG_BASE_ML={'牛番茄':400,'彩椒':350,'玉女番茄':300,'高山草莓':200,'高麗菜':450,'敏豆':250};
+const IRRIG_STAGE_F={'苗期':0.25,'生長期':0.60,'花期':0.85,'花果期':0.90,'果期':1.00,'採收期':0.90,'結球期':0.95,'結莢期':1.00};
+const IRRIG_DEF_FREQ={'苗期':1,'生長期':2,'花期':3,'花果期':3,'果期':3,'採收期':2,'結球期':2,'結莢期':3};
+function calcIrrigResult(baseMl,stageF,plants,tempId,freqId,resId){
+  const tv=+document.getElementById(tempId).value||25;
+  const fv=Math.max(1,+document.getElementById(freqId).value||2);
+  const tf=tv<=15?0.5:tv<=20?0.7:tv<=25?1.0:tv<=30?1.3:1.6;
+  const daily=Math.round(baseMl*stageF*tf);
+  const perIrr=Math.round(daily/fv);
+  const totalL=Math.round(plants*daily/100)/10;
+  const perL=Math.round(plants*perIrr/100)/10;
+  const tfLabel=tf<=0.5?'節水（低溫）':tf<=0.7?'省水（涼爽）':tf<=1.0?'標準（25°C）':tf<=1.3?'增水（溫暖）':'大量補水（高溫）';
+  const el=document.getElementById(resId);if(!el)return;
+  el.innerHTML=
+    '<div class="irc-result">'+
+    '<div class="irc-row"><span>每株每日需水（估算）</span><b>'+daily+' mL</b></div>'+
+    '<div class="irc-row"><span>每次灌溉量（每株）</span><b>'+perIrr+' mL</b></div>'+
+    '<div class="irc-row irc-total"><span>全田每次灌溉量（'+plants+' 株）</span><b>'+perL+' L</b></div>'+
+    '<div class="irc-row"><span>全田每日總用水量</span><b>'+totalL+' L</b></div>'+
+    '<div class="irc-row"><span>氣溫修正</span><b>'+Math.round(tf*100)+'% — '+tfLabel+'</b></div>'+
+    '</div>'+
+    '<div style="font-size:.7rem;color:var(--ink-soft);margin-top:7px;line-height:1.6">'+
+    '⚠️ 以上為估算值。最準確的方法是觀察排液率：出水量 ÷ 注入量 = 目標15–25%。'+
+    '排液太少→補水；排液 EC 遠高於施入 EC→需沖洗。'+
+    '</div>';
+}
+function renderIrrigCalcCard(r,c,age){
+  if(age<0)return'';
+  const key=stageGuideKey(c,age);
+  if(key==='定植前')return'';
+  const baseMl=IRRIG_BASE_ML[r.crop]||300;
+  const stageF=IRRIG_STAGE_F[key]||0.8;
+  const defFreq=IRRIG_DEF_FREQ[key]||2;
+  const plants=r.plants||0;
+  if(!plants)return'';
+  const uid='irc-'+Date.now();
+  const resId='irc-res-'+uid;
+  const tempId='irc-temp-'+uid;
+  const freqId='irc-freq-'+uid;
+  const baseAtStage=Math.round(baseMl*stageF);
+  return'<div class="irc-card">'+
+    '<div class="irc-hd" onclick="var b=document.getElementById(\''+uid+'\');b.classList.toggle(\'open\');this.querySelector(\'.irc-arr\').classList.toggle(\'open\')">'+
+    '<span style="font-size:1.1rem">🪣</span>'+
+    '<span class="irc-title">灌溉量計算機</span>'+
+    '<span style="font-size:.68rem;color:var(--blue);margin-left:6px">'+key+'階段</span>'+
+    '<span class="irc-arr">▶</span></div>'+
+    '<div class="irc-body" id="'+uid+'">'+
+    '<div class="irc-base">本階段基準：每株約 <b>'+baseAtStage+' mL / 天</b>（25°C）。氣溫每升 5°C，需水量增加約 30%。此田共 <b>'+plants+' 株</b>。</div>'+
+    '<div class="irc-inputs">'+
+    '<div class="irc-inp-grp"><label for="'+tempId+'">今日最高氣溫</label>'+
+    '<input id="'+tempId+'" type="number" value="25" min="5" max="45"><span style="font-size:.72rem">°C</span></div>'+
+    '<div class="irc-inp-grp"><label for="'+freqId+'">每天灌幾次</label>'+
+    '<input id="'+freqId+'" type="number" value="'+defFreq+'" min="1" max="8"><span style="font-size:.72rem">次</span></div>'+
+    '</div>'+
+    '<button class="irc-calc-btn" onclick="calcIrrigResult('+baseMl+','+stageF+','+plants+',\''+tempId+'\',\''+freqId+'\',\''+resId+'\')">計算今日灌溉量</button>'+
+    '<div id="'+resId+'"></div>'+
+    '<div style="font-size:.7rem;color:var(--ink-soft);margin-top:8px;line-height:1.6;border-top:1px solid var(--line);padding-top:7px">'+
+    '💡 早晨第一次＋傍晚最後一次灌溉是最重要的兩次。高溫天（>30°C）可增加中午一次淺灌，但避免12:00–14:00澆冷水（溫差傷根）。'+
+    '</div>'+
+    '</div></div>';
 }
 function renderEnvGuide(r,c,age){
   const key=stageGuideKey(c,age);
@@ -3580,6 +3662,7 @@ function renderPlots(){
     renderFertPlanCard(r,c,age)+
     renderEcPhAdjCard(r,c,age)+
     renderIrrigGuide(r,c,age)+
+    renderIrrigCalcCard(r,c,age)+
     renderEnvGuide(r,c,age)+
     renderWeekPlan(r,c,age)+
     renderPollinationGuide(r,c,age)+
