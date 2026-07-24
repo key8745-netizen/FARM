@@ -305,6 +305,23 @@ nav button.on{color:var(--accent);}
 .work-chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px;}
 .work-chip{background:var(--card2);border:1.5px solid var(--line);border-radius:20px;padding:5px 12px;font-size:.8rem;cursor:pointer;color:var(--ink);user-select:none;transition:background .1s,border-color .1s;}
 .work-chip:active,.work-chip.sel{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-d);}
+/* 近 7 天活動點圖 */
+.act-strip{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 14px 10px;margin:8px 0;}
+.act-hd{font-size:.8rem;font-weight:700;color:var(--ink);margin-bottom:9px;display:flex;align-items:baseline;gap:8px;}
+.act-hd small{font-size:.7rem;color:var(--ink-soft);font-weight:400;}
+.act-days{display:flex;gap:5px;}
+.act-day{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;}
+.act-dow{font-size:.55rem;color:var(--ink-soft);text-align:center;}
+.act-cell{width:100%;aspect-ratio:1;border-radius:8px;background:var(--card2);border:1.5px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;opacity:.45;}
+.act-cell.has{background:var(--accent-soft);border-color:var(--accent);opacity:1;}
+.act-cell.today{background:var(--accent);border-color:var(--accent-d);opacity:1;}
+.act-num{font-size:.62rem;font-weight:700;line-height:1;}
+.act-cell.today .act-num{color:#fff;}
+.act-cell.has .act-num{color:var(--accent-d);}
+.act-cell:not(.has):not(.today) .act-num{color:var(--ink-soft);}
+.act-dots{display:flex;gap:2px;justify-content:center;flex-wrap:wrap;padding:0 2px;}
+.act-dot{width:5px;height:5px;border-radius:50%;flex:none;}
+.act-hint{font-size:.71rem;color:var(--grow);background:var(--grow-bg);border-radius:7px;padding:5px 9px;margin-top:7px;line-height:1.5;}
 /* 本季收益試算卡 */
 .profit-card{background:var(--card);border:1.5px solid var(--line);border-radius:13px;padding:14px;margin:10px 0;}
 .profit-hd{font-size:.92rem;font-weight:800;color:var(--ink);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
@@ -1545,6 +1562,38 @@ function renderWorkGuide(cropName){
     '<div class="ecguide-body" id="'+uid+'-b">'+stepsHtml+'</div></div>';
 }
 
+/* 近 7 天活動點圖 */
+const TYPE_COL={fert:'var(--grow)',spray:'var(--warn)',harv:'var(--harv)',ecph:'var(--blue)',work:'var(--accent)',obs:'var(--done)',ipm:'var(--ink-soft)',cost:'var(--pre)'};
+function renderActivityStrip(r){
+  const recs=r.records||[];const tdy=today();
+  const days=[];
+  for(let i=6;i>=0;i--){const d=addD(tdy,-i);days.push({d,ds:fmtD(d),isToday:i===0});}
+  const totalW=days.reduce((a,{ds})=>a+(recs.filter(x=>x.date===ds).length),0);
+  const daysW=days.filter(({ds})=>recs.some(x=>x.date===ds)).length;
+  const cells=days.map(({d,ds,isToday})=>{
+    const dr=recs.filter(x=>x.date===ds);
+    const has=dr.length>0;
+    const types=[...new Set(dr.map(x=>x.type))].slice(0,4);
+    const dots=types.map(t=>'<div class="act-dot" style="background:'+( TYPE_COL[t]||'var(--accent)')+'"></div>').join('');
+    const cls='act-cell'+(isToday?' today':has?' has':'');
+    const dName=['日','一','二','三','四','五','六'][d.getDay()];
+    return'<div class="act-day">'+
+      '<div class="act-dow">'+dName+'</div>'+
+      '<div class="'+cls+'">'+
+        '<div class="act-num">'+d.getDate()+'</div>'+
+        (has&&!isToday?'<div class="act-dots">'+dots+'</div>':'')+
+        (isToday?'<div style="font-size:.45rem;color:rgba(255,255,255,.8)">今天</div>':'')+
+      '</div></div>';
+  }).join('');
+  const hint=daysW<4?'<div class="act-hint">💡 這週只有 '+daysW+' 天有記錄。每天至少記一筆「觀察」，有助掌握趨勢。</div>':'';
+  const legend=Object.entries({施肥:TYPE_COL.fert,用藥:TYPE_COL.spray,採收:TYPE_COL.harv,'EC/pH':TYPE_COL.ecph,作業:TYPE_COL.work,觀察:TYPE_COL.obs}).map(([n,c])=>'<span style="display:inline-flex;align-items:center;gap:3px;font-size:.62rem;color:var(--ink-soft)"><span style="width:6px;height:6px;border-radius:50%;background:'+c+';flex:none"></span>'+n+'</span>').join('');
+  return'<div class="act-strip">'+
+    '<div class="act-hd">📅 近 7 天記錄<small>'+daysW+'/7 天有記錄 · 共 '+totalW+' 筆</small></div>'+
+    '<div class="act-days">'+cells+'</div>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">'+legend+'</div>'+
+    hint+'</div>';
+}
+
 /* 本季收益試算 */
 const PRICE_REF={
   "牛番茄":  {g1:50, g2:35,g3:15,note:"產地參考行情"},
@@ -1770,6 +1819,7 @@ function renderPlots(){
     ((()=>{const costs=(r.records||[]).filter(x=>x.type==='cost'&&x.amount);if(!costs.length)return'';const tot=costs.reduce((a,x)=>a+(+x.amount||0),0);return '<span class="pill" style="background:var(--grow-bg);color:var(--grow)">💰 累計成本 NT$'+Math.round(tot).toLocaleString()+'</span>';})())+
     ipmWarn+'</div>'+
     renderHealthAlerts(r,c,age)+
+    renderActivityStrip(r)+
     renderStageTimeline(r,c,age)+
     renderStageGuide(r,c,age)+
     renderWeekPlan(r,c,age)+
