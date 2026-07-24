@@ -693,6 +693,18 @@ nav button.on{color:var(--accent);}
 .fpc-tank-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
 .fpc-tank-row label{font-size:.74rem;color:var(--ink-soft);flex:none;}
 .fpc-tank-row input{width:80px;font-size:.84rem;font-weight:700;text-align:center;padding:4px 6px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--ink);}
+/* 缺素症速查 */
+.def-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px;}
+.def-btn{border:1.5px solid var(--line);background:var(--card2);border-radius:11px;padding:8px 5px;cursor:pointer;text-align:center;transition:border-color .15s,background .15s;}
+.def-btn.sel{border-color:var(--blue);background:var(--blue-bg,#e6f1fb);}
+.def-btn-sym{font-size:1.1rem;display:block;margin-bottom:2px;}
+.def-btn-nm{font-size:.7rem;font-weight:800;color:var(--ink);}
+.def-detail{border-radius:12px;padding:12px 14px;border:1.5px solid var(--line);background:var(--card2);}
+.def-detail-hd{display:flex;align-items:center;gap:10px;margin-bottom:9px;flex-wrap:wrap;}
+.def-detail-nm{font-size:.96rem;font-weight:900;color:var(--ink);}
+.def-part-tag{font-size:.68rem;background:var(--warn-bg);color:var(--warn);border-radius:20px;padding:2px 10px;font-weight:700;}
+.def-row{display:flex;gap:7px;margin-bottom:6px;font-size:.74rem;line-height:1.55;}
+.def-lbl{font-weight:800;color:var(--ink);flex:none;min-width:52px;}
 /* 整季行事曆 */
 .sca-card{background:var(--card);border:1.5px solid var(--accent);border-radius:13px;margin:8px 0;overflow:hidden;}
 .sca-hd{display:flex;align-items:center;gap:9px;padding:11px 14px;cursor:pointer;}
@@ -3981,6 +3993,20 @@ function renderTools(){
     '<div id="diag-reswrap" style="display:none"><div class="diag-result" id="diag-result"></div>'+
     '<button style="margin-top:9px;font-size:.75rem;color:var(--ink-soft);background:none;border:none;cursor:pointer" id="diag-reset">← 重新診斷</button></div>'+
     '</div>'+
+    '<h2 style="margin-top:22px">🧪 缺素症速查表</h2><p class="note">葉片黃化、紫化、葉緣焦枯？點擊下方元素立刻查症狀、處理方式與 pH 關係。記住：<b>老葉先</b>→缺移動性元素（N/P/K/Mg）；<b>新葉先</b>→缺不移動元素（Ca/Fe/Mn/B）。</p>'+
+    '<div class="card" id="def-card">'+
+    '<div class="def-grid" id="def-btns">'+
+    '<div class="def-btn" data-elem="N"><span class="def-btn-sym">🟡</span><span class="def-btn-nm">N（氮）</span></div>'+
+    '<div class="def-btn" data-elem="P"><span class="def-btn-sym">🟣</span><span class="def-btn-nm">P（磷）</span></div>'+
+    '<div class="def-btn" data-elem="K"><span class="def-btn-sym">🟤</span><span class="def-btn-nm">K（鉀）</span></div>'+
+    '<div class="def-btn" data-elem="Ca"><span class="def-btn-sym">⬛</span><span class="def-btn-nm">Ca（鈣）</span></div>'+
+    '<div class="def-btn" data-elem="Mg"><span class="def-btn-sym">🟢</span><span class="def-btn-nm">Mg（鎂）</span></div>'+
+    '<div class="def-btn" data-elem="Fe"><span class="def-btn-sym">🔶</span><span class="def-btn-nm">Fe（鐵）</span></div>'+
+    '<div class="def-btn" data-elem="Mn"><span class="def-btn-sym">🔵</span><span class="def-btn-nm">Mn（錳）</span></div>'+
+    '<div class="def-btn" data-elem="B"><span class="def-btn-sym">🔺</span><span class="def-btn-nm">B（硼）</span></div>'+
+    '</div>'+
+    '<div id="def-detail" style="display:none"></div>'+
+    '</div>'+
     '<h2 style="margin-top:22px">每日農場作業時程</h2><p class="note">依目前田區生育階段，生成今天的建議作業時程表。進到溫室前先看一遍，確保不遺漏重要工作。</p>'+
     '<div class="card" id="sched-card"><button class="btn" id="sched-go">生成今日作業時程</button><div id="sched-res"></div></div>'+
     '<h2 style="margin-top:22px">剩餘季節採購預算試算</h2><p class="note">依目前各田區作物、株數、剩餘天數，估算還需要採購哪些農資與預算。</p>'+
@@ -4520,6 +4546,86 @@ function renderTools(){
       parts.querySelectorAll(".diag-part-btn").forEach(b=>b.classList.remove("sel"));
       sympWrap.style.display='none';resWrap.style.display='none';
     };
+  })();
+  // 缺素症速查
+  (function(){
+    const DEFIC=[
+      {elem:'N',name:'氮（N）',sym:'🟡',part:'老葉先（由下而上擴散）',
+       early:'下位葉均勻黃化，連葉脈也一起黃（全葉黃化）',
+       adv:'全株漸黃、莖細徒長弱化、生長停滯',
+       ph:'pH 6.0–7.0 皆可吸收；主因是 EC 不足非 pH 問題',
+       fix:'提高 EC（增加施肥量）；補施硝酸鉀（KNO₃）或硝酸鈣（Ca(NO₃)₂）為氮源',
+       prev:'定期測 EC，低於目標 0.3 以上時立即追肥；苗期後不可斷肥超過 3 天'},
+      {elem:'P',name:'磷（P）',sym:'🟣',part:'老葉先（葉背紫化）',
+       early:'老葉葉背葉脈間出現紫紅色斑，葉色暗綠',
+       adv:'全株莖幹出現紫色，根系稀少，生長幾乎停止',
+       ph:'⚠️ pH > 7.5 磷幾乎無法吸收！降 pH 至 6.2 以下是第一步',
+       fix:'先降 pH 至 6.0–6.5；再補施磷酸二氫鉀（MKP）葉面噴施或灌根',
+       prev:'維持 pH 6.0–6.5；苗期與花期加強磷肥促根促花'},
+      {elem:'K',name:'鉀（K）',sym:'🟤',part:'老葉葉緣先',
+       early:'老葉葉尖與葉緣出現焦褐色，從邊緣往葉脈方向延伸',
+       adv:'大面積葉緣焦枯落葉，果實裂果、著色不均、糖度下降',
+       ph:'pH 6.0–7.0 吸收良好；注意高鉀會拮抗鎂的吸收',
+       fix:'補施硝酸鉀（KNO₃）或硫酸鉀（K₂SO₄）；果期確保 N:P:K = 1:1:3',
+       prev:'果期加強鉀肥；與硫酸鎂一起施用防鎂拮抗'},
+      {elem:'Ca',name:'鈣（Ca）',sym:'⬛',part:'新葉 / 生長點先',
+       early:'新葉葉尖焦化、葉緣向內捲曲；番茄果實底部出現黑凹（底腐病 BER）',
+       adv:'生長點壞死停止生長、彩椒/番茄嚴重裂果影響商品率',
+       ph:'pH 6.2–7.0 吸收佳；酸性（pH < 5.5）下鈣吸收受阻',
+       fix:'葉面噴施氯化鈣（CaCl₂，0.3–0.5%）；先確認灌溉均勻（忽乾忽濕是主因）',
+       prev:'定期施硝酸鈣；避免 EC 過高（鹽分競爭阻斷鈣吸收）；澆水均勻穩定'},
+      {elem:'Mg',name:'鎂（Mg）',sym:'🟢',part:'老葉葉脈間先',
+       early:'老葉葉脈間黃化，葉脈本身保持明顯綠色（網狀失綠，典型缺鎂）',
+       adv:'斑駁葉色（葉脈綠、葉肉黃），大量落葉，光合能力大降',
+       ph:'pH 6.0–7.0；鉀:鎂 比率 > 5:1 時鎂被拮抗',
+       fix:'葉面噴施硫酸鎂（Epsom Salt，0.5%）；施肥中加鎂源（如鎂肥）',
+       prev:'果期避免鉀肥過量；定期在肥液中加入硫酸鎂'},
+      {elem:'Fe',name:'鐵（Fe）',sym:'🔶',part:'新葉先（嫩葉黃白化）',
+       early:'新生嫩葉均勻黃化，葉脈仍清晰綠色（失綠症 Chlorosis）',
+       adv:'嫩葉黃白化甚至葉脈也白化，新芽死亡，植株停止生長',
+       ph:'⚠️ pH > 6.5 鐵就難以吸收，這是最常見原因！pH 5.5–6.2 最佳',
+       fix:'最重要：先降 pH 至 6.0–6.2（降 pH 優先於補鐵）；葉面噴螯合鐵（EDTA-Fe）',
+       prev:'pH 維持 6.2 以下；使用螯合鐵（EDTA-Fe）而非硫酸亞鐵避免高 pH 沉澱'},
+      {elem:'Mn',name:'錳（Mn）',sym:'🔵',part:'新葉先（葉脈間黃化）',
+       early:'新葉葉脈間黃化（與缺鐵類似，但葉脈更深綠、症狀較斑塊狀）',
+       adv:'出現褐色壞死斑點，葉片壞死脫落，嚴重影響光合',
+       ph:'pH > 6.5 吸收差；pH < 5.5 過多時錳中毒（也有斑點）',
+       fix:'降低 pH 至 5.8–6.2；葉面噴施硫酸錳（MnSO₄，0.05%）',
+       prev:'pH 維持 6.0–6.5；避免介質積水（厭氧環境會造成錳毒害）'},
+      {elem:'B',name:'硼（B）',sym:'🔺',part:'生長點 / 新葉先',
+       early:'生長點停止生長、嫩葉捲曲變厚變脆（像燒焦一樣）',
+       adv:'落花落果、果實畸形開裂，莖幹出現裂縫並木栓化',
+       ph:'pH 6.0–7.5 皆可；乾旱或過濕都會影響吸收',
+       fix:'葉面噴施硼砂（0.1–0.2%）或硼酸；開花前預防性噴施一次',
+       prev:'開花前 7–10 天噴施含硼葉肥；大雨後沙質介質易流失硼'},
+    ];
+    const btns=v.querySelector('#def-btns');
+    const detail=v.querySelector('#def-detail');
+    if(!btns||!detail)return;
+    btns.querySelectorAll('.def-btn').forEach(btn=>{
+      btn.onclick=()=>{
+        btns.querySelectorAll('.def-btn').forEach(b=>b.classList.remove('sel'));
+        btn.classList.add('sel');
+        const d=DEFIC.find(x=>x.elem===btn.dataset.elem);
+        if(!d)return;
+        detail.style.display='block';
+        detail.className='def-detail';
+        detail.innerHTML=
+          '<div class="def-detail-hd">'+
+          '<span style="font-size:1.8rem">'+d.sym+'</span>'+
+          '<span class="def-detail-nm">缺'+d.name+'</span>'+
+          '<span class="def-part-tag">'+d.part+'</span>'+
+          '</div>'+
+          '<div class="def-row"><span class="def-lbl">早期症狀</span><span style="color:var(--warn)">'+d.early+'</span></div>'+
+          '<div class="def-row"><span class="def-lbl">嚴重症狀</span><span style="color:var(--warn);opacity:.8">'+d.adv+'</span></div>'+
+          '<div class="def-row"><span class="def-lbl">pH 的影響</span><span style="color:var(--blue)">'+d.ph+'</span></div>'+
+          '<div class="def-row"><span class="def-lbl">立即處理</span><span style="color:var(--accent)">'+d.fix+'</span></div>'+
+          '<div class="def-row"><span class="def-lbl">預防方式</span><span style="color:var(--ink-soft)">'+d.prev+'</span></div>'+
+          '<div style="margin-top:8px;font-size:.7rem;color:var(--ink-soft);border-top:1px solid var(--line);padding-top:7px">'+
+          '💡 <b>老葉先</b>→缺移動性元素（N/P/K/Mg）；<b>新葉先</b>→缺不移動元素（Ca/Fe/Mn/B）。最多缺素問題根源在 pH 太高，先測 pH 再查缺素。'+
+          '</div>';
+      };
+    });
   })();
   // 每日農場作業時程
   v.querySelector("#sched-go").onclick=()=>{
