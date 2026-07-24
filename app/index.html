@@ -573,6 +573,22 @@ nav button.on{color:var(--accent);}
 .poll-timing-cell{background:var(--card2);border:1px solid var(--line);border-radius:9px;padding:7px 8px;text-align:center;}
 .poll-timing-lbl{font-size:.6rem;color:var(--ink-soft);margin-bottom:3px;}
 .poll-timing-val{font-size:.82rem;font-weight:800;color:var(--harv);}
+.diag-parts{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:12px;}
+.diag-part-btn{border:1.5px solid var(--line);background:var(--card2);border-radius:11px;padding:9px 4px;text-align:center;cursor:pointer;transition:all .18s;}
+.diag-part-btn:hover{border-color:var(--blue);}
+.diag-part-btn.sel{border-color:var(--blue);background:var(--blue-bg,#e8f4ff);}
+.diag-part-icon{font-size:1.3rem;display:block;margin-bottom:3px;}
+.diag-part-lbl{font-size:.65rem;font-weight:700;color:var(--ink);}
+.diag-symp-list{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;}
+.diag-symp-btn{border:1px solid var(--line);background:var(--card2);border-radius:9px;padding:9px 12px;text-align:left;cursor:pointer;font-size:.78rem;color:var(--ink-soft);transition:all .15s;}
+.diag-symp-btn:hover,.diag-symp-btn.sel{border-color:var(--warn);color:var(--ink);background:var(--warn-bg);}
+.diag-result{border-radius:12px;padding:13px 14px;border:1.5px solid var(--warn);background:var(--warn-bg);}
+.diag-cause-hd{font-size:.72rem;font-weight:800;color:var(--warn);margin-bottom:3px;letter-spacing:.5px;}
+.diag-cause-val{font-size:.95rem;font-weight:800;color:var(--ink);margin-bottom:7px;}
+.diag-why{font-size:.75rem;color:var(--ink-soft);background:var(--card);border-radius:8px;padding:7px 10px;margin-bottom:10px;line-height:1.5;}
+.diag-fix-hd{font-size:.72rem;font-weight:800;color:var(--grow);margin-bottom:5px;}
+.diag-fix-step{display:flex;gap:8px;font-size:.77rem;color:var(--ink-soft);line-height:1.6;margin-bottom:4px;align-items:baseline;}
+.diag-fix-num{background:var(--grow);color:#fff;border-radius:50%;width:17px;height:17px;font-size:.62rem;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex:none;}
 </style>
 
 </head>
@@ -2094,7 +2110,7 @@ function renderSprayGuide(){
 
 /* 觀察記錄：灌溉指引 + 巡查快選晶片 */
 const OBS_CHIPS=["葉色深綠正常","下位老葉自然黃落","葉緣出現焦褐（疑缺鉀）","葉片輕微萎凋（高溫蒸散）","發現葉背疑似小蟲","花朵開放已輔助授粉","果實膨大正常","支架/誘引需調整","根域排水出水正常","整體植株狀態良好"];
-const IRRIG_GUIDE={
+const IRRIG_FREQ={
   "苗期":  {freq:"每天 1 次",time:"清晨 7–8 時",dur:"15–20 分鐘",tip:"根系淺，少量即可；排液比 20–30% 屬正常"},
   "生長期":{freq:"每天 2–3 次",time:"清晨＋中午前",dur:"每次 15–20 分鐘",tip:"生長旺盛耗水；傍晚後減少灌溉，降低夜間濕度防病"},
   "花期":  {freq:"每天 2–3 次",time:"清晨為主",dur:"每次 20 分鐘",tip:"水分需穩定；忽多忽少易落花，花期不宜過濕"},
@@ -2105,7 +2121,7 @@ const IRRIG_GUIDE={
   "採收期":{freq:"每天 2–3 次",time:"清晨",dur:"每次 20 分鐘",tip:"維持基本水分；即將拔株可逐漸減少給液"},
 };
 function renderObsGuide(stageKey){
-  const ig=IRRIG_GUIDE[stageKey]||IRRIG_GUIDE["生長期"];
+  const ig=IRRIG_FREQ[stageKey]||IRRIG_FREQ["生長期"];
   const uid='og-'+Date.now();
   const chips=OBS_CHIPS.map(t=>'<button class="work-chip" data-task="'+t+'">'+t+'</button>').join('');
   return'<div class="ecguide"><div class="ecguide-q" id="'+uid+'-q" onclick="var b=document.getElementById(\''+uid+'-b\');b.classList.toggle(\'open\');this.classList.toggle(\'open\')">💧 '+stageKey+'灌溉頻率參考</div>'+
@@ -3096,6 +3112,19 @@ function renderTools(){
     '<div id="mk-res"></div></div>'+
     '<h2 style="margin-top:22px">產銷履歷紀錄簿</h2><p class="note">依台灣安全農業（TGAP）匯出用藥/施肥/採收紀錄，供驗證稽核與追溯。</p>'+
     '<div class="card"><button class="btn" id="rb-go">匯出履歷紀錄簿 CSV</button><div id="rb-res"></div></div>'+
+    '<h2 style="margin-top:22px">🔍 植株問題快速診斷</h2><p class="note">看到植株異常？選擇發病部位和症狀，立刻得到可能原因與處理步驟。不需要事先懂病蟲害，只要描述你看到的狀況。</p>'+
+    '<div class="card" id="diag-card">'+
+    '<div class="diag-parts" id="diag-parts">'+
+    '<div class="diag-part-btn" data-part="葉片"><span class="diag-part-icon">🍃</span><span class="diag-part-lbl">葉片</span></div>'+
+    '<div class="diag-part-btn" data-part="莖部"><span class="diag-part-icon">🪴</span><span class="diag-part-lbl">莖部</span></div>'+
+    '<div class="diag-part-btn" data-part="根部"><span class="diag-part-icon">🌱</span><span class="diag-part-lbl">根部</span></div>'+
+    '<div class="diag-part-btn" data-part="果實"><span class="diag-part-icon">🍅</span><span class="diag-part-lbl">果實</span></div>'+
+    '<div class="diag-part-btn" data-part="整株"><span class="diag-part-icon">🌿</span><span class="diag-part-lbl">整株</span></div>'+
+    '</div>'+
+    '<div id="diag-sympwrap" style="display:none"><div style="font-size:.76rem;font-weight:700;color:var(--ink);margin-bottom:7px">你看到哪種狀況？</div><div class="diag-symp-list" id="diag-symplist"></div></div>'+
+    '<div id="diag-reswrap" style="display:none"><div class="diag-result" id="diag-result"></div>'+
+    '<button style="margin-top:9px;font-size:.75rem;color:var(--ink-soft);background:none;border:none;cursor:pointer" id="diag-reset">← 重新診斷</button></div>'+
+    '</div>'+
     '<h2 style="margin-top:22px">每日農場作業時程</h2><p class="note">依目前田區生育階段，生成今天的建議作業時程表。進到溫室前先看一遍，確保不遺漏重要工作。</p>'+
     '<div class="card" id="sched-card"><button class="btn" id="sched-go">生成今日作業時程</button><div id="sched-res"></div></div>'+
     '<h2 style="margin-top:22px">剩餘季節採購預算試算</h2><p class="note">依目前各田區作物、株數、剩餘天數，估算還需要採購哪些農資與預算。</p>'+
@@ -3373,6 +3402,83 @@ function renderTools(){
       res.innerHTML='<div class="info">✓ 已從雲端下載（'+(ts?new Date(ts).toLocaleString():"")+'）。回總覽查看。</div>';}
     catch(e){res.innerHTML='<div class="info" style="color:var(--warn)">下載失敗：'+e.message+'</div>';}
   };
+  // 植株問題快速診斷
+  const DIAG={
+    '葉片':{icon:'🍃',symptoms:[
+      {s:'下葉黃化，由下往上蔓延',cause:'缺氮（N）',why:'施肥不足或根系吸收差，氮素不夠新葉搶走下葉的氮',fix:['立刻施用高氮液肥（如魚精或硝酸鈣鉀）','檢查滴管是否有堵塞、每株有沒有均勻出水','EC是否過低？目標值參考 App 田區建議']},
+      {s:'葉緣焦褐、向上捲曲',cause:'缺鉀（K）或高溫熱傷害',why:'高溫加劇葉緣蒸散，缺鉀時水分調節失靈',fix:['補充高鉀肥料（硫酸鉀）','立刻加強通風、打開天窗','午後以冷水噴霧降溫（避免噴葉面留溼）']},
+      {s:'葉脈間黃化（整片黃、但脈仍綠）',cause:'缺鎂（Mg）或缺鐵（Fe）',why:'pH 偏高時微量元素鎖住，根系無法吸收',fix:['測量灌溉水與排液的 pH，目標 5.8-6.2','葉面噴施0.2% 硫酸鎂（泡水）','若懷疑缺鐵，改用螯合鐵葉噴']},
+      {s:'葉片表面有白色粉末',cause:'白粉病（真菌）',why:'晝夜溫差大、濕度忽高忽低，促進孢子萌發',fix:['立刻摘除有粉末的葉片並裝袋丟棄（不可放地上）','噴施苦楝油 2000 倍或小蘇打 0.3%','加強通風，避免葉面留水珠']},
+      {s:'葉片有灰色霉層或軟爛水浸斑',cause:'灰霉病（Botrytis）',why:'低溫高濕，連續陰天通風差時爆發',fix:['剪掉病葉立刻丟出溫室','噴施保護性殺菌劑（如四克利、福多寧）','確保夜間不讓棚內濕度超過 80%']},
+      {s:'葉片有不規則褐色小斑',cause:'細菌性斑點病或真菌葉斑病',why:'雨水飛濺或結露傳播病菌',fix:['避免頭頂灌溉，改底部滴灌','噴銅製劑（氧氯化銅）保護','受害嚴重植株考慮拔除']},
+      {s:'葉背有白色蠟粉小蟲，飛起來是白雲',cause:'粉蝨',why:'高溫乾燥、通風差時大量孳生',fix:['掛黃色黏蟲板（每50株1張）','噴施苦楝油或皂液（下午噴、避免葉燒）','引入麗蚜小蜂進行生物防治']},
+      {s:'葉片有細密黃白點，葉背有細絲',cause:'葉蟎（紅蜘蛛）',why:'高溫低濕（夏季乾燥）爆發最快',fix:['立即噴施硫黃懸浮劑或挨克蟎','適度提高空間濕度（噴水地面）','每週巡查，密度高就連噴2次間隔5天']},
+      {s:'葉片濃淡不均、皺縮或葉脈異常',cause:'病毒病（TSWV、ToMV 等）',why:'薊馬或蚜蟲吸食傳播，一旦感染無法治癒',fix:['立刻拔除病株並裝袋丟出溫室','所有工具用酒精消毒','加強防治蚜蟲與薊馬（傳毒媒介）']},
+    ]},
+    '莖部':{icon:'🪴',symptoms:[
+      {s:'莖基部黑爛、軟塌有臭味',cause:'莖基腐病或疫病（Phytophthora）',why:'土壤或介質積水缺氧，病菌趁機入侵',fix:['立刻停止澆水 1-2 天','挖開土面確認是否積水，若有積水立刻疏通','噴淋甲基多保淨或嘉賜銅（含土覆蓋莖基）']},
+      {s:'莖部節間很長、莖細又軟',cause:'徒長（光照不足或夜溫過高）',why:'光線不足時莖節拉長找光，夜溫高使呼吸消耗養分',fix:['確認每天日照時數是否足夠（至少 6 小時）','夜溫控制在 15-18°C（比日溫低 5-8°C）','疏植，讓每株都有充分受光空間']},
+      {s:'莖上有白色棉絮狀物',cause:'白絹病或菌核病（Sclerotinia）',why:'高濕低溫，病菌在土面和莖基蔓延',fix:['在莖基周圍撒石灰粉消毒土面','噴施福多寧或嘉保克','移除病株燒毀，不可堆肥']},
+      {s:'莖皮龜裂、木栓化',cause:'缺硼（B）或機械損傷',why:'硼不足影響細胞壁合成，莖組織乾裂',fix:['葉面噴施0.1% 硼砂（溶解後過濾噴葉）','避免整枝時用力傷莖','此現象若輕微對產量影響不大']},
+    ]},
+    '根部':{icon:'🌱',symptoms:[
+      {s:'根系呈褐色或黑色，有異味腐爛',cause:'根腐病（Pythium、Fusarium）',why:'積水缺氧是最常見原因，病菌趁弱入侵',fix:['停止澆水讓介質乾燥至少 2 天','以福多寧或敵力脫灌根','確認排水孔無堵塞；重新設計滴頭數量']},
+      {s:'根系稀少、細軟、幾乎不長',cause:'EC 過高或 pH 偏差',why:'高鹽分造成滲透壓傷根，pH 偏差使離子毒害',fix:['用 EC/pH 計測量排液（不是灌液）','EC > 4.0 mS/cm：立刻灌清水稀釋','pH < 5.5 或 > 6.8：調整肥液配比']},
+      {s:'根部有腫瘤狀結節',cause:'根瘤線蟲（Meloidogyne）',why:'土壤帶蟲卵，高溫期活躍',fix:['將病株連根拔除裝袋離田','土壤日光消毒（蓋透明塑膠布悶曬 4-6 週）','下一季用拮抗菌（淡紫紫孢菌）預防']},
+    ]},
+    '果實':{icon:'🍅',symptoms:[
+      {s:'果實頂端（花蒂對面）黑褐腐爛像燒焦',cause:'頂腐病（BER）—缺鈣',why:'水分供應不穩定使鈣素來不及輸送到果頂',fix:['立刻噴施 0.5% 氯化鈣（每週噴 2 次）','保持穩定供水，避免過乾後大量澆水','確認 EC 不要超過目標值（過高阻礙鈣吸收）']},
+      {s:'果實裂縫、果皮撐破',cause:'裂果（水分供應不均）',why:'缺水後驟然吸收大量水，果肉膨脹超過果皮彈性',fix:['採收期前維持穩定水分（不要讓介質過乾）','接近成熟期停止大量灌水','著色期可套袋（紙袋）保護']},
+      {s:'果實奇形怪狀、空心或種子少',cause:'授粉不良',why:'溫度過高（>32°C）或過低（<12°C）損壞花粉活力',fix:['改善授粉作業（振動棒、風扇輔助）','在花期前後補充硼肥（0.1% 硼砂）','控制棚內溫度在授粉最適範圍 20-27°C']},
+      {s:'果面有凹陷褐斑或霉層',cause:'炭疽病或灰霉病',why:'果實接觸土面、濕度高時感染',fix:['立刻摘除受感染果並丟棄','噴施保護性殺菌劑（銅製劑或四克利）','採後立刻移入陰涼通風處，不要堆疊']},
+      {s:'果實小、顏色不均或不著色',cause:'缺鉀或光照不足',why:'鉀參與糖分轉運和果實著色，不足時品質大降',fix:['進入果期補充高鉀肥（K:N 比約 2:1）','疏葉讓果實直接受光（每穗保留 3-4 片功能葉）','確認 EC 達到果期目標值']},
+    ]},
+    '整株':{icon:'🌿',symptoms:[
+      {s:'整株突然萎凋，澆水後仍不恢復',cause:'土壤傳播性枯萎病或青枯病（細菌）',why:'病菌堵塞維管束，根部吸水幹道被切斷',fix:['切斷莖基確認是否有褐色維管束（若有則確定是枯萎病）','立刻拔除病株，不要留在溫室','所有接觸的工具用 70% 酒精消毒，避免擴散']},
+      {s:'植株生長停滯，整體葉色暗淡無光',cause:'EC 過高或根系出問題',why:'高鹽分或根腐使植株無法正常吸水吸肥',fix:['立刻測 EC/pH（排液和灌液都要測）','灌清水降低 EC 至正常範圍','提起植株確認根系顏色與健康程度']},
+      {s:'下葉依序黃化掉落（從最底部開始）',cause:'正常老化葉脫落',why:'養分向新生組織移動，老葉功能結束後黃化',fix:['這是正常現象，不需要緊張','確認新葉顏色是否正常（若新葉也黃才需要擔心）','摘除黃葉，改善下部通風']},
+      {s:'午後高溫時植株萎凋，早晨自動恢復',cause:'熱萎蔫（暫時性）',why:'高溫時蒸散速率大於根系吸水速率',fix:['立刻加強通風（打開天窗、側窗）','在地面灑水降低棚內溫度','午前灌溉確保介質不缺水；考慮遮光網（30%）']},
+      {s:'植株各部位都有問題，連根都爛',cause:'複合感染或嚴重管理失誤',why:'通常是積水+病菌+高鹽多重問題同時發生',fix:['立刻拔除嚴重病株，減少感染源','對剩餘植株全面檢查，確認水分管理','聯絡農業改良場或農藥行請專家到場診斷']},
+    ]},
+  };
+  (()=>{
+    const parts=v.querySelector("#diag-parts");
+    const sympWrap=v.querySelector("#diag-sympwrap");
+    const sympList=v.querySelector("#diag-symplist");
+    const resWrap=v.querySelector("#diag-reswrap");
+    const resEl=v.querySelector("#diag-result");
+    let curPart=null;
+    parts.querySelectorAll(".diag-part-btn").forEach(btn=>{
+      btn.onclick=()=>{
+        parts.querySelectorAll(".diag-part-btn").forEach(b=>b.classList.remove("sel"));
+        btn.classList.add("sel");
+        curPart=btn.dataset.part;
+        const data=DIAG[curPart];
+        sympList.innerHTML=data.symptoms.map((sym,i)=>
+          '<div class="diag-symp-btn" data-i="'+i+'">'+sym.s+'</div>'
+        ).join('');
+        sympWrap.style.display='block';
+        resWrap.style.display='none';
+        sympList.querySelectorAll(".diag-symp-btn").forEach(sb=>{
+          sb.onclick=()=>{
+            sympList.querySelectorAll(".diag-symp-btn").forEach(b=>b.classList.remove("sel"));
+            sb.classList.add("sel");
+            const sym=DIAG[curPart].symptoms[+sb.dataset.i];
+            const steps=sym.fix.map((f,j)=>'<div class="diag-fix-step"><span class="diag-fix-num">'+(j+1)+'</span><span>'+f+'</span></div>').join('');
+            resEl.innerHTML='<div class="diag-cause-hd">🔬 診斷結果</div>'+
+              '<div class="diag-cause-val">'+sym.cause+'</div>'+
+              '<div class="diag-why">💡 為什麼會這樣：'+sym.why+'</div>'+
+              '<div class="diag-fix-hd">✅ 處理步驟（依優先順序）</div>'+steps;
+            resWrap.style.display='block';
+          };
+        });
+      };
+    });
+    v.querySelector("#diag-reset").onclick=()=>{
+      parts.querySelectorAll(".diag-part-btn").forEach(b=>b.classList.remove("sel"));
+      sympWrap.style.display='none';resWrap.style.display='none';
+    };
+  })();
   // 每日農場作業時程
   v.querySelector("#sched-go").onclick=()=>{
     const plots=load();const res=v.querySelector("#sched-res");
