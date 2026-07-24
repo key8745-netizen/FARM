@@ -820,6 +820,17 @@ nav button.on{color:var(--accent);}
 .mix-compat-tbl td.no{background:#fff0f0;}
 .mix-compat-tbl td.sl{background:var(--card2);color:var(--ink-soft);}
 .mix-emg{background:var(--warn-bg);border:1px solid var(--warn);border-radius:9px;padding:9px 12px;font-size:.73rem;line-height:1.65;margin-top:10px;}
+/* 環境逆境應對手冊 */
+.stress-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:12px;}
+.stress-btn{border:1.5px solid var(--line);background:var(--card2);border-radius:10px;padding:8px 4px;cursor:pointer;text-align:center;transition:border-color .15s,background .15s;}
+.stress-btn.sel{border-color:var(--warn);background:var(--warn-bg);}
+.stress-btn-ic{font-size:1.2rem;display:block;margin-bottom:3px;}
+.stress-btn-nm{font-size:.63rem;font-weight:800;color:var(--ink);display:block;line-height:1.3;}
+.stress-detail{border-radius:11px;padding:11px 13px;border:1.5px solid var(--line);background:var(--card2);}
+.stress-detail-hd{font-size:.9rem;font-weight:900;color:var(--ink);margin-bottom:5px;}
+.stress-trigger{font-size:.71rem;color:var(--ink-soft);margin-bottom:9px;}
+.stress-row{display:flex;gap:7px;margin-bottom:6px;font-size:.74rem;line-height:1.6;}
+.stress-lbl{font-weight:800;color:var(--ink);flex:none;min-width:44px;}
 </style>
 
 </head>
@@ -4137,6 +4148,17 @@ function renderTools(){
     '<div style="font-size:.68rem;color:var(--ink-soft);margin-bottom:10px">❌ 不可直接混合（需各自先溶入大量水後才可合桶）&nbsp;&nbsp;✅ 可直接同桶混用</div>'+
     '<div class="mix-emg"><b>🚨 發現白色混濁或沉澱？</b><br>立刻倒掉，不要勉強使用！沉澱的磷酸鈣無法再溶解，繼續用只會堵塞滴頭和管路，也讓植物持續缺磷缺鈣。請重新按步驟 A 後 B 分開配製。</div>'+
     '</div>'+
+    '<h2 style="margin-top:22px">🌡️ 環境逆境應對手冊</h2><p class="note">台灣農業四季都有挑戰。點選下方情境，立即查看徵狀辨識、緊急處理與預防方法。</p>'+
+    '<div class="card">'+
+    '<div class="stress-grid">'+
+    '<div class="stress-btn" data-stress="hot"><span class="stress-btn-ic">🔥</span><span class="stress-btn-nm">高溫熱害</span></div>'+
+    '<div class="stress-btn" data-stress="rain"><span class="stress-btn-ic">🌧️</span><span class="stress-btn-nm">連陰雨期</span></div>'+
+    '<div class="stress-btn" data-stress="typhoon"><span class="stress-btn-ic">🌀</span><span class="stress-btn-nm">颱風前後</span></div>'+
+    '<div class="stress-btn" data-stress="cold"><span class="stress-btn-ic">🥶</span><span class="stress-btn-nm">低溫寒害</span></div>'+
+    '<div class="stress-btn" data-stress="shade"><span class="stress-btn-ic">☁️</span><span class="stress-btn-nm">光照不足</span></div>'+
+    '</div>'+
+    '<div id="stress-detail" style="display:none"></div>'+
+    '</div>'+
     '<h2 style="margin-top:22px">每日農場作業時程</h2><p class="note">依目前田區生育階段，生成今天的建議作業時程表。進到溫室前先看一遍，確保不遺漏重要工作。</p>'+
     '<div class="card" id="sched-card"><button class="btn" id="sched-go">生成今日作業時程</button><div id="sched-res"></div></div>'+
     '<h2 style="margin-top:22px">剩餘季節採購預算試算</h2><p class="note">依目前各田區作物、株數、剩餘天數，估算還需要採購哪些農資與預算。</p>'+
@@ -4755,6 +4777,48 @@ function renderTools(){
           '💡 <b>老葉先</b>→缺移動性元素（N/P/K/Mg）；<b>新葉先</b>→缺不移動元素（Ca/Fe/Mn/B）。最多缺素問題根源在 pH 太高，先測 pH 再查缺素。'+
           '</div>';
       };
+    });
+  })();
+  // 環境逆境應對手冊
+  (function(){
+    const STRESS=[
+      {id:'hot',ic:'🔥',nm:'高溫熱害',trigger:'日溫持續 > 35°C，或棚內超過 38°C 以上',
+       signs:['葉片捲曲萎凋（早晚恢復，中午最嚴重）','花粉活性降低，落花落果增加','果實出現日燒（白化斑塊）','葉緣焦枯（番茄、彩椒最常見）'],
+       immed:['08:00 前完成灌溉，補足水分防失水','架設 45–60% 遮光率遮陰網','中午前後用霧噴頭噴水霧降溫','停施高氮肥，改輕量高鉀補充抗逆境能力'],
+       prev:['6 月前提前搭設遮陰網','選用耐熱品種（如耐熱番茄系統）','採少量多次灌溉，維持根際涼爽','夜間保持通風，拉大日夜溫差']},
+      {id:'rain',ic:'🌧️',nm:'連陰雨期',trigger:'持續陰雨 5 天以上，日照嚴重不足',
+       signs:['莖節拉長、莖細（徒長）','葉片黃化，光合能力下降','灰黴病、白粉病大爆發','水耕袋積水缺氧，根系腐爛'],
+       immed:['調低 EC 至正常值 70%（光合弱不需高肥）','減少灌溉頻率 30–50%，提高排液率','開啟通風扇強制降低棚內濕度','預防性噴施殺菌劑（銅製劑或亞磷酸鉀）'],
+       prev:['安裝棚頂防雨設施','設計良好排水溝與高畦栽培','梅雨前提前噴藥預防灰黴','維持葉片乾燥，減少夜間葉面積水']},
+      {id:'typhoon',ic:'🌀',nm:'颱風前後',trigger:'颱風警報發布 / 強風豪雨後恢復期',
+       signs:['葉片撕裂、莖稈折傷','介質袋移位或嚴重積水','大量落花落果','颱風後炭疽病、軟腐病激增'],
+       immed:['颱風前：加固支架、固定介質袋、疏果減少受力','關閉通風口但保留小縫防止正壓','颱風後立即排除積水、清除斷枝殘葉','颱風後 24 小時內噴銅製劑預防細菌性病害'],
+       prev:['颱風季前確認溫室骨架與覆蓋膜強度','備妥應急噴藥器材與藥劑','颱風警報期間提前採收已熟果品','了解在地颱風高發月份，提前完成防護']},
+      {id:'cold',ic:'🥶',nm:'低溫寒害',trigger:'夜溫 < 10°C（茄科）/ < 5°C（草莓、高麗菜）',
+       signs:['葉片水浸狀軟化（早晨最明顯）','老葉紫化，葉尖焦枯','花粉不活，著果率大幅下降','生長幾乎停頓，新芽不展'],
+       immed:['加蓋雙層不織布或塑膠薄膜保溫','大幅減少灌溉（低溫根系吸水能力極弱）','施用高磷鉀葉面肥增加細胞液濃度抗寒','恢復天氣時緩慢通風，避免急速溫差傷苗'],
+       prev:['秋末種植規劃避開最冷月份定植','備妥電熱片或瓦斯暖氣加溫設備','選用耐寒品種（高山草莓天然耐冷）','夜間密封棚室保溫，白天充分通風']},
+      {id:'shade',ic:'☁️',nm:'光照不足',trigger:'日照時數 < 4 小時 / 冬季長期陰天',
+       signs:['新葉偏黃、節間明顯拉長','花蕾不開或大量落花','果實著色差、甜度低','整株生長遲緩，藥害也更難恢復'],
+       immed:['調低 EC（光合弱時高濃度肥料積鹽）','增施胺基酸、海藻萃取葉面肥補充能量','摘除多餘果實集中養分','修剪遮光老葉與過密側芽'],
+       prev:['南向或東南向搭棚最大化日照','鋪設反光地布或銀白色地膜增加反射','冬季改種耐陰短日性作物（高麗菜、敏豆）','加裝 LED 植物補光燈，每日補光至 16 小時']}
+    ];
+    const detail=v.querySelector('#stress-detail');
+    v.querySelectorAll('.stress-btn').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        v.querySelectorAll('.stress-btn').forEach(function(b){b.classList.remove('sel');});
+        this.classList.add('sel');
+        const d=STRESS.find(function(x){return x.id===btn.dataset.stress;});
+        if(!d)return;
+        detail.style.display='block';
+        detail.className='stress-detail';
+        detail.innerHTML=
+          '<div class="stress-detail-hd">'+d.ic+' '+d.nm+'</div>'+
+          '<div class="stress-trigger">📍 發生條件：'+d.trigger+'</div>'+
+          '<div class="stress-row"><span class="stress-lbl">⚠️ 徵狀</span><div>'+d.signs.map(function(s){return'• '+s;}).join('<br>')+'</div></div>'+
+          '<div class="stress-row"><span class="stress-lbl">🚨 緊急</span><div>'+d.immed.map(function(s){return'• '+s;}).join('<br>')+'</div></div>'+
+          '<div class="stress-row"><span class="stress-lbl">🛡️ 預防</span><div>'+d.prev.map(function(s){return'• '+s;}).join('<br>')+'</div></div>';
+      });
     });
   })();
   // 每日農場作業時程
