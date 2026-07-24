@@ -462,6 +462,23 @@ nav button.on{color:var(--accent);}
 .onboard-body{flex:1;}
 .onboard-body b{display:block;font-size:.88rem;color:var(--ink);margin-bottom:2px;}
 .onboard-body span{font-size:.75rem;color:var(--ink-soft);}
+/* 溫室環境管理指引 */
+.env-guide{background:var(--card);border:1px solid var(--line);border-radius:13px;margin:8px 0;overflow:hidden;}
+.env-guide-hd{display:flex;align-items:center;gap:9px;padding:11px 14px;cursor:pointer;}
+.env-guide-icon{font-size:1.1rem;flex:none;}
+.env-guide-title{flex:1;font-size:.88rem;font-weight:800;color:var(--ink);}
+.env-guide-arr{font-size:.85rem;color:var(--ink-soft);transition:transform .2s;}
+.env-guide-arr.open{transform:rotate(90deg);}
+.env-guide-body{display:none;padding:0 14px 14px;}
+.env-guide-body.open{display:block;}
+.env-params{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin-bottom:10px;}
+.env-param{background:var(--card2);border:1px solid var(--line);border-radius:9px;padding:8px 10px;}
+.env-param-lbl{font-size:.65rem;color:var(--ink-soft);font-weight:600;margin-bottom:3px;}
+.env-param-val{font-size:.88rem;font-weight:800;color:var(--ink);}
+.env-tip-row{font-size:.76rem;color:var(--ink-soft);line-height:1.6;margin-bottom:4px;display:flex;gap:7px;}
+.env-tip-row b{color:var(--ink);font-weight:700;flex:none;}
+.env-warn-hd{font-size:.75rem;font-weight:700;color:var(--warn);margin:9px 0 5px;}
+.env-warn-item{font-size:.72rem;color:var(--ink-soft);background:var(--warn-bg);border-radius:7px;padding:5px 9px;margin-bottom:4px;line-height:1.5;}
 </style>
 
 </head>
@@ -931,6 +948,54 @@ function stageGuideKey(c,age){
   if(age<=c.grow*0.5)return"生長期"; // 前半段生長期
   if(age<=c.grow*0.7)return"花期";   // 開花期
   return"果期";                        // 後段果實發育
+}
+/* ────── 溫室環境管理目標（依生育階段） ────── */
+const ENV_GUIDE={
+ "定植前":{dayT:"25–30°C",nightT:"15–20°C",rh:"60–75%",
+  light:"自然光即可；備妥遮光網（30–40%遮光率）待苗期使用",
+  vent:"保持通風，潮濕天開頂窗排濕，避免介質帶病原",
+  warns:["棚內積水超過1天→病原菌大量繁殖，定植後爆發根腐","夜溫 < 10°C 定植後根系凍傷，活著率大幅下降"]},
+ "苗期":{dayT:"22–27°C",nightT:"15–18°C",rh:"65–75%",
+  light:"遮光 30–40%（散射光為主，避免直曬蒸散過強）",
+  vent:"微通風；雨天關窗防淋；避免棚內溫度劇烈波動",
+  warns:["夜溫 < 12°C 葉片紫化，根系活性下降","日溫 > 35°C 午後萎凋，需立刻噴水降溫+加強遮光"]},
+ "生長期":{dayT:"24–30°C",nightT:"16–20°C",rh:"60–70%",
+  light:"最大自然日照（植株已適應），不再需要遮光",
+  vent:"每 1–2 小時通風一次；高溫日（>30°C）增加頂窗開幅",
+  warns:["連續 > 33°C 超過 3 天花粉活性降低，受粉率下降","RH > 80% 持續 → 灰黴病/白粉病爆發風險"]},
+ "花期":{dayT:"23–27°C",nightT:"15–18°C",rh:"55–65%",
+  light:"全日照，確保每株葉片不互相遮蔽，光照均勻",
+  vent:"授粉時間（早 9–11 點）保持棚內微風循環，震動花粉促自然授粉",
+  warns:["夜溫 < 13°C 花粉量少，落花落果率升高","日溫 > 30°C 花粉失活 → 改人工輔助授粉（電動授粉棒）"]},
+ "果期":{dayT:"24–29°C",nightT:"16–20°C",rh:"55–70%",
+  light:"全日照，光照充足果實著色均勻且糖度高",
+  vent:"頂窗通風為主，避免強風直吹果實；注意防熱傷（日燒）",
+  warns:["溫差急遽（>10°C）易造成裂果，夜間注意關窗保溫","持續 RH > 75% 果面黴斑，採收後腐敗快"]},
+ "採收期":{dayT:"22–28°C",nightT:"14–18°C",rh:"55–65%",
+  light:"全日照維持，著色期是品質關鍵",
+  vent:"採收後清理植株殘體前保持通風，降低病原在棚內滯留",
+  warns:["低溫（< 12°C）著色遲緩，延後採收計畫","高溫多濕加速果實後熟，須每天巡視提早採收"]}
+};
+function renderEnvGuide(r,c,age){
+  const key=stageGuideKey(c,age);
+  const g=ENV_GUIDE[key];if(!g)return'';
+  const uid='env-'+Date.now();
+  const warns=g.warns.map(w=>'<div class="env-warn-item">⚠️ '+w+'</div>').join('');
+  return'<div class="env-guide">'+
+    '<div class="env-guide-hd" onclick="var b=document.getElementById(\''+uid+'\');b.classList.toggle(\'open\');this.querySelector(\'.env-guide-arr\').classList.toggle(\'open\')">'+
+    '<span class="env-guide-icon">🌡️</span>'+
+    '<span class="env-guide-title">環境管理目標 — '+key+'</span>'+
+    '<span class="env-guide-arr">▶</span></div>'+
+    '<div class="env-guide-body" id="'+uid+'">'+
+    '<div class="env-params">'+
+    '<div class="env-param"><div class="env-param-lbl">🌞 日間溫度</div><div class="env-param-val">'+g.dayT+'</div></div>'+
+    '<div class="env-param"><div class="env-param-lbl">🌙 夜間溫度</div><div class="env-param-val">'+g.nightT+'</div></div>'+
+    '<div class="env-param"><div class="env-param-lbl">💧 相對濕度</div><div class="env-param-val">'+g.rh+'</div></div>'+
+    '<div class="env-param" style="grid-column:span 2"><div class="env-param-lbl">💡 光照建議</div><div class="env-param-val" style="font-size:.78rem;font-weight:700">'+g.light+'</div></div>'+
+    '</div>'+
+    '<div class="env-tip-row"><b>🌬️ 通風：</b>'+g.vent+'</div>'+
+    '<div class="env-warn-hd">⚠️ 注意異常</div>'+
+    warns+'</div></div>';
 }
 function renderStageGuide(r,c,age){
   const key=stageGuideKey(c,age);
@@ -2210,6 +2275,7 @@ function renderPlots(){
     renderActivityStrip(r)+
     renderStageTimeline(r,c,age)+
     renderStageGuide(r,c,age)+
+    renderEnvGuide(r,c,age)+
     renderWeekPlan(r,c,age)+
     renderSeasonEndGuide(r,c,age)+
     renderPlotDailyTasks(r.plot)+
