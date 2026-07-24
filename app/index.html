@@ -305,6 +305,21 @@ nav button.on{color:var(--accent);}
 .work-chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px;}
 .work-chip{background:var(--card2);border:1.5px solid var(--line);border-radius:20px;padding:5px 12px;font-size:.8rem;cursor:pointer;color:var(--ink);user-select:none;transition:background .1s,border-color .1s;}
 .work-chip:active,.work-chip.sel{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-d);}
+/* 智能健康警告卡 */
+.health-alerts{margin:8px 0;}
+.ha-card{border-radius:11px;padding:10px 12px;margin-bottom:7px;border:1.5px solid transparent;}
+.ha-card.ha-warn{background:var(--warn-bg);border-color:var(--warn);}
+.ha-card.ha-info{background:var(--grow-bg);border-color:var(--grow);}
+.ha-card.ha-harv{background:var(--harv-bg);border-color:var(--harv);}
+.ha-top{display:flex;align-items:center;gap:7px;margin-bottom:3px;}
+.ha-icon{font-size:1.05rem;flex:none;}
+.ha-title{font-size:.85rem;font-weight:800;}
+.ha-card.ha-warn .ha-title{color:var(--warn);}
+.ha-card.ha-info .ha-title{color:var(--grow);}
+.ha-card.ha-harv .ha-title{color:var(--harv);}
+.ha-msg{font-size:.76rem;color:var(--ink-soft);line-height:1.55;margin-bottom:5px;}
+.ha-btn{background:none;border:1.5px solid currentColor;border-radius:20px;padding:3px 11px;font-size:.73rem;cursor:pointer;color:inherit;transition:opacity .1s;}
+.ha-btn:active{opacity:.6;}
 /* 生長里程碑時間軸 */
 .tl-wrap{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:12px 14px 10px;margin:8px 0;}
 .tl-hd{font-size:.78rem;font-weight:700;color:var(--ink);margin-bottom:10px;}
@@ -1438,6 +1453,58 @@ function renderWorkGuide(cropName){
     '<div class="ecguide-body" id="'+uid+'-b">'+stepsHtml+'</div></div>';
 }
 
+/* 智能健康警告 — 根據田區資料自動產生個人化行動提示 */
+function renderHealthAlerts(r,c,age){
+  if(age<3)return'';
+  const recs=r.records||[];const tdy=today();
+  const alerts=[];
+  // 1. EC 量測狀況
+  const ecRecs=recs.filter(x=>x.type==="ecph").sort((a,b)=>b.date>a.date?1:-1);
+  const lastEc=ecRecs[0];
+  if(age>=7){
+    if(!lastEc){
+      alerts.push({lv:'warn',icon:'🌡️',title:'還沒有 EC/pH 紀錄',msg:'第 '+age+' 天了，第一次量測很重要！EC 能告訴你肥料濃度是否正確，避免植株缺肥或積鹽傷根。',act:'ecph',abt:'去量測 →'});
+    }else{
+      const dse=Math.round((tdy-parseD(lastEc.date))/DAY);
+      if(dse>=8){alerts.push({lv:'warn',icon:'🌡️',title:'EC/pH 已 '+dse+' 天未量測',msg:'上次：'+md(parseD(lastEc.date))+'（EC '+lastEc.ec+'）。建議每 3–5 天量一次，才能追蹤肥料狀況。',act:'ecph',abt:'去量測 →'});}
+      const[,ecTgt]=ecStage(c,age);const ev=+lastEc.ec;
+      if(ev>ecTgt*1.32){alerts.push({lv:'warn',icon:'⚠️',title:'EC 偏高（'+ev+' > 目標 '+ecTgt+'）',msg:'介質可能積鹽，植株容易根系脫水、葉緣焦褐。今日改澆清水（不加肥）沖洗，明天再量看看。',act:'ecph',abt:'量測確認 →'});}
+      else if(ev<ecTgt*0.62&&age>=21){alerts.push({lv:'info',icon:'💧',title:'EC 偏低（'+ev+' < 目標 '+ecTgt+'）',msg:'肥料濃度可能不足，植株可能生長緩慢。可適量提高施肥濃度或縮短施肥間隔。',act:'fert',abt:'記錄施肥 →'});}
+    }
+  }
+  // 2. 施肥起始提醒
+  const fertRecs=recs.filter(x=>x.type==="fert");
+  if(age>=21&&!fertRecs.length){
+    alerts.push({lv:'info',icon:'💊',title:'第 '+age+' 天還沒有施肥紀錄',msg:'定植後 14–21 天應開始追肥。若已施肥請補記錄，才能追蹤養分投入。',act:'fert',abt:'記錄施肥 →'});
+  }
+  // 3. 黏板巡查
+  const ipmRecs=recs.filter(x=>x.type==="ipm").sort((a,b)=>b.date>a.date?1:-1);
+  const lastIpm=ipmRecs[0];
+  if(age>=14){
+    if(!lastIpm){
+      alerts.push({lv:'info',icon:'🪤',title:'尚未做黏板巡查',msg:'每週查一次黏板蟲口，超過門檻才用藥（IPM 原則），可大幅減少農藥用量。',act:'ipm',abt:'記錄黏板 →'});
+    }else{
+      const dsi=Math.round((tdy-parseD(lastIpm.date))/DAY);
+      if(dsi>=10){alerts.push({lv:'info',icon:'🪤',title:'黏板巡查已 '+dsi+' 天未做',msg:'上次：'+md(parseD(lastIpm.date))+'。建議每 7 天查一次黏板，預防病蟲害爆發。',act:'ipm',abt:'記錄黏板 →'});}
+    }
+  }
+  // 4. 近期沒有任何紀錄
+  if(recs.length){
+    const sorted=recs.slice().sort((a,b)=>b.date>a.date?1:-1);
+    const dsa=Math.round((tdy-parseD(sorted[0].date))/DAY);
+    if(dsa>=5){alerts.push({lv:'info',icon:'📋',title:dsa+' 天沒有任何紀錄',msg:'定期記錄才能掌握趨勢。建議每天至少「觀察」一次，記錄今天看到的狀況。',act:'obs',abt:'記錄觀察 →'});}
+  }
+  // 5. 即將採收
+  const dth=c.grow-age;
+  if(dth>0&&dth<=14){alerts.push({lv:'harv',icon:'🧺',title:'距採收還剩 '+dth+' 天！',msg:'開始準備採收工具（剪刀、採收籃）、確認收購商聯絡方式。注意若有施藥須確認 PHI 安全期已過。',act:'harv',abt:'看採收指引 →'});}
+  if(!alerts.length)return'';
+  return'<div class="health-alerts">'+alerts.map(a=>
+    '<div class="ha-card ha-'+a.lv+'"><div class="ha-top"><span class="ha-icon">'+a.icon+'</span><span class="ha-title">'+a.title+'</span></div>'+
+    '<div class="ha-msg">'+a.msg+'</div>'+
+    (a.act?'<button class="ha-btn" onclick="logModal(\''+a.act+'\')">'+a.abt+'</button>':'')+
+    '</div>').join('')+'</div>';
+}
+
 /* 生長里程碑時間軸 */
 function renderStageTimeline(r,c,age){
   if(age<0||!c.sched||!c.sched.length)return'';
@@ -1571,6 +1638,7 @@ function renderPlots(){
     ((()=>{const g=harvestGrades(r);return (g.g2||g.g3)?'<span class="pill ok" style="background:var(--accent-soft);color:var(--accent)">特'+g.g1+'/優'+g.g2+'/次'+g.g3+' kg</span>':'';})())+
     ((()=>{const costs=(r.records||[]).filter(x=>x.type==='cost'&&x.amount);if(!costs.length)return'';const tot=costs.reduce((a,x)=>a+(+x.amount||0),0);return '<span class="pill" style="background:var(--grow-bg);color:var(--grow)">💰 累計成本 NT$'+Math.round(tot).toLocaleString()+'</span>';})())+
     ipmWarn+'</div>'+
+    renderHealthAlerts(r,c,age)+
     renderStageTimeline(r,c,age)+
     renderStageGuide(r,c,age)+
     renderWeekPlan(r,c,age)+
