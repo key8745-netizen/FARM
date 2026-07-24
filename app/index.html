@@ -514,6 +514,21 @@ nav button.on{color:var(--accent);}
 .irr-state-card.ok .irr-state-hd{color:var(--grow);}
 .irr-state-card.bad .irr-state-hd{color:var(--warn);}
 .irr-state-item{font-size:.7rem;color:var(--ink-soft);line-height:1.5;}
+/* 整枝誘引指引 */
+.prune-card{background:var(--card);border:1px solid var(--grow);border-radius:13px;margin:8px 0;overflow:hidden;}
+.prune-hd{display:flex;align-items:center;gap:9px;padding:11px 14px;cursor:pointer;}
+.prune-hd-icon{font-size:1.1rem;flex:none;}
+.prune-hd-title{flex:1;font-size:.88rem;font-weight:800;color:var(--ink);}
+.prune-hd-arr{font-size:.85rem;color:var(--ink-soft);transition:transform .2s;}
+.prune-hd-arr.open{transform:rotate(90deg);}
+.prune-body{display:none;padding:0 14px 14px;}
+.prune-body.open{display:block;}
+.prune-section{margin-bottom:10px;}
+.prune-section-hd{font-size:.76rem;font-weight:800;color:var(--ink);margin:9px 0 5px;display:flex;align-items:center;gap:5px;}
+.prune-step{display:flex;gap:8px;font-size:.75rem;color:var(--ink-soft);line-height:1.6;margin-bottom:5px;align-items:baseline;}
+.prune-num{width:18px;height:18px;border-radius:50%;background:var(--grow);color:#fff;font-size:.65rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;margin-top:2px;}
+.prune-dont{background:var(--warn-bg);border-radius:8px;padding:7px 10px;font-size:.73rem;color:var(--warn);line-height:1.6;margin-top:7px;}
+.prune-tip{background:var(--grow-bg);border-radius:8px;padding:7px 10px;font-size:.73rem;color:var(--grow);line-height:1.6;margin-top:6px;}
 </style>
 
 </head>
@@ -1050,6 +1065,75 @@ const IRRIG_GUIDE={
   over:["採收果實水分過多、保鮮期短","糖度下降"],
   under:["植株老化加速","剩餘果實皮質變差"]}
 };
+/* ────── 整枝誘引操作指引（依作物） ────── */
+const PRUNE_GUIDE={
+ "牛番茄":{
+  icon:"🍅",style:"單幹整枝",
+  stages:{
+   "苗期":{freq:"每 5–7 天一次",steps:["定植後 7–10 天開始：觀察葉腋（每片葉與主莖之間），看到小芽冒出即可摘除","摘除方法：用拇指和食指捏住小芽基部，往側邊輕壓掰斷（不要往下拉）","主莖用寬扁藤帶（或撕條軟布）以 8 字形固定到誘引鐵線上，留 1–2cm 伸縮空間"],dont:"不要剪除頂端生長點（那是主莖，只摘葉腋側芽）",tip:"苗期只有幾片葉，不會長太多側芽，每次 5 分鐘就搞定。"},
+   "生長期":{freq:"每 5–7 天一次",steps:["沿主莖由下往上，逐一找出所有側芽（葉腋小芽）","3cm 以下的側芽：用手掰除，傷口小不易感染","超過 5cm 的側芽：用消毒剪刀剪除，傷口塗木焦油或石灰粉","每隔 2–3 節（約每週）將主莖用藤帶固定到上方誘引繩，讓植株往上爬而非彎折","老葉（最下面已轉黃的葉片）可摘除，增加通風減少病害"],dont:"❌ 不摘花苞或果穗（那是你的產品！）\n❌ 不把固定繩綁太緊（勒傷莖幹）",tip:"整枝最佳時機是早上露水乾後，此時植株最挺，操作容易且傷口乾燥快。"},
+   "花期":{freq:"每 7–10 天一次",steps:["繼續摘側芽，重點在花穗附近","花穗出現後：每穗建議留 4–6 朵花（番茄），多餘的花可疏除（讓剩餘果實長更大）","花穗下方 1–2 片老葉可摘除，增加光照到花穗"],dont:"花期手上勿殘留農藥，避免污染花粉影響授粉",tip:"疏花疏果聽起來心疼，但少量大果遠比大量小果值錢，契作品質分級是關鍵。"}
+  }
+ },
+ "玉女番茄":{
+  icon:"🍒",style:"單幹整枝（保留 1–2 支側枝增加穗數）",
+  stages:{
+   "苗期":{freq:"每 5–7 天一次",steps:["定植後 10 天：開始摘除主莖下方側芽","主莖固定到誘引繩，每週向上移一節"],dont:"玉女番茄果穗密集，不要一次摘太多葉片（保留光合能量）",tip:"玉女番茄可保留 1 支強壯的側芽（第一花穗下方那支），讓它形成 2 主幹，增加整體穗數與產量。"},
+   "生長期":{freq:"每 5–7 天一次",steps:["主幹繼續誘引向上，不需要的側芽全摘","若保留 2 幹：主幹和保留的側枝各自誘引往上，其餘側芽全摘","每週固定一次主莖，讓莖幹不彎曲"],dont:"不要讓植株超過誘引繩頂端未做處理（會倒塌）",tip:"果串長出後：每串可保留 6–10 顆果（視果粒均勻度），摘除畸形果和最小果。"},
+   "花期":{freq:"每 7–10 天一次",steps:["穗梗附近的側芽持續摘除","每果串保留均勻的 8–12 粒果（依市場要求調整）","果串下方老葉摘除 2–3 片，讓光線照到果實"],dont:"不要在花朵完全開放時震動植株（花粉撒落，降低授粉率）",tip:"玉女番茄靠自然震動（通風）授粉效率高，開天窗微風比人工效果更好。"}
+  }
+ },
+ "彩椒":{
+  icon:"🫑",style:"Y 字形雙幹（或三幹）整枝",
+  stages:{
+   "苗期":{freq:"每 7 天一次",steps:["找到第一個 Y 形分叉（主莖第一次分岔的地方）","Y 形分叉以下的所有側芽：全部摘除（這些最浪費養分）","Y 形以上：保留 2–3 個主枝，各自誘引到不同的繩子"],dont:"不要摘除 Y 形分叉以上的主枝（那就是你的主幹）",tip:"彩椒的 Y 字形很明顯，分叉後兩支往外張開，找到它就知道下面全部要摘乾淨。"},
+   "生長期":{freq:"每 7 天一次",steps:["確認 2–3 支主枝各自往上誘引，不交叉纏繞","主枝之間冒出的側芽（非主枝）摘除","每支主枝每週固定一次（8字形藤帶）","如果植株整體太密，可在第 2–3 節以下各留一片葉後截短側枝"],dont:"彩椒枝條比番茄脆，綁繩時更要留伸縮空間，避免風吹斷",tip:"彩椒長得慢，整枝工作量比番茄少，但每次都要確認 3 支主枝有繼續向上不交叉。"},
+   "花期":{freq:"每 10–14 天一次",steps:["花期整枝頻率可降低，優先保留開花枝條","每個節位留 1–2 顆果，多餘的果（特別是畸形果）摘除","果重增加後，需用藤帶加強支撐，避免枝條被重量壓斷"],dont:"花期避免大規模整枝（影響授粉和荷爾蒙平衡）",tip:"彩椒果實很重，每支枝條通常只能承受 2–3 個果。疏果是維持品質的關鍵。"}
+  }
+ },
+ "高山草莓":{
+  icon:"🍓",style:"摘匍匐莖 + 老葉疏除",
+  stages:{
+   "苗期":{freq:"每 7–10 天一次",steps:["草莓沒有側芽問題，重點是摘除「匍匐莖」","匍匐莖（Runner）：從主株長出的長細莖，末端會長出子株。全數剪除","固定主株在高架基質袋中，確保不會歪倒"],dont:"不要摘除正常的三片複葉（那是主要光合器官）",tip:"匍匐莖非常消耗母株養分。只要讓母株結果，所有從地面蔓延出去的細長莖都是匍匐莖，全部剪掉。"},
+   "生長期":{freq:"每 7 天一次",steps:["繼續摘除所有新長出的匍匐莖","最下層的老葉（褐黃色、枯乾）摘除：提高通風，減少灰黴病","確認每株保留 6–8 片健康葉片（太少光合不足，太多通風不良）"],dont:"不要摘除花苞（花苞就是未來的草莓！）",tip:"每次摘葉後仔細查看有無灰黴病（毛毛的灰色黴）在葉片或果梗，發現立刻摘除銷毀。"},
+   "花期":{freq:"每 10–14 天一次",steps:["花期主要工作：確保花朵不被葉片遮蔽","摘除花旁邊的老葉（但不要摘太多）","每株保留 8–12 朵花（視植株大小），過多則疏花"],dont:"花期放蜂授粉期間不噴藥（殺傷授粉蜂）",tip:"草莓花期必須有蜂授粉。溫室裡放一箱熊蜂是最穩定的方式，比人工授粉效率高很多。"}
+  }
+ },
+ "高麗菜":{
+  icon:"🥬",style:"基本上不需整枝",
+  stages:{
+   "生長期":{freq:"每 2 週一次",steps:["高麗菜不需要摘側芽或誘引","主要工作：清除破損/蟲咬的外葉，保持田間衛生","確認每株站立穩固（幼株若歪倒需補土）"],dont:"不要摘除外圍的包覆葉（那是保護結球的外皮）",tip:"高麗菜管理最重要的是密度——株距太小結球小，太大浪費空間。定植後就固定了，主要靠均勻施肥保持每株一致生長。"}
+  }
+ },
+ "敏豆":{
+  icon:"🫘",style:"立支架 + 引蔓",
+  stages:{
+   "苗期":{freq:"每 5–7 天一次",steps:["出苗後 7–10 天：在每株旁插 120cm 竹竿（或拉橫網格）","將幼莖輕輕引導繞上支架（敏豆本身有捲鬚，輔助固定即可）","疏苗：若穴播出苗超過 2 株，留最強壯的 1 株，其餘拔除"],dont:"不要強行纏繞已固定方向的莖（易折斷）",tip:"敏豆生長速度很快，錯過立架時機就會倒伏纏繞在地，後期扶正很困難，所以要早立架。"},
+   "生長期":{freq:"每 5 天一次",steps:["每次巡查時，將新生蔓莖引導繞上支架（防止亂長）","株型過密時，摘除一些老葉改善通風","開花後不再需要積極引蔓（讓它自然生長）"],dont:"不要摘除花苞（那是豆莢的前身）",tip:"敏豆開花後約 7–10 天即可採收嫩莢，要每天巡查，過熟的豆莢會讓植株停止開花。"}
+  }
+ }
+};
+function renderPruningGuide(r,c,age){
+  if(age<0||age>c.grow)return'';
+  const key=stageGuideKey(c,age);
+  if(key==='定植前'||key==='採收期')return'';
+  const g=PRUNE_GUIDE[r.crop];if(!g)return'';
+  const sg=g.stages[key]||g.stages['生長期'];if(!sg)return'';
+  const uid='prn-'+Date.now();
+  const steps=sg.steps.map((s,i)=>'<div class="prune-step"><span class="prune-num">'+(i+1)+'</span><span>'+s+'</span></div>').join('');
+  const dontHtml=sg.dont?'<div class="prune-dont">❌ 不要這樣做：'+sg.dont+'</div>':'';
+  const tipHtml=sg.tip?'<div class="prune-tip">💡 '+sg.tip+'</div>':'';
+  return'<div class="prune-card">'+
+    '<div class="prune-hd" onclick="var b=document.getElementById(\''+uid+'\');b.classList.toggle(\'open\');this.querySelector(\'.prune-hd-arr\').classList.toggle(\'open\')">'+
+    '<span class="prune-hd-icon">✂️</span>'+
+    '<span class="prune-hd-title">整枝誘引指引 — '+g.style+'</span>'+
+    '<span class="prune-hd-arr">▶</span></div>'+
+    '<div class="prune-body" id="'+uid+'">'+
+    '<div class="prune-section">'+
+    '<div class="prune-section-hd">📅 頻率：'+sg.freq+'</div>'+
+    steps+dontHtml+tipHtml+
+    '</div></div></div>';
+}
 function renderIrrigGuide(r,c,age){
   if(age<0)return'';
   const key=stageGuideKey(c,age);
@@ -2438,6 +2522,7 @@ function renderPlots(){
     renderActivityStrip(r)+
     renderStageTimeline(r,c,age)+
     renderStageGuide(r,c,age)+
+    renderPruningGuide(r,c,age)+
     renderIrrigGuide(r,c,age)+
     renderEnvGuide(r,c,age)+
     renderWeekPlan(r,c,age)+
