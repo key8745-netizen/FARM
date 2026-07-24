@@ -801,6 +801,25 @@ nav button.on{color:var(--accent);}
 .epa-result.info{background:var(--grow-bg);color:var(--grow);}
 .epa-step{display:flex;gap:7px;align-items:flex-start;margin-top:4px;font-size:.74rem;}
 .epa-step-n{background:var(--blue);color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:800;flex:none;margin-top:1px;}
+/* 配肥安全手冊 */
+.mix-ab{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px;}
+.mix-tank{border-radius:10px;padding:9px 11px;font-size:.74rem;line-height:1.65;}
+.mix-tank.a{background:#e6f9f0;border:1.5px solid var(--grow);}
+.mix-tank.b{background:var(--blue-bg,#e6f1fb);border:1.5px solid var(--blue);}
+.mix-tank-lbl{font-size:.8rem;font-weight:900;margin-bottom:5px;}
+.mix-tank.a .mix-tank-lbl{color:var(--grow);}
+.mix-tank.b .mix-tank-lbl{color:var(--blue);}
+.mix-step-row{display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px dashed var(--line);font-size:.74rem;line-height:1.55;}
+.mix-step-row:last-child{border-bottom:none;}
+.mix-sn{background:var(--blue);color:#fff;border-radius:50%;min-width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:900;flex:none;margin-top:1px;}
+.mix-compat-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:4px 0 8px;}
+.mix-compat-tbl{border-collapse:collapse;font-size:.66rem;min-width:360px;width:100%;}
+.mix-compat-tbl th{background:var(--card2);font-weight:800;padding:5px 4px;text-align:center;border:1px solid var(--line);font-size:.65rem;}
+.mix-compat-tbl td{padding:6px 4px;text-align:center;border:1px solid var(--line);font-size:.9rem;}
+.mix-compat-tbl td.ck{background:#e6f9f0;}
+.mix-compat-tbl td.no{background:#fff0f0;}
+.mix-compat-tbl td.sl{background:var(--card2);color:var(--ink-soft);}
+.mix-emg{background:var(--warn-bg);border:1px solid var(--warn);border-radius:9px;padding:9px 12px;font-size:.73rem;line-height:1.65;margin-top:10px;}
 </style>
 
 </head>
@@ -4089,6 +4108,34 @@ function renderTools(){
     '<div class="def-btn" data-elem="B"><span class="def-btn-sym">🔺</span><span class="def-btn-nm">B（硼）</span></div>'+
     '</div>'+
     '<div id="def-detail" style="display:none"></div>'+
+    '</div>'+
+    '<h2 style="margin-top:22px">🧴 配肥安全手冊</h2><p class="note">水耕液肥最常犯的錯誤：把「含鈣肥料」直接和「磷酸鹽/硫酸鹽」混在同一桶，立即產生白色沉澱，肥料白白浪費。照這份手冊操作，再也不踩雷。</p>'+
+    '<div class="card">'+
+    '<div style="font-size:.78rem;font-weight:800;color:var(--ink);margin-bottom:7px">🪣 A/B 桶分裝原理</div>'+
+    '<div class="mix-ab">'+
+    '<div class="mix-tank a"><div class="mix-tank-lbl">🅰️ A 桶（含鈣類）</div>硝酸鈣<br>氯化鈣<br>硝酸銨鈣<br><small style="color:var(--ink-soft)">所有含 Ca²⁺ 的肥料</small></div>'+
+    '<div class="mix-tank b"><div class="mix-tank-lbl">🅱️ B 桶（其他類）</div>MKP（磷酸二氫鉀）<br>硫酸鉀・硫酸鎂<br>微量元素・尿素<br><small style="color:var(--ink-soft)">磷酸鹽、硫酸鹽、微量</small></div>'+
+    '</div>'+
+    '<div style="font-size:.78rem;font-weight:800;color:var(--ink);margin-bottom:8px">📋 正確配製步驟</div>'+
+    '<div class="mix-step-row"><div class="mix-sn">1</div><div><b>先倒入目標水量的 3/4</b> — 確保肥料有充分空間稀釋，不直接接觸</div></div>'+
+    '<div class="mix-step-row"><div class="mix-sn">2</div><div><b>倒入 A 桶濃縮液</b> — 邊倒邊攪拌，確認完全溶解才繼續下一步</div></div>'+
+    '<div class="mix-step-row"><div class="mix-sn">3</div><div><b>倒入 B 桶濃縮液</b> — 同樣邊倒邊攪拌；兩種濃液之間需以「大量水」作緩衝</div></div>'+
+    '<div class="mix-step-row"><div class="mix-sn">4</div><div><b>補足清水至目標體積</b> — 再攪拌 1 分鐘使均勻</div></div>'+
+    '<div class="mix-step-row"><div class="mix-sn">5</div><div><b>測 EC 確認濃度</b> — 偏低加少量 B 桶料；偏高加清水稀釋</div></div>'+
+    '<div class="mix-step-row"><div class="mix-sn">6</div><div><b>測 pH 並調整</b> — 偏高用磷酸下調；偏低用氫氧化鉀溶液上調</div></div>'+
+    '<div style="font-size:.78rem;font-weight:800;color:var(--ink);margin:12px 0 6px">🔬 常見肥料相容性速查</div>'+
+    '<div class="mix-compat-wrap">'+
+    '<table class="mix-compat-tbl">'+
+    '<tr><th></th><th>硝酸鈣</th><th>MKP</th><th>硫酸鉀</th><th>硫酸鎂</th><th>磷酸</th><th>尿素</th></tr>'+
+    '<tr><th>硝酸鈣</th><td class="sl">—</td><td class="no">❌</td><td class="no">❌</td><td class="no">❌</td><td class="no">❌</td><td class="ck">✅</td></tr>'+
+    '<tr><th>MKP</th><td class="no">❌</td><td class="sl">—</td><td class="ck">✅</td><td class="ck">✅</td><td class="ck">✅</td><td class="ck">✅</td></tr>'+
+    '<tr><th>硫酸鉀</th><td class="no">❌</td><td class="ck">✅</td><td class="sl">—</td><td class="ck">✅</td><td class="ck">✅</td><td class="ck">✅</td></tr>'+
+    '<tr><th>硫酸鎂</th><td class="no">❌</td><td class="ck">✅</td><td class="ck">✅</td><td class="sl">—</td><td class="ck">✅</td><td class="ck">✅</td></tr>'+
+    '<tr><th>磷酸</th><td class="no">❌</td><td class="ck">✅</td><td class="ck">✅</td><td class="ck">✅</td><td class="sl">—</td><td class="ck">✅</td></tr>'+
+    '<tr><th>尿素</th><td class="ck">✅</td><td class="ck">✅</td><td class="ck">✅</td><td class="ck">✅</td><td class="ck">✅</td><td class="sl">—</td></tr>'+
+    '</table></div>'+
+    '<div style="font-size:.68rem;color:var(--ink-soft);margin-bottom:10px">❌ 不可直接混合（需各自先溶入大量水後才可合桶）&nbsp;&nbsp;✅ 可直接同桶混用</div>'+
+    '<div class="mix-emg"><b>🚨 發現白色混濁或沉澱？</b><br>立刻倒掉，不要勉強使用！沉澱的磷酸鈣無法再溶解，繼續用只會堵塞滴頭和管路，也讓植物持續缺磷缺鈣。請重新按步驟 A 後 B 分開配製。</div>'+
     '</div>'+
     '<h2 style="margin-top:22px">每日農場作業時程</h2><p class="note">依目前田區生育階段，生成今天的建議作業時程表。進到溫室前先看一遍，確保不遺漏重要工作。</p>'+
     '<div class="card" id="sched-card"><button class="btn" id="sched-go">生成今日作業時程</button><div id="sched-res"></div></div>'+
