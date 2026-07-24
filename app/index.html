@@ -326,6 +326,22 @@ nav button.on{color:var(--accent);}
 .ipm-pest-row{font-size:.72rem;color:var(--ink-soft);line-height:1.55;margin-bottom:2px;}
 .ipm-pest-row b{color:var(--ink);font-weight:600;}
 .ipm-pest-act{font-size:.71rem;background:var(--grow-bg);color:var(--grow);border-radius:7px;padding:4px 7px;margin-top:5px;line-height:1.5;}
+/* 新手入門引導 */
+.ob-card{background:linear-gradient(135deg,var(--accent-soft) 0%,var(--card) 100%);border:1.5px solid var(--accent);border-radius:16px;padding:16px 16px 12px;margin-bottom:14px;}
+.ob-title{font-size:1.05rem;font-weight:900;color:var(--accent-d);margin-bottom:4px;}
+.ob-sub{font-size:.78rem;color:var(--ink-soft);margin-bottom:12px;line-height:1.5;}
+.ob-steps{display:flex;flex-direction:column;gap:7px;}
+.ob-step{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;}
+.ob-step-hd{display:flex;align-items:center;gap:9px;padding:9px 11px;cursor:pointer;}
+.ob-step-hd:active{opacity:.7;}
+.ob-num{background:var(--accent);color:#fff;border-radius:50%;width:22px;height:22px;font-size:.72rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;}
+.ob-step-title{flex:1;font-size:.82rem;font-weight:700;color:var(--ink);}
+.ob-step-arr{font-size:.85rem;color:var(--ink-soft);transition:transform .2s;}
+.ob-step-body{display:none;padding:0 11px 10px 42px;font-size:.74rem;color:var(--ink-soft);line-height:1.7;}
+.ob-step-body.open{display:block;}
+.ob-step-arr.open{transform:rotate(90deg);}
+.ob-item{display:flex;gap:7px;margin-bottom:3px;align-items:baseline;}
+.ob-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);flex:none;margin-top:6px;}
 /* 田區健康評分 */
 .hs-badge{display:inline-flex;align-items:center;gap:4px;border-radius:20px;padding:3px 10px;font-size:.72rem;font-weight:800;white-space:nowrap;}
 .hs-badge.hs-ok{background:var(--grow-bg);color:var(--grow);}
@@ -1851,6 +1867,33 @@ function renderStageTimeline(r,c,age){
     nextHtml+'</div>';
 }
 
+/* ---------- 新手入門引導 ---------- */
+const ONBOARD_STEPS=[
+  {title:"準備量測工具",items:["EC 計（導電度計）：量測營養液濃度，最重要的工具，約 NT$500–1500","pH 計：量測酸鹼值，pH 偏差會讓植物無法吸肥，約 NT$300–800","溫度計：監控溫室溫度，超過 35°C 需通風降溫","量筒或量杯（100 mL）：精確量取液肥與農藥，不能目測","定期用標準液（pH 4.0 / 7.0）校正 pH 計，EC 計用 1.413 mS/cm 標準液"]},
+  {title:"建立灌溉系統",items:["RO 純水或靜置 24 小時的自來水（EC < 0.3、pH 6.5 以下）","水泵或水塔＋定時器：每天定時定量自動澆灌","滴頭（每株 1–2 個）＋PE 管：確保每株水量均等","排液管：收集滴液測排液 EC，正常排液量為給水量的 20–30%","首次通水前徹底沖洗管路，排除雜質"]},
+  {title:"準備栽培容器與介質",items:["栽培袋（20–25L 容量為佳）或其他容器，底部需有排水孔","介質推薦：椰殼纖維（coco peat）或椰殼 + 珍珠石 7:3 混合，EC 低、通氣好","使用前用 pH 5.8–6.0 的水沖洗介質至少 3 次，降低緩衝 EC","支架、鐵線（番茄/彩椒需誘引用）、黃藍黏板（早期放 IPM 黏板）","定植前在介質中插入滴頭，預濕介質至含水量約 70%"]},
+  {title:"選購健康種苗",items:["選葉色深綠、莖桿粗壯的苗，根系緊緻不分散最佳","避免：葉片黃化、莖細徒長、根域已積水腐爛的苗","定植前一天澆水讓苗根吸飽水，減少移植衝擊（transplant shock）","定植後 3 天不要施全濃度肥料，先給 1/3 濃度讓根適應","定植深度以子葉以上不碰土為原則"]},
+  {title:"建立第一份記錄",items:["在下方「新增田區」填入畦區名稱、作物、定植日、株數","定植當天記一筆「觀察」：描述苗況、溫度、灌溉狀況","隔天開始每天量 EC/pH 並記錄，連續 7 天建立基線數據","設定每天固定一個時間（建議清晨 8 點）量測，數據才有可比性","看到異常立刻記錄，不要等「等一下再說」——早記錄早發現早處理"]}
+];
+function renderOnboarding(){
+  const uid='ob';
+  const steps=ONBOARD_STEPS.map((s,i)=>{
+    const items=s.items.map(it=>'<div class="ob-item"><span class="ob-dot"></span><span>'+it+'</span></div>').join('');
+    const bid=uid+'-b'+i;
+    return'<div class="ob-step">'+
+      '<div class="ob-step-hd" onclick="var b=document.getElementById(\''+bid+'\'),a=this.querySelector(\'.ob-step-arr\');b.classList.toggle(\'open\');a.classList.toggle(\'open\')">'+
+      '<span class="ob-num">'+(i+1)+'</span>'+
+      '<span class="ob-step-title">'+s.title+'</span>'+
+      '<span class="ob-step-arr">›</span>'+
+      '</div>'+
+      '<div class="ob-step-body" id="'+bid+'">'+items+'</div></div>';
+  }).join('');
+  return'<div class="ob-card">'+
+    '<div class="ob-title">👋 歡迎使用智慧農場助理</div>'+
+    '<div class="ob-sub">你不需要任何農業背景，系統會一步一步帶你從準備到採收。<br>先看看「開始前需要準備什麼」，再填下方表單新增第一個田區。</div>'+
+    '<div class="ob-steps">'+steps+'</div>'+
+    '</div>';
+}
 /* ---------- 田區健康評分 ---------- */
 function plotHealthScore(r){
   const c=CROPS[r.crop];if(!c)return{score:0,label:'未知',cls:'hs-bad'};
@@ -1931,8 +1974,9 @@ function renderPlots(){
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px">'+
       '<div class="sub" style="margin:0">定植 '+r.date+'　·　'+(r.plants||"?")+' 株　·　'+(age>=0?"第 "+age+" 天":"未定植")+'　·　紀錄 '+((r.records||[]).length)+' 筆</div>'+
       (age>=0?'<span class="hs-badge '+hs.cls+'">'+hs.score+' '+hs.label+'</span>':'')+
-      '</div></div>';}).join(""):'<div class="empty">尚無田區，用下方表單新增。</div>';
-    v.innerHTML='<h2>我的田區</h2><p class="note">點田區可登錄施肥/用藥/採收等紀錄。資料存在你的手機。</p>'+renderTodayActions(plots)+list+
+      '</div></div>';}).join(""):'';
+    const emptyGuide=!plots.length?renderOnboarding():'';
+    v.innerHTML='<h2>我的田區</h2><p class="note">點田區可登錄施肥/用藥/採收等紀錄。資料存在你的手機。</p>'+renderTodayActions(plots)+emptyGuide+list+
       '<div class="card"><h3 style="margin:0 0 2px">＋ 新增田區</h3>'+
       '<label class="f">畦區名稱</label><input class="t" id="np" placeholder="例如 A區">'+
       '<label class="f">作物</label><select class="t" id="nc">'+opts+'</select>'+
