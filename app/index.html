@@ -305,6 +305,16 @@ nav button.on{color:var(--accent);}
 .work-chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px;}
 .work-chip{background:var(--card2);border:1.5px solid var(--line);border-radius:20px;padding:5px 12px;font-size:.8rem;cursor:pointer;color:var(--ink);user-select:none;transition:background .1s,border-color .1s;}
 .work-chip:active,.work-chip.sel{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-d);}
+/* IPM 病蟲害識別卡 */
+.ipm-guide-wrap{margin:4px 0 10px;}
+.ipm-pest-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;}
+.ipm-pest-card{background:var(--card2);border:1.5px solid var(--line);border-radius:10px;padding:9px 10px;}
+.ipm-pest-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;}
+.ipm-pest-name{font-size:.82rem;font-weight:800;color:var(--ink);}
+.ipm-pest-thr{font-size:.66rem;font-weight:700;background:var(--warn-bg);color:var(--warn);border-radius:10px;padding:2px 7px;white-space:nowrap;}
+.ipm-pest-row{font-size:.72rem;color:var(--ink-soft);line-height:1.55;margin-bottom:2px;}
+.ipm-pest-row b{color:var(--ink);font-weight:600;}
+.ipm-pest-act{font-size:.71rem;background:var(--grow-bg);color:var(--grow);border-radius:7px;padding:4px 7px;margin-top:5px;line-height:1.5;}
 /* 今日行動摘要卡 */
 .ta-card{background:var(--card);border:1.5px solid var(--accent);border-radius:14px;padding:12px 14px;margin-bottom:12px;}
 .ta-hd{font-size:.85rem;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:8px;margin-bottom:8px;}
@@ -1531,6 +1541,31 @@ function renderObsGuide(stageKey){
     '<label class="f">今日巡查狀況（點選自動填入，可多選）</label>'+
     '<div class="work-chips">'+chips+'</div>';
 }
+/* IPM 病蟲害識別指引 */
+const IPM_PESTS=[
+  {name:"粉蝨",thr:"≥5隻/板",look:"0.8mm 白色小蛾，葉背群集，受驚飛散如白雪",dmg:"吸汁、排蜜露→黑煤病、傳病毒",trap:"黃色黏板",ctrl:"苦楝油每7天噴1次；超門檻改用益達胺/聯苯除蟲菊（輪換避免抗性）"},
+  {name:"薊馬",thr:"≥3隻/板",look:"1–1.5mm 細長黃/棕，躲花苞與嫩葉縫隙",dmg:"花苞/嫩葉出現銀灰斑、果實木栓化變形",trap:"藍色黏板",ctrl:"多殺黴素（Spinosad）；除蟲菊精；花期避免強效農藥傷蜂"},
+  {name:"葉蟎",thr:"≥5隻/板",look:"<0.5mm 紅/黃色，葉背結細蛛網，目視可見",dmg:"葉面小黃斑→葉片乾枯落葉，高溫乾燥時爆發",trap:"目視葉背+黏板",ctrl:"提高濕度（噴水）；礦物油/窄域油；嚴重用甲基多保淨"},
+  {name:"蚜蟲",thr:"≥10隻/板",look:"1–2mm 綠/黑/黃，嫩梢群聚不動",dmg:"捲葉/生長點畸形/蜜露→黑煤病、傳病毒",trap:"黃色黏板",ctrl:"苦楝油噴嫩梢；益達胺稀釋500倍；引入蚜繭蜂生物防治"}
+];
+function renderIpmGuide(){
+  const uid='ipm-'+Date.now();
+  const cards=IPM_PESTS.map(p=>
+    '<div class="ipm-pest-card">'+
+    '<div class="ipm-pest-hd"><span class="ipm-pest-name">'+p.name+'</span><span class="ipm-pest-thr">門檻'+p.thr+'</span></div>'+
+    '<div class="ipm-pest-row"><b>外觀：</b>'+p.look+'</div>'+
+    '<div class="ipm-pest-row"><b>危害：</b>'+p.dmg+'</div>'+
+    '<div class="ipm-pest-row"><b>黏板：</b>'+p.trap+'</div>'+
+    '<div class="ipm-pest-act">✅ 防治：'+p.ctrl+'</div>'+
+    '</div>'
+  ).join('');
+  return'<div class="ipm-guide-wrap">'+
+    '<div class="ecguide-q" id="'+uid+'" onclick="var b=document.getElementById(\''+uid+'-b\');b.classList.toggle(\'open\');this.classList.toggle(\'open\')">🪤 四大害蟲識別 ＋ 防治速查</div>'+
+    '<div class="ecguide-body" id="'+uid+'-b">'+
+    '<p style="font-size:.73rem;color:var(--ink-soft);margin:0 0 4px">超過門檻數量即需噴藥；黏板建議每7天檢查並更換。</p>'+
+    '<div class="ipm-pest-grid">'+cards+'</div>'+
+    '</div></div>';
+}
 /* 整枝/作業 快選晶片 + 指引 */
 const WORK_CHIPS={
   "牛番茄":["摘側芽（主幹整枝）","引蔓固定","摘老葉（下位3–4片）","輔助授粉（輕搖花穗）","疏果 每串留5果","整理支架鐵線","打頂（主蔓超2m）"],
@@ -1953,6 +1988,7 @@ function logModal(type){
     '<div style="font-size:.75rem;color:var(--ink-soft);margin-top:6px">⚠️ 使用前請核對植保資訊系統登記（輪替不同作用機制延緩抗藥性）</div>';
   }
   else if(type==="ipm")fields+=
+    renderIpmGuide()+
     '<p style="font-size:.8rem;color:var(--ink-soft);margin:4px 0 10px">每週換板時記錄各板蟲數，超門檻系統自動提醒用藥。</p>'+
     '<div class="row2">'+
     '<div><label class="f">粉蝨（隻/板）門檻≥5</label><input class="t" id="m-wf" type="number" min="0" placeholder="0"></div>'+
