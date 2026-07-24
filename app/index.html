@@ -938,6 +938,56 @@ function renderWeekPlan(r,c,age){
     '</div>';
 }
 
+/* 季末換株指引 */
+const ROTATION_MAP={
+  "牛番茄":  {next:["高麗菜","敏豆","彩椒"],    avoid:["玉女番茄","牛番茄"],rest:30,tip:"茄科忌連作，輪種高麗菜或豆科可改善介質"},
+  "玉女番茄":{next:["高麗菜","敏豆","彩椒"],    avoid:["牛番茄","玉女番茄"],rest:30,tip:"茄科忌連作，建議換種十字花科或豆科"},
+  "彩椒":    {next:["高麗菜","敏豆","牛番茄"],  avoid:["彩椒"],             rest:30,tip:"彩椒連作易根腐，建議輪換其他科別"},
+  "高山草莓":{next:["高麗菜","敏豆"],            avoid:["高山草莓"],         rest:60,tip:"草莓連作易根腐及線蟲，需較長空床消毒"},
+  "高麗菜":  {next:["牛番茄","彩椒","敏豆"],    avoid:["高麗菜"],           rest:14,tip:"十字花科短輪作即可；豆科後種茄科效果佳"},
+  "敏豆":    {next:["牛番茄","彩椒","玉女番茄"],avoid:["敏豆"],             rest:14,tip:"豆科固氮有利後作茄科，是良好前作"},
+};
+const SUBSTRATE_STEPS=[
+  {b:"拔除植株",s:"從莖基剪斷，連根球取出栽培袋。殘株切碎堆肥或裝袋清運（不可直接留在棚內，防病菌）"},
+  {b:"清洗介質袋",s:"保留椰纖介質，從袋頂大量灌清水，讓排液 EC 降至 < 1.0 dS/m，可能需灌洗 2–3 次"},
+  {b:"補充新介質",s:"每袋補加 20–30% 新椰纖，混入緩效有機肥（每袋約 50g），輕翻混勻後整理平整"},
+  {b:"空床消毒",s:"覆蓋透明塑膠薄膜密封棚床曝曬 14 天（太陽能消毒），殺死殘留病原與線蟲"},
+  {b:"定植前複測",s:"揭膜通風 1 天，再澆水測排液：EC < 1.0、pH 5.8–6.5 合格才能定植新苗"},
+];
+function renderSeasonEndGuide(r,c,age){
+  if(age<c.grow)return'';
+  const rot=ROTATION_MAP[r.crop]||{next:[],avoid:[],rest:30,tip:""};
+  const isOver=age>=c.grow+c.dur;
+  const harDays=age-c.grow;
+  const dLeft=Math.max(0,c.grow+c.dur-age);
+  if(!isOver){
+    const hp=Math.min(100,Math.round(harDays/c.dur*100));
+    return'<div style="background:var(--harv-bg);border:1px solid var(--harv);border-radius:12px;padding:11px 14px;margin:8px 0">'+
+      '<div style="font-size:.82rem;font-weight:800;color:var(--harv);margin-bottom:5px">🧺 採收期進行中（第 '+harDays+' 天）· 約還剩 '+dLeft+' 天</div>'+
+      '<div style="height:5px;background:rgba(0,0,0,.12);border-radius:3px;margin-bottom:8px"><div style="height:100%;width:'+hp+'%;background:var(--harv);border-radius:3px"></div></div>'+
+      '<div style="font-size:.76rem;color:var(--ink-soft);line-height:1.7">'+
+      '💡 每採一次施一次鉀肥（防後期產量下滑）<br>'+
+      '🌱 可提前 <b>'+rot.rest+' 天</b>準備下一批種苗，以便採收結束立即換株'+
+      '</div></div>';
+  }
+  const uid='se-'+Date.now();
+  const stepsHtml=SUBSTRATE_STEPS.map((s,i)=>'<div class="ecguide-step"><div class="ecguide-sn">'+(i+1)+'</div><div class="ecguide-st"><b>'+s.b+'</b><span>'+s.s+'</span></div></div>').join('');
+  const nextChips=rot.next.map(n=>'<span style="background:var(--accent-soft);color:var(--accent-d);border:1px solid var(--accent);border-radius:20px;padding:3px 10px;font-size:.75rem;font-weight:700;display:inline-block">'+n+'</span>').join(' ');
+  const avoidChips=rot.avoid.map(n=>'<span style="background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn);border-radius:20px;padding:3px 10px;font-size:.74rem;display:inline-block">'+n+'</span>').join(' ');
+  const earlyDate=md(addD(today(),rot.rest));
+  return'<div class="card" style="border-color:var(--harv)">'+
+    '<h3 style="margin:0 0 3px;font-size:1rem;color:var(--harv)">🎊 本季採收期結束！換株準備指引</h3>'+
+    '<p class="note" style="margin:0 0 10px">採收合計 '+Math.round(harvestTotal(r)*10)/10+' kg・本季第 '+age+' 天</p>'+
+    '<div style="margin-bottom:10px"><div style="font-size:.8rem;font-weight:700;color:var(--ink);margin-bottom:4px">🔄 下一季輪作建議</div>'+
+    '<div style="font-size:.74rem;color:var(--ink-soft);margin-bottom:6px">'+rot.tip+'</div>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:4px"><span style="font-size:.74rem;color:var(--ink-soft)">✅ 推薦：</span>'+nextChips+'</div>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:5px"><span style="font-size:.74rem;color:var(--ink-soft)">⛔ 避免：</span>'+avoidChips+'</div></div>'+
+    '<div class="ecguide"><div class="ecguide-q" id="'+uid+'-q" onclick="var b=document.getElementById(\''+uid+'-b\');b.classList.toggle(\'open\');this.classList.toggle(\'open\')">🪴 介質更新 5 步驟</div>'+
+    '<div class="ecguide-body" id="'+uid+'-b">'+stepsHtml+'</div></div>'+
+    '<div style="font-size:.76rem;background:var(--accent-soft);border-radius:8px;padding:7px 10px;margin-top:8px;color:var(--accent-d);line-height:1.55">'+
+    '⏰ 建議空床消毒 <b>'+rot.rest+' 天</b>，最早 <b>'+earlyDate+'</b> 定植下一季種苗</div></div>';
+}
+
 /* 田區詳情頁：顯示 daily.js 針對本田區的智慧任務 */
 function renderPlotDailyTasks(plotName){
   const tasks=(_dailyData?.tasks||[]).filter(t=>t.plot===plotName);
@@ -1723,6 +1773,7 @@ function renderPlots(){
     renderStageTimeline(r,c,age)+
     renderStageGuide(r,c,age)+
     renderWeekPlan(r,c,age)+
+    renderSeasonEndGuide(r,c,age)+
     renderPlotDailyTasks(r.plot)+
     dynHtml+
     (tasks?'<div class="card"><h3 style="margin:0 0 4px;font-size:1rem">今日待辦</h3>'+tasks+soon+'</div>':'')+
