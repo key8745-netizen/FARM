@@ -908,6 +908,31 @@ nav button.on{color:var(--accent);}
 .hp-rec:last-child{border-bottom:none;}
 .hp-rec-dt{color:var(--ink-soft);flex:none;font-size:.68rem;}
 .hp-rec-qty{font-weight:800;color:var(--harv);flex:none;}
+/* 採後分級包裝指引 */
+.gpk-card{background:var(--card);border:1px solid var(--harv);border-radius:13px;margin:8px 0;overflow:hidden;}
+.gpk-hd{display:flex;align-items:center;gap:9px;padding:11px 14px;cursor:pointer;}
+.gpk-title{flex:1;font-size:.88rem;font-weight:800;color:var(--harv);}
+.gpk-arr{font-size:.85rem;color:var(--harv);transition:transform .2s;}
+.gpk-arr.open{transform:rotate(90deg);}
+.gpk-body{display:none;padding:0 14px 14px;}
+.gpk-body.open{display:block;}
+.gpk-sub{font-size:.78rem;font-weight:800;color:var(--ink);margin:8px 0 6px;}
+.gpk-grades{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:10px;}
+.gpk-grade{border-radius:10px;padding:9px 8px;}
+.gpk-grade.g1{background:#e6f9f0;border:1px solid var(--grow);}
+.gpk-grade.g2{background:var(--harv-bg,#fff8e6);border:1px solid var(--harv);}
+.gpk-grade.g3{background:var(--card2);border:1px dashed var(--line);}
+.gpk-grade-name{font-size:.78rem;font-weight:900;text-align:center;}
+.gpk-grade.g1 .gpk-grade-name{color:var(--grow);}
+.gpk-grade.g2 .gpk-grade-name{color:var(--harv);}
+.gpk-grade.g3 .gpk-grade-name{color:var(--ink-soft);}
+.gpk-grade-crit{font-size:.66rem;line-height:1.5;margin-top:4px;color:var(--ink);}
+.gpk-grade-price{font-size:.65rem;font-weight:800;margin-top:5px;color:var(--ink-soft);}
+.gpk-row{display:flex;gap:9px;align-items:flex-start;background:var(--card2);border-radius:9px;padding:7px 10px;margin-bottom:5px;}
+.gpk-row-ic{font-size:1rem;flex:none;margin-top:1px;}
+.gpk-row-lbl{font-size:.68rem;font-weight:800;color:var(--ink-soft);}
+.gpk-row-val{font-size:.75rem;color:var(--ink);line-height:1.5;}
+.gpk-note{background:var(--harv-bg,#fff8e6);border-left:3px solid var(--harv);border-radius:0 8px 8px 0;padding:8px 11px;font-size:.75rem;margin-top:8px;color:var(--ink);line-height:1.6;}
 /* 支架架設與引蔓指引 */
 .stk-card{background:var(--card);border:1px solid var(--grow);border-radius:13px;margin:8px 0;overflow:hidden;}
 .stk-hd{display:flex;align-items:center;gap:9px;padding:11px 14px;cursor:pointer;}
@@ -2625,6 +2650,84 @@ function renderHarvestSafetyCard(r,c,age){
     '<div class="hsc-tip">💡 <b>什麼是安全採收期（PHI）？</b><br>農藥在作物上完全降解所需的最短天數。未過安全期採收的農產品可能有殘留，不僅傷害食用者，也可能影響契作收購與市場信任。請務必遵守。</div>'+
     '</div></div>';
 }
+const GRADE_INFO={
+  '牛番茄':{
+    g1:{crit:'顏色均勻全紅，外形飽滿無疤，單果 200g 以上，無機械傷',price:'精品超市/禮盒'},
+    g2:{crit:'顏色良好，單果 150–200g，輕微色差或小疤但不影響食用',price:'傳統市場'},
+    g3:{crit:'顏色不均、形狀不規則或小傷，仍可食用',price:'批發/加工'},
+    wash:'以清水輕沖去泥，自然晾乾，不可用力擦拭',
+    pack:'特/優：單層入紙箱（5 kg/箱），用軟網套隔開；次：秤重裝袋',
+    note:'採後 2 小時內完成分級，避免高溫下持續後熟影響品質'
+  },
+  '玉女番茄':{
+    g1:{crit:'全紅飽滿有光澤，無裂果日燒，串形完整',price:'禮盒/精品'},
+    g2:{crit:'顏色均勻，輕微表皮紋路，無裂口',price:'散裝市場'},
+    g3:{crit:'輕微裂果、過熟或色差但仍可食用',price:'加工/即食'},
+    wash:'整串輕沖清水，蒂頭朝上晾乾，避免積水腐爛',
+    pack:'特：120–250g 禮盒；優：300–500g 小包；次：散裝秤重',
+    note:'裂果需立即分離，以免乙烯散發加速其他果實過熟'
+  },
+  '彩椒':{
+    g1:{crit:'轉色完全均勻，果壁厚實，單果 200g 以上，外形方正',price:'超市/禮盒'},
+    g2:{crit:'轉色良好，外形稍不規則或輕微色差',price:'傳統市場'},
+    g3:{crit:'轉色不均、外形扭曲或表皮輕微軟化但新鮮',price:'批發/加工'},
+    wash:'以濕布輕擦表面灰塵，不建議直接水洗（加速腐爛）',
+    pack:'特：3–5 顆一盒；優：散裝秤重；次：散裝或加工',
+    note:'出貨前一天於 10°C 預冷，顯著提升保存期與甜度保留'
+  },
+  '高山草莓':{
+    g1:{crit:'全紅均勻有光澤，單果 25g 以上，無壓傷',price:'精品禮盒'},
+    g2:{crit:'顏色良好，單果 15–25g，外形稍小',price:'散裝市場'},
+    g3:{crit:'輕微過熟或形狀不規則，仍可即食',price:'果醬/加工'},
+    wash:'切勿水洗（極易腐爛），以軟刷去除灰塵，保留蒂頭',
+    pack:'特：6–12 顆單層排列禮盒；優：200–300g 籃裝；次：即日出售',
+    note:'分級時戴棉質手套，單層排列不堆疊，極不耐壓'
+  },
+  '高麗菜':{
+    g1:{crit:'球體緊實，外葉深綠無蟲孔，單球 1.5–2.5 kg',price:'超市/批發'},
+    g2:{crit:'球體結實，外葉輕微缺損，單球 1.0–1.5 kg',price:'傳統市場'},
+    g3:{crit:'球體鬆散或外葉多破損，但內部仍新鮮',price:'加工/即時料理'},
+    wash:'不需水洗，去除外層受損葉片，保留 1–2 片完整外葉保護球體',
+    pack:'特/優：保鮮膜包覆根部出貨；次：現切現售',
+    note:'分級後移至冷涼處存放，避免高溫下加速失水軟化'
+  },
+  '敏豆':{
+    g1:{crit:'豆莢挺直深綠，長 10–14 cm，無纖維化，無蟲孔',price:'超市/餐廳'},
+    g2:{crit:'外觀良好，輕微彎曲或少量表皮紋路',price:'傳統市場'},
+    g3:{crit:'豆粒突起（過熟）或輕微黃化，仍可食用',price:'加工/秤斤賣'},
+    wash:'以清水沖洗後瀝乾，依市場需求決定是否去除兩端蒂頭',
+    pack:'300–500g 小包裝或 5 kg 批發裝',
+    note:'採後每多放 1 天即老化纖維化，當天採當天出貨品質最佳'
+  }
+};
+function renderGradingPackGuide(r,c,age){
+  const key=stageGuideKey(c,age);
+  if(key!=='採收期'&&key!=='採收後')return'';
+  const g=GRADE_INFO[r.crop];if(!g)return'';
+  const uid='gpk-'+Date.now();
+  const gradeHtml=
+    '<div class="gpk-grade g1"><div class="gpk-grade-name">特級</div><div class="gpk-grade-crit">'+g.g1.crit+'</div><div class="gpk-grade-price">'+g.g1.price+'</div></div>'+
+    '<div class="gpk-grade g2"><div class="gpk-grade-name">優級</div><div class="gpk-grade-crit">'+g.g2.crit+'</div><div class="gpk-grade-price">'+g.g2.price+'</div></div>'+
+    '<div class="gpk-grade g3"><div class="gpk-grade-name">次級</div><div class="gpk-grade-crit">'+g.g3.crit+'</div><div class="gpk-grade-price">'+g.g3.price+'</div></div>';
+  const rows=[
+    {ic:'🚿',lbl:'清洗方式',val:g.wash},
+    {ic:'📦',lbl:'包裝規格',val:g.pack}
+  ];
+  const rowsHtml=rows.map(function(row){
+    return'<div class="gpk-row"><span class="gpk-row-ic">'+row.ic+'</span><div><div class="gpk-row-lbl">'+row.lbl+'</div><div class="gpk-row-val">'+row.val+'</div></div></div>';
+  }).join('');
+  return'<div class="gpk-card">'+
+    '<div class="gpk-hd" onclick="var b=document.getElementById(\''+uid+'\');b.classList.toggle(\'open\');this.querySelector(\'.gpk-arr\').classList.toggle(\'open\')">'+
+    '<span style="font-size:1.1rem">📦</span>'+
+    '<span class="gpk-title">採後分級包裝指引</span>'+
+    '<span class="gpk-arr">▶</span></div>'+
+    '<div class="gpk-body" id="'+uid+'">'+
+    '<div class="gpk-sub">🏷️ '+r.crop+' 分級標準</div>'+
+    '<div class="gpk-grades">'+gradeHtml+'</div>'+
+    rowsHtml+
+    '<div class="gpk-note">⏰ '+g.note+'</div>'+
+    '</div></div>';
+}
 function renderHarvestGuide(r,c,age){
   const key=stageGuideKey(c,age);
   if(key!=='果期'&&key!=='採收期')return'';
@@ -4310,6 +4413,7 @@ function renderPlots(){
     renderHarvestSafetyCard(r,c,age)+
     renderHarvestMaturityCard(r,c,age)+
     renderHarvestGuide(r,c,age)+
+    renderGradingPackGuide(r,c,age)+
     renderPostHarvestGuide(r,c,age)+
     renderSeasonEndGuide(r,c,age)+
     renderPlotDailyTasks(r.plot)+
