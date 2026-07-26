@@ -838,6 +838,31 @@ nav button.on{color:var(--accent);}
 .fmg-col.keep .fmg-col-hd{color:var(--grow);}
 .fmg-col.cut .fmg-col-hd{color:var(--warn);}
 .fmg-tip{background:var(--card2);border-radius:8px;padding:8px 10px;font-size:.73rem;color:var(--ink-soft);line-height:1.6;border-left:3px solid var(--harv);}
+/* 採收安全確認卡 */
+.hsc-card{background:var(--card);border-radius:13px;margin:8px 0;overflow:hidden;}
+.hsc-hd{display:flex;align-items:center;gap:9px;padding:11px 14px;cursor:pointer;}
+.hsc-title{flex:1;font-size:.88rem;font-weight:800;color:var(--ink);}
+.hsc-badge{font-size:.7rem;font-weight:800;border-radius:20px;padding:3px 10px;flex:none;}
+.hsc-badge.ok{background:var(--accent-soft);color:var(--accent);}
+.hsc-badge.no{background:var(--warn-bg);color:var(--warn);}
+.hsc-arr{font-size:.85rem;color:var(--ink-soft);transition:transform .2s;}
+.hsc-arr.open{transform:rotate(90deg);}
+.hsc-body{display:none;padding:0 14px 14px;}
+.hsc-body.open{display:block;}
+.hsc-status{display:flex;gap:10px;align-items:flex-start;padding:9px 12px;border-radius:9px;margin-bottom:10px;font-size:.76rem;line-height:1.65;}
+.hsc-status.ok{background:#e6f9f0;border:1px solid var(--accent);}
+.hsc-status.no{background:var(--warn-bg);border:1.5px solid var(--warn);}
+.hsc-status-ic{font-size:1.5rem;flex:none;line-height:1;}
+.hsc-status b{font-size:.82rem;display:block;margin-bottom:2px;}
+.hsc-count{color:var(--warn);font-weight:800;}
+.hsc-rec{display:flex;align-items:center;gap:6px;padding:5px 4px;border-bottom:1px dashed var(--line);font-size:.72rem;flex-wrap:wrap;}
+.hsc-rec:last-child{border-bottom:none;}
+.hsc-rec-dt{color:var(--ink-soft);flex:none;}
+.hsc-rec-nm{flex:1;color:var(--ink);}
+.hsc-rec-phi{font-weight:700;flex:none;font-size:.72rem;}
+.hsc-rec.rk .hsc-rec-phi{color:var(--accent);}
+.hsc-rec.rp .hsc-rec-phi{color:var(--warn);}
+.hsc-tip{font-size:.7rem;color:var(--ink-soft);background:var(--card2);border-radius:8px;padding:8px 10px;margin-top:9px;line-height:1.6;}
 /* 環境逆境應對手冊 */
 .stress-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:12px;}
 .stress-btn{border:1.5px solid var(--line);background:var(--card2);border-radius:10px;padding:8px 4px;cursor:pointer;text-align:center;transition:border-color .15s,background .15s;}
@@ -2101,6 +2126,48 @@ const HARVEST_GUIDE={
   post:"裝袋後冷藏（7–10°C）保鮮 5–7 天；常溫不超過 2 天。勿堆疊壓損。",
   spec:"契作規格：翠綠均勻、長度 10–14cm、無蟲咬/病斑，不接受過老豆莢。"}
 };
+function renderHarvestSafetyCard(r,c,age){
+  const key=stageGuideKey(c,age);
+  if(key!=='果期'&&key!=='採收期')return'';
+  const tdy=today();
+  const sprays=(r.records||[]).filter(function(x){return x.type==='spray'&&+x.phi>0;});
+  let latestEnd=null,latestRec=null;
+  sprays.forEach(function(x){
+    const e=addD(parseD(x.date),+x.phi);
+    if(!latestEnd||e>latestEnd){latestEnd=e;latestRec=x;}
+  });
+  const dLeft=latestEnd?Math.ceil((latestEnd-tdy)/DAY):0;
+  const isSafe=!latestEnd||dLeft<=0;
+  const uid='hsc-'+Date.now();
+  let statusHtml;
+  if(!latestRec){
+    statusHtml='<div class="hsc-status ok"><span class="hsc-status-ic">✅</span><div><b>無噴藥記錄，可正常採收</b><div style="color:var(--ink-soft)">若有噴藥但未記錄，請先補記錄確認安全期再採收</div></div></div>';
+  }else if(isSafe){
+    statusHtml='<div class="hsc-status ok"><span class="hsc-status-ic">✅</span><div><b>安全採收期已解除，可採收</b><div style="color:var(--ink-soft)">最後噴藥（'+latestRec.note+'）安全期已於 '+md(latestEnd)+' 結束</div></div></div>';
+  }else{
+    statusHtml='<div class="hsc-status no"><span class="hsc-status-ic">⛔</span><div><b>安全採收期未結束，暫停採收！</b><div style="color:var(--ink)">最後噴藥：'+latestRec.note+'（'+latestRec.date+'，安全期 '+latestRec.phi+' 天）</div><div class="hsc-count">距解除還有 '+dLeft+' 天（'+md(latestEnd)+'）</div></div></div>';
+  }
+  const recentHtml=sprays.slice().sort(function(a,b){return b.date>a.date?1:-1;}).slice(0,3).map(function(x){
+    const e=addD(parseD(x.date),+x.phi);
+    const dl=Math.ceil((e-tdy)/DAY);
+    const safe=dl<=0;
+    return'<div class="hsc-rec '+(safe?'rk':'rp')+'">'+
+      '<span class="hsc-rec-dt">'+x.date+'</span>'+
+      '<span class="hsc-rec-nm">'+(x.note||'—')+(x.target?' — '+x.target:'')+'</span>'+
+      '<span class="hsc-rec-phi">'+(safe?'✅ 已解除':'⏳ 剩 '+dl+' 天')+'</span></div>';
+  }).join('');
+  return'<div class="hsc-card" style="border:1.5px solid '+(isSafe?'var(--accent)':'var(--warn)')+'">'+
+    '<div class="hsc-hd" onclick="var b=document.getElementById(\''+uid+'\');b.classList.toggle(\'open\');this.querySelector(\'.hsc-arr\').classList.toggle(\'open\')">'+
+    '<span style="font-size:1.1rem">🔒</span>'+
+    '<span class="hsc-title">採收安全確認</span>'+
+    '<span class="hsc-badge '+(isSafe?'ok':'no')+'">'+(isSafe?'✅ 可採收':'⛔ 停採中')+'</span>'+
+    '<span class="hsc-arr">▶</span></div>'+
+    '<div class="hsc-body" id="'+uid+'">'+
+    statusHtml+
+    (recentHtml?'<div style="font-size:.74rem;font-weight:800;color:var(--ink);margin:8px 0 4px">📋 噴藥記錄（近 3 筆）</div>'+recentHtml:'')+
+    '<div class="hsc-tip">💡 <b>什麼是安全採收期（PHI）？</b><br>農藥在作物上完全降解所需的最短天數。未過安全期採收的農產品可能有殘留，不僅傷害食用者，也可能影響契作收購與市場信任。請務必遵守。</div>'+
+    '</div></div>';
+}
 function renderHarvestGuide(r,c,age){
   const key=stageGuideKey(c,age);
   if(key!=='果期'&&key!=='採收期')return'';
@@ -3779,6 +3846,7 @@ function renderPlots(){
     renderSprayGuide(r,c,age)+
     renderDiseaseGuide(r,c,age)+
     renderIpmTrendCard(r,c,age)+
+    renderHarvestSafetyCard(r,c,age)+
     renderHarvestGuide(r,c,age)+
     renderPostHarvestGuide(r,c,age)+
     renderSeasonEndGuide(r,c,age)+
