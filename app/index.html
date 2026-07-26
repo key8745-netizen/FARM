@@ -863,6 +863,21 @@ nav button.on{color:var(--accent);}
 .hsc-rec.rk .hsc-rec-phi{color:var(--accent);}
 .hsc-rec.rp .hsc-rec-phi{color:var(--warn);}
 .hsc-tip{font-size:.7rem;color:var(--ink-soft);background:var(--card2);border-radius:8px;padding:8px 10px;margin-top:9px;line-height:1.6;}
+/* 黏板判讀指南 */
+.trap-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px;}
+.trap-btn{border:1.5px solid var(--line);background:var(--card2);border-radius:11px;padding:9px 4px;cursor:pointer;text-align:center;transition:border-color .15s,background .15s;}
+.trap-btn.sel{border-color:var(--warn);background:var(--warn-bg);}
+.trap-btn-ic{font-size:1.3rem;display:block;margin-bottom:3px;}
+.trap-btn-nm{font-size:.68rem;font-weight:800;color:var(--ink);display:block;}
+.trap-detail{border-radius:11px;padding:11px 13px;border:1.5px solid var(--line);background:var(--card2);}
+.trap-detail-hd{font-size:.9rem;font-weight:900;color:var(--ink);margin-bottom:6px;}
+.trap-row{display:flex;gap:7px;margin-bottom:6px;font-size:.74rem;line-height:1.6;}
+.trap-lbl{font-weight:800;color:var(--ink);flex:none;min-width:52px;}
+.trap-thresh-row{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;}
+.trap-thresh{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:.72rem;font-weight:800;}
+.trap-thresh.ok{background:#e6f9f0;color:var(--grow);}
+.trap-thresh.warn{background:#fff8e6;color:#a07000;}
+.trap-thresh.no{background:var(--warn-bg);color:var(--warn);}
 /* 環境逆境應對手冊 */
 .stress-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:12px;}
 .stress-btn{border:1.5px solid var(--line);background:var(--card2);border-radius:10px;padding:8px 4px;cursor:pointer;text-align:center;transition:border-color .15s,background .15s;}
@@ -4307,6 +4322,16 @@ function renderTools(){
     '</div>'+
     '<div id="stress-detail" style="display:none"></div>'+
     '</div>'+
+    '<h2 style="margin-top:22px">🪤 黏板判讀指南</h2><p class="note">每週換板時要計數，知道數量才知道要不要噴藥。點選害蟲查外觀特徵、黏板顏色、行動門檻與防治方法。</p>'+
+    '<div class="card">'+
+    '<div class="trap-grid">'+
+    '<div class="trap-btn" data-trap="wf"><span class="trap-btn-ic">🟡</span><span class="trap-btn-nm">粉蝨</span></div>'+
+    '<div class="trap-btn" data-trap="th"><span class="trap-btn-ic">🔵</span><span class="trap-btn-nm">薊馬</span></div>'+
+    '<div class="trap-btn" data-trap="sm"><span class="trap-btn-ic">🔴</span><span class="trap-btn-nm">葉蟎</span></div>'+
+    '<div class="trap-btn" data-trap="ap"><span class="trap-btn-ic">🟢</span><span class="trap-btn-nm">蚜蟲</span></div>'+
+    '</div>'+
+    '<div id="trap-detail" style="display:none"></div>'+
+    '</div>'+
     '<h2 style="margin-top:22px">每日農場作業時程</h2><p class="note">依目前田區生育階段，生成今天的建議作業時程表。進到溫室前先看一遍，確保不遺漏重要工作。</p>'+
     '<div class="card" id="sched-card"><button class="btn" id="sched-go">生成今日作業時程</button><div id="sched-res"></div></div>'+
     '<h2 style="margin-top:22px">剩餘季節採購預算試算</h2><p class="note">依目前各田區作物、株數、剩餘天數，估算還需要採購哪些農資與預算。</p>'+
@@ -4966,6 +4991,55 @@ function renderTools(){
           '<div class="stress-row"><span class="stress-lbl">⚠️ 徵狀</span><div>'+d.signs.map(function(s){return'• '+s;}).join('<br>')+'</div></div>'+
           '<div class="stress-row"><span class="stress-lbl">🚨 緊急</span><div>'+d.immed.map(function(s){return'• '+s;}).join('<br>')+'</div></div>'+
           '<div class="stress-row"><span class="stress-lbl">🛡️ 預防</span><div>'+d.prev.map(function(s){return'• '+s;}).join('<br>')+'</div></div>';
+      });
+    });
+  })();
+  // 黏板判讀指南
+  (function(){
+    const TRAPS={
+      wf:{name:'粉蝨（白粉蝨/銀葉粉蝨）',ic:'🟡',trap:'黃色黏板',
+        look:'體長約 1–1.5mm，全身覆蓋白色蠟粉，翅膀白色，振翅時像白霧散開。卵及若蟲在葉背（白色小點/透明扁圓形）',
+        damage:'直接刺吸葉液，導致葉片黃化捲曲；並分泌蜜露引發煤煙病（葉面黑色黏膩）；是番茄黃化捲葉病毒（TYLCV）的主要媒介',
+        spot:'翻葉背看白色小點；搖動植株有白色小蟲飛起；葉面出現黑色黴菌',
+        thresh:[{t:'0–5 隻/張',cls:'ok',l:'正常監測，每週換板計數'},{t:'6–20 隻/張',cls:'warn',l:'警戒，加強巡視、掛多張板'},{t:'>20 隻/張',cls:'no',l:'立即噴藥（亞滅培、螺蟲乙酯，輪替使用）'}],
+        tip:'粉蝨發展快，一旦超過門檻需在 3 天內完成第一次噴藥，且需連噴 2–3 次（間隔 5–7 天）針對不同蟲期'},
+      th:{name:'薊馬（西方花薊馬/番茄薊馬）',ic:'🔵',trap:'藍色黏板（也會黏黃板）',
+        look:'體長約 1–2mm，細長如針，顏色黃褐或深褐，肉眼勉強可見，常躲在花瓣內或嫩芽縫隙中',
+        damage:'銼吸嫩葉和花瓣，造成葉片銀白色條紋、花瓣褐化；會傳播斑萎病毒（TSWV），造成番茄彩椒嚴重減產',
+        spot:'嫩葉表面出現銀白或褐色細條紋；花瓣褐化或落花；搖動花朵有微小細蟲掉落在白紙上',
+        thresh:[{t:'0–10 隻/張',cls:'ok',l:'正常，維持監測'},{t:'11–30 隻/張',cls:'warn',l:'開始重點巡查花朵和新葉'},{t:'>30 隻/張',cls:'no',l:'立即噴藥（賽洛寧、蘇力菌+礦物油，輪替）'}],
+        tip:'薊馬最難防治，因為躲在花內。噴藥時需在早晨花朵打開時進行，確保藥液接觸到花內害蟲'},
+      sm:{name:'葉蟎（二點葉蟎/朱砂葉蟎）',ic:'🔴',trap:'黃板不適合計數，改用葉片直接觀察',
+        look:'體長 0.3–0.5mm，肉眼幾乎看不見，需用 10–20 倍放大鏡。二點葉蟎呈黃綠色，體側有黑斑；在葉背結極細蜘蛛網',
+        damage:'刺吸葉片細胞液，造成葉面出現無數細小黃白色斑點（如砂紙質感）；嚴重時葉片乾枯脫落，植株衰弱',
+        spot:'葉背出現細蜘蛛絲；葉面呈現灰白色細點；高溫乾燥時（>30°C）爆發特別快；用手指輕抹葉背後看指腹有無橙色小點',
+        thresh:[{t:'每葉 < 5 隻',cls:'ok',l:'正常，繼續每週抽查'},{t:'每葉 5–15 隻',cls:'warn',l:'重點監控，可先噴水提高濕度'},{t:'每葉 > 15 隻',cls:'no',l:'立即噴殺蟎劑（阿巴汀、賽芬蟎，2種以上輪替）'}],
+        tip:'葉蟎最怕高濕，棚內維持相對濕度 60–70% 可大幅抑制族群。乾熱天氣必加強巡查。殺蟎劑和殺蟲劑不同，一般殺蟲劑對葉蟎無效'},
+      ap:{name:'蚜蟲（桃蚜/棉蚜）',ic:'🟢',trap:'黃色黏板',
+        look:'體長 1–3mm，梨形，顏色多樣（黃綠、黑、褐），通常群聚在新芽和嫩葉背面，肉眼清晰可見',
+        damage:'大量刺吸嫩芽汁液，造成新葉捲曲、生長點畸型；分泌蜜露引發煤煙病；傳播多種病毒（花葉病、黃化病）',
+        spot:'新芽生長點附近有密集小蟲聚集；嫩葉捲曲或皺縮；葉面黏膩並出現黑色煤煙；螞蟻頻繁出現在植株上（牠們在保護蚜蟲）',
+        thresh:[{t:'零星幾隻',cls:'ok',l:'正常，可用手指直接撥除'},{t:'每植株 > 30 隻',cls:'warn',l:'噴水沖洗、或黃板誘捕加強'},{t:'每植株 > 100 隻',cls:'no',l:'立即噴藥（賽速安、賜派芬，避免單一藥劑反覆使用）'}],
+        tip:'發現螞蟻在植株爬動，很可能已有蚜蟲群落。消滅蚜蟲前先驅螞蟻（螞蟻會保護蚜蟲、驅走天敵）。少量時可用有機皂液水噴灑'}
+    };
+    const detail=v.querySelector('#trap-detail');
+    v.querySelectorAll('.trap-btn').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        v.querySelectorAll('.trap-btn').forEach(function(b){b.classList.remove('sel');});
+        this.classList.add('sel');
+        const d=TRAPS[btn.dataset.trap];if(!d)return;
+        detail.style.display='block';
+        detail.className='trap-detail';
+        const thHtml=d.thresh.map(function(t){return'<span class="trap-thresh '+t.cls+'">'+t.t+' — '+t.l+'</span>';}).join('');
+        detail.innerHTML=
+          '<div class="trap-detail-hd">'+d.ic+' '+d.name+'</div>'+
+          '<div style="font-size:.73rem;background:var(--card);border-radius:8px;padding:6px 9px;margin-bottom:8px;color:var(--ink-soft)">🪤 使用黏板：<b style="color:var(--ink)">'+d.trap+'</b></div>'+
+          '<div class="trap-row"><span class="trap-lbl">🔍 外觀</span><div>'+d.look+'</div></div>'+
+          '<div class="trap-row"><span class="trap-lbl">💥 危害</span><div>'+d.damage+'</div></div>'+
+          '<div class="trap-row"><span class="trap-lbl">👁️ 找牠</span><div>'+d.spot+'</div></div>'+
+          '<div style="font-size:.76rem;font-weight:800;color:var(--ink);margin:8px 0 5px">📊 行動門檻</div>'+
+          '<div class="trap-thresh-row">'+thHtml+'</div>'+
+          '<div style="font-size:.73rem;color:var(--ink-soft);background:var(--card);border-radius:8px;padding:7px 10px;margin-top:6px;line-height:1.65">💡 '+d.tip+'</div>';
       });
     });
   })();
