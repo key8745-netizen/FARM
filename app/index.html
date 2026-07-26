@@ -863,6 +863,34 @@ nav button.on{color:var(--accent);}
 .hsc-rec.rk .hsc-rec-phi{color:var(--accent);}
 .hsc-rec.rp .hsc-rec-phi{color:var(--warn);}
 .hsc-tip{font-size:.7rem;color:var(--ink-soft);background:var(--card2);border-radius:8px;padding:8px 10px;margin-top:9px;line-height:1.6;}
+/* 收成進度追蹤卡 */
+.hp-card{background:var(--card);border:1px solid var(--harv);border-radius:13px;margin:8px 0;overflow:hidden;}
+.hp-hd{display:flex;align-items:center;gap:9px;padding:11px 14px;cursor:pointer;}
+.hp-title{flex:1;font-size:.88rem;font-weight:800;color:var(--harv);}
+.hp-badge{font-size:.7rem;font-weight:800;border-radius:20px;padding:3px 10px;flex:none;}
+.hp-badge.ok{background:var(--harv-bg,#fff8e6);color:var(--harv);}
+.hp-badge.hi{background:#e6f9f0;color:var(--grow);}
+.hp-badge.lo{background:var(--warn-bg);color:var(--warn);}
+.hp-arr{font-size:.85rem;color:var(--harv);transition:transform .2s;}
+.hp-arr.open{transform:rotate(90deg);}
+.hp-body{display:none;padding:0 14px 14px;}
+.hp-body.open{display:block;}
+.hp-nums{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+.hp-num{background:var(--card2);border-radius:9px;padding:9px 10px;text-align:center;}
+.hp-num-val{font-size:1.2rem;font-weight:900;font-family:var(--disp);color:var(--harv);line-height:1;}
+.hp-num-lbl{font-size:.66rem;color:var(--ink-soft);margin-top:3px;}
+.hp-bar-wrap{background:rgba(0,0,0,.1);border-radius:4px;height:8px;overflow:hidden;margin-bottom:4px;}
+.hp-bar-fill{height:100%;border-radius:4px;background:var(--harv);transition:width .4s;}
+.hp-grades{display:flex;gap:6px;margin:8px 0 10px;flex-wrap:wrap;}
+.hp-grade{font-size:.72rem;padding:3px 9px;border-radius:20px;font-weight:700;}
+.hp-grade.g1{background:#e6f9f0;color:var(--grow);}
+.hp-grade.g2{background:var(--harv-bg,#fff8e6);color:var(--harv);}
+.hp-grade.g3{background:var(--card2);color:var(--ink-soft);}
+.hp-recent{border-top:1px solid var(--line);padding-top:8px;}
+.hp-rec{display:flex;align-items:center;gap:7px;padding:4px 0;font-size:.73rem;border-bottom:1px dashed var(--line);}
+.hp-rec:last-child{border-bottom:none;}
+.hp-rec-dt{color:var(--ink-soft);flex:none;font-size:.68rem;}
+.hp-rec-qty{font-weight:800;color:var(--harv);flex:none;}
 /* 根系健康管理指引 */
 .rh-card{background:var(--card);border:1px solid var(--grow);border-radius:13px;margin:8px 0;overflow:hidden;}
 .rh-hd{display:flex;align-items:center;gap:9px;padding:11px 14px;cursor:pointer;}
@@ -2195,6 +2223,62 @@ const HARVEST_GUIDE={
   post:"裝袋後冷藏（7–10°C）保鮮 5–7 天；常溫不超過 2 天。勿堆疊壓損。",
   spec:"契作規格：翠綠均勻、長度 10–14cm、無蟲咬/病斑，不接受過老豆莢。"}
 };
+const YIELD_PER_PLANT={
+  '牛番茄':{lo:6,hi:12,unit:'kg'},'玉女番茄':{lo:4,hi:7,unit:'kg'},
+  '彩椒':{lo:2.5,hi:5,unit:'kg'},'高山草莓':{lo:0.25,hi:0.5,unit:'kg'},
+  '高麗菜':{lo:1.2,hi:2.5,unit:'kg'},'敏豆':{lo:0.3,hi:0.6,unit:'kg'}
+};
+function renderHarvestProgressCard(r,c,age){
+  const key=stageGuideKey(c,age);
+  if(key!=='果期'&&key!=='採收期')return'';
+  const plants=+r.plants||0;if(!plants)return'';
+  const yp=YIELD_PER_PLANT[r.crop];if(!yp)return'';
+  const targetLo=Math.round(yp.lo*plants*10)/10;
+  const targetHi=Math.round(yp.hi*plants*10)/10;
+  const targetMid=Math.round((targetLo+targetHi)/2*10)/10;
+  const actual=Math.round(harvestTotal(r)*10)/10;
+  const grades=harvestGrades(r);
+  const pct=targetMid>0?Math.min(120,Math.round(actual/targetMid*100)):0;
+  const harvStart=addD(parseD(r.date),c.grow);
+  const harvEnd=addD(harvStart,c.dur);
+  const tdy=today();
+  const daysLeft=Math.max(0,Math.round((harvEnd-tdy)/DAY));
+  const daysIn=Math.max(0,Math.round((tdy-harvStart)/DAY));
+  let badge,badgeClass;
+  if(pct>=100){badge='超標達成 🎉';badgeClass='hi';}
+  else if(pct>=60){badge='進度正常';badgeClass='ok';}
+  else{badge='進度偏低';badgeClass='lo';}
+  const uid='hp-'+Date.now();
+  const dailyNeed=daysLeft>0&&actual<targetLo?Math.round((targetLo-actual)/daysLeft*10)/10:0;
+  const recentHarvs=(r.records||[]).filter(function(x){return x.type==='harv';}).sort(function(a,b){return b.date>a.date?1:-1;}).slice(0,4);
+  const recentHtml=recentHarvs.map(function(x){
+    const gTag=(x.g1||x.g2||x.g3)?'<span class="hp-grade g1">特'+( +x.g1||0)+'kg</span><span class="hp-grade g2">優'+(+x.g2||0)+'kg</span>'+'<span class="hp-grade g3">次'+(+x.g3||0)+'kg</span>':'';
+    return'<div class="hp-rec"><span class="hp-rec-dt">'+x.date+'</span><span class="hp-rec-qty">'+x.qty+' kg</span>'+gTag+'</div>';
+  }).join('');
+  const gradeHtml=grades.g1||grades.g2||grades.g3?
+    '<div class="hp-grades"><span class="hp-grade g1">特級 '+grades.g1+' kg</span><span class="hp-grade g2">優級 '+grades.g2+' kg</span><span class="hp-grade g3">次級 '+grades.g3+' kg</span></div>':'';
+  return'<div class="hp-card">'+
+    '<div class="hp-hd" onclick="var b=document.getElementById(\''+uid+'\');b.classList.toggle(\'open\');this.querySelector(\'.hp-arr\').classList.toggle(\'open\')">'+
+    '<span style="font-size:1.1rem">📊</span>'+
+    '<span class="hp-title">收成進度追蹤</span>'+
+    '<span class="hp-badge '+badgeClass+'">'+badge+'</span>'+
+    '<span class="hp-arr">▶</span></div>'+
+    '<div class="hp-body" id="'+uid+'">'+
+    '<div class="hp-nums">'+
+    '<div class="hp-num"><div class="hp-num-val">'+actual+'</div><div class="hp-num-lbl">已採收 (kg)</div></div>'+
+    '<div class="hp-num"><div class="hp-num-val" style="color:var(--ink-soft);font-size:.95rem">'+targetLo+'–'+targetHi+'</div><div class="hp-num-lbl">目標範圍 (kg)</div></div>'+
+    '<div class="hp-num"><div class="hp-num-val">'+pct+'%</div><div class="hp-num-lbl">目標達成率</div></div>'+
+    '</div>'+
+    '<div class="hp-bar-wrap"><div class="hp-bar-fill" style="width:'+Math.min(100,pct)+'%"></div></div>'+
+    '<div style="display:flex;justify-content:space-between;font-size:.68rem;color:var(--ink-soft);margin-bottom:8px">'+
+    '<span>採收第 '+daysIn+' 天</span><span>剩 '+daysLeft+' 天</span></div>'+
+    gradeHtml+
+    (dailyNeed>0?'<div style="font-size:.76rem;background:var(--warn-bg);border-radius:8px;padding:7px 10px;margin-bottom:8px;color:var(--warn)">⏰ 達到最低目標還需每天採收 <b>'+dailyNeed+' kg</b>（共 '+daysLeft+' 天）</div>':'')+
+    (recentHtml?'<div class="hp-recent"><div style="font-size:.74rem;font-weight:800;color:var(--ink);margin-bottom:5px">📋 近期採收記錄</div>'+recentHtml+'</div>':
+    '<div style="font-size:.74rem;color:var(--ink-soft);padding:6px 0">尚無採收記錄 — 請在「記錄」中新增採收資料</div>')+
+    '<div style="font-size:.68rem;color:var(--ink-soft);margin-top:8px;line-height:1.55">💡 目標產量依每株 '+yp.lo+'–'+yp.hi+' '+yp.unit+' 估算（品種、管理品質、季節均會影響實際產量）</div>'+
+    '</div></div>';
+}
 function renderHarvestSafetyCard(r,c,age){
   const key=stageGuideKey(c,age);
   if(key!=='果期'&&key!=='採收期')return'';
@@ -3916,6 +4000,7 @@ function renderPlots(){
     renderSprayGuide(r,c,age)+
     renderDiseaseGuide(r,c,age)+
     renderIpmTrendCard(r,c,age)+
+    renderHarvestProgressCard(r,c,age)+
     renderHarvestSafetyCard(r,c,age)+
     renderHarvestGuide(r,c,age)+
     renderPostHarvestGuide(r,c,age)+
