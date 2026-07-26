@@ -863,6 +863,26 @@ nav button.on{color:var(--accent);}
 .hsc-rec.rk .hsc-rec-phi{color:var(--accent);}
 .hsc-rec.rp .hsc-rec-phi{color:var(--warn);}
 .hsc-tip{font-size:.7rem;color:var(--ink-soft);background:var(--card2);border-radius:8px;padding:8px 10px;margin-top:9px;line-height:1.6;}
+/* 根系健康管理指引 */
+.rh-card{background:var(--card);border:1px solid var(--grow);border-radius:13px;margin:8px 0;overflow:hidden;}
+.rh-hd{display:flex;align-items:center;gap:9px;padding:11px 14px;cursor:pointer;}
+.rh-title{flex:1;font-size:.88rem;font-weight:800;color:var(--grow);}
+.rh-arr{font-size:.85rem;color:var(--grow);transition:transform .2s;}
+.rh-arr.open{transform:rotate(90deg);}
+.rh-body{display:none;padding:0 14px 14px;}
+.rh-body.open{display:block;}
+.rh-section{font-size:.78rem;font-weight:800;color:var(--ink);margin:10px 0 5px;}
+.rh-cols{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+.rh-col{border-radius:9px;padding:9px 11px;font-size:.73rem;line-height:1.65;}
+.rh-col.good{background:#e6f9f0;border:1px solid var(--grow);}
+.rh-col.bad{background:#fff0f0;border:1px solid var(--warn);}
+.rh-col-hd{font-size:.76rem;font-weight:900;margin-bottom:4px;}
+.rh-col.good .rh-col-hd{color:var(--grow);}
+.rh-col.bad .rh-col-hd{color:var(--warn);}
+.rh-step{display:flex;align-items:flex-start;gap:7px;padding:5px 0;border-bottom:1px dashed var(--line);font-size:.74rem;line-height:1.55;}
+.rh-step:last-child{border-bottom:none;}
+.rh-sn{background:var(--grow);color:#fff;border-radius:50%;min-width:19px;height:19px;display:flex;align-items:center;justify-content:center;font-size:.66rem;font-weight:900;flex:none;margin-top:1px;}
+.rh-tip{background:var(--card2);border-radius:8px;padding:8px 10px;font-size:.72rem;color:var(--ink-soft);line-height:1.6;border-left:3px solid var(--grow);}
 /* 黏板判讀指南 */
 .trap-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px;}
 .trap-btn{border:1.5px solid var(--line);background:var(--card2);border-radius:11px;padding:9px 4px;cursor:pointer;text-align:center;transition:border-color .15s,background .15s;}
@@ -1677,6 +1697,40 @@ const PC_SECTIONS=[
     '拍照記錄初始植株狀況，方便未來比對生長情況',
   ]},
 ];
+function renderRootHealthCard(r,c,age){
+  const key=stageGuideKey(c,age);
+  if(key!=='苗期'&&key!=='生長期')return'';
+  if(age>30)return'';
+  const uid='rh-'+Date.now();
+  const dayMsg=age<=7
+    ?'<div style="background:var(--accent-soft);border-radius:8px;padding:7px 10px;font-size:.76rem;color:var(--accent);margin-bottom:10px;font-weight:700">📌 定植後第 '+age+' 天 — 現在最重要的是確認根系是否存活</div>'
+    :age<=14
+    ?'<div style="background:var(--card2);border-radius:8px;padding:7px 10px;font-size:.76rem;color:var(--ink-soft);margin-bottom:10px">📌 定植後第 '+age+' 天 — 根系應已開始穿入介質，定期翻看袋底確認</div>'
+    :'<div style="background:var(--card2);border-radius:8px;padding:7px 10px;font-size:.76rem;color:var(--ink-soft);margin-bottom:10px">📌 定植後第 '+age+' 天 — 每兩週查看一次根系狀況，早發現早處理</div>';
+  return'<div class="rh-card">'+
+    '<div class="rh-hd" onclick="var b=document.getElementById(\''+uid+'\');b.classList.toggle(\'open\');this.querySelector(\'.rh-arr\').classList.toggle(\'open\')">'+
+    '<span style="font-size:1.1rem">🌱</span>'+
+    '<span class="rh-title">根系健康管理</span>'+
+    '<span class="rh-arr">▶</span></div>'+
+    '<div class="rh-body" id="'+uid+'">'+
+    dayMsg+
+    '<div class="rh-section">🔍 如何確認定植成功</div>'+
+    '<div class="rh-step"><div class="rh-sn">1</div><div><b>定植後 5–7 天，輕拉植株基部</b>（只用兩指輕扣莖基，不要用力拔）<br>有阻力 → ✅ 根系已固定，定植成功；輕鬆拔起 → ⚠️ 根系未生長，需查原因</div></div>'+
+    '<div class="rh-step"><div class="rh-sn">2</div><div><b>每兩週從袋底排水孔觀察根系顏色</b><br>翻起介質袋，用手電筒照排水孔，或輕擠袋子讓根系露出</div></div>'+
+    '<div class="rh-step"><div class="rh-sn">3</div><div><b>觀察葉片作為根系健康指標</b><br>早晨看到葉片飽滿直立 → 根系吸水正常；白天萎凋但早晚恢復 → 根系壓力大</div></div>'+
+    '<div class="rh-section">🌿 健康 vs 不健康根系</div>'+
+    '<div class="rh-cols">'+
+    '<div class="rh-col good"><div class="rh-col-hd">✅ 健康根系</div>顏色白色或乳白<br>根尖有光澤<br>分枝多、如羽毛狀<br>聞起來無異味<br>量多且緊密</div>'+
+    '<div class="rh-col bad"><div class="rh-col-hd">⚠️ 不健康根系</div>顏色褐色或深褐<br>根系有黏液感<br>聞起來有腐爛氣味<br>量稀少或斷裂<br>根尖發黑萎縮</div>'+
+    '</div>'+
+    '<div class="rh-section">🚨 發現根腐——急救步驟</div>'+
+    '<div class="rh-step"><div class="rh-sn">1</div><div><b>立即提高排液率</b>：每次澆水後確認有 15–25% 排出，若沒有排液代表積水缺氧</div></div>'+
+    '<div class="rh-step"><div class="rh-sn">2</div><div><b>減少灌溉量 40%</b>，讓介質有乾濕交替，根系需要氧氣</div></div>'+
+    '<div class="rh-step"><div class="rh-sn">3</div><div><b>澆施益生菌</b>（枯草芽孢桿菌或木黴菌），對抗根域病原菌</div></div>'+
+    '<div class="rh-step"><div class="rh-sn">4</div><div><b>根域降溫</b>：夏季在介質袋外包銀色反射材料，根域超過 28°C 時吸氧能力大幅下降</div></div>'+
+    '<div class="rh-tip" style="margin-top:10px">💡 <b>最佳根域條件</b><br>溫度：18–24°C（夏季最難達到，優先處理）<br>排液率：15–25%（不足 = 缺氧；過多 = 浪費）<br>EC：苗期保持低肥（EC 1.0–1.5），根系受傷時先給清水<br>定植後前 3 天：只給清水（EC &lt; 0.5），讓傷口癒合後再施肥</div>'+
+    '</div></div>';
+}
 function renderPrePlantChecklist(r,c,age){
   const key=stageGuideKey(c,age);
   if(key!=='定植前')return'';
@@ -3849,6 +3903,7 @@ function renderPlots(){
     renderStageGuide(r,c,age)+
     renderSeasonCalendar(r,c,age)+
     renderPrePlantChecklist(r,c,age)+
+    renderRootHealthCard(r,c,age)+
     renderPruningGuide(r,c,age)+
     renderFertPlanCard(r,c,age)+
     renderEcPhAdjCard(r,c,age)+
