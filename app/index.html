@@ -838,6 +838,23 @@ nav button.on{color:var(--accent);}
 .fmg-col.keep .fmg-col-hd{color:var(--grow);}
 .fmg-col.cut .fmg-col-hd{color:var(--warn);}
 .fmg-tip{background:var(--card2);border-radius:8px;padding:8px 10px;font-size:.73rem;color:var(--ink-soft);line-height:1.6;border-left:3px solid var(--harv);}
+/* 採收熟度判斷指南 */
+.hm-card{background:var(--card);border:1px solid var(--harv);border-radius:13px;margin:8px 0;overflow:hidden;}
+.hm-hd{display:flex;align-items:center;gap:9px;padding:11px 14px;cursor:pointer;}
+.hm-title{flex:1;font-size:.88rem;font-weight:800;color:var(--harv);}
+.hm-arr{font-size:.85rem;color:var(--harv);transition:transform .2s;}
+.hm-arr.open{transform:rotate(90deg);}
+.hm-body{display:none;padding:0 14px 14px;}
+.hm-body.open{display:block;}
+.hm-sub{font-size:.78rem;font-weight:800;color:var(--ink);margin:10px 0 6px;}
+.hm-check{display:flex;gap:9px;align-items:flex-start;padding:6px 9px;background:var(--card2);border-radius:9px;margin-bottom:5px;}
+.hm-check-ic{font-size:1rem;flex:none;margin-top:2px;}
+.hm-check-lbl{font-size:.7rem;font-weight:800;color:var(--ink-soft);}
+.hm-check-val{font-size:.76rem;color:var(--ink);line-height:1.5;}
+.hm-x{font-size:.76rem;color:var(--warn);padding:4px 9px;background:var(--warn-bg);border-radius:7px;margin-bottom:4px;}
+.hm-tip-row{font-size:.76rem;color:var(--grow);padding:3px 0;border-bottom:1px dashed var(--line);}
+.hm-tip-row:last-child{border-bottom:none;}
+.hm-storage{background:var(--card2);border-radius:8px;padding:8px 10px;font-size:.74rem;margin-top:10px;color:var(--ink);border-left:3px solid var(--harv);}
 /* 採收安全確認卡 */
 .hsc-card{background:var(--card);border-radius:13px;margin:8px 0;overflow:hidden;}
 .hsc-hd{display:flex;align-items:center;gap:9px;padding:11px 14px;cursor:pointer;}
@@ -2277,6 +2294,101 @@ function renderHarvestProgressCard(r,c,age){
     (recentHtml?'<div class="hp-recent"><div style="font-size:.74rem;font-weight:800;color:var(--ink);margin-bottom:5px">📋 近期採收記錄</div>'+recentHtml+'</div>':
     '<div style="font-size:.74rem;color:var(--ink-soft);padding:6px 0">尚無採收記錄 — 請在「記錄」中新增採收資料</div>')+
     '<div style="font-size:.68rem;color:var(--ink-soft);margin-top:8px;line-height:1.55">💡 目標產量依每株 '+yp.lo+'–'+yp.hi+' '+yp.unit+' 估算（品種、管理品質、季節均會影響實際產量）</div>'+
+    '</div></div>';
+}
+const HARVEST_MATURITY={
+  '牛番茄':{
+    swatch:'#e63e2e',colorDesc:'由綠轉橘紅至全紅（果肩轉色即可搶先採）',
+    touch:'輕壓有微彈性，不軟爛也不堅硬如石',
+    size:'單果 150–300 g，直徑 7–9 cm',
+    aroma:'頂端有淡番茄香氣',daysFlower:'授粉後 45–55 天',
+    tips:['連果梗用剪刀剪下，避免拉扯','清晨採收較耐儲運','依顏色深淺分批採'],
+    notReady:['全綠或肩部仍有大片綠色','觸感堅硬如石','果實明顯偏小'],
+    storage:'常溫陰涼 3–5 天；冷藏易失去風味，建議常溫保存'
+  },
+  '玉女番茄':{
+    swatch:'#e63e2e',colorDesc:'全果轉鮮紅且帶光澤，果粒均勻紅透',
+    touch:'輕捏有輕微彈感，不會爆漿',
+    size:'單果 15–25 g，橢圓飽滿',
+    aroma:'香甜番茄氣味明顯',daysFlower:'授粉後 40–50 天',
+    tips:['整串或單粒均可採','輕拿輕放避免擠壓','大雨後延遲採收以防裂果'],
+    notReady:['仍呈橙黃色未轉紅','有青肩（頂部仍綠）','果皮緊繃感過強'],
+    storage:'常溫 2–3 天；冷藏可保 5–7 天但風味稍降'
+  },
+  '彩椒':{
+    swatch:'#e8a020',colorDesc:'依品種轉色：紅椒全紅、黃椒全黃、橙椒全橙（亦可青採）',
+    touch:'果壁厚實，輕壓不凹陷，有重量感',
+    size:'單果 150–250 g，肩寬飽滿',
+    aroma:'轉色後散發淡甜椒香',daysFlower:'授粉後 60–75 天轉色完成',
+    tips:['用剪刀連果梗剪下','避免陽光直曬導致日燒','青採或轉色均可依市場需求決定'],
+    notReady:['果型未達飽滿','果壁薄觸感偏軟','顏色尚未均勻轉色'],
+    storage:'常溫 5–7 天；冷藏可達 2–3 週'
+  },
+  '高山草莓':{
+    swatch:'#d42b2b',colorDesc:'全果轉均勻鮮紅，果尖亦須紅透，顏色一致',
+    touch:'輕捏有微軟感，不過軟爛，果肉飽滿',
+    size:'依品種 15–40 g，外形飽滿有光澤',
+    aroma:'強烈草莓甜香，接近果汁香氣',daysFlower:'授粉後 30–40 天',
+    tips:['連蒂頭輕旋摘取，避免損傷果肉','清晨採收含糖量最高','熟透不耐運輸，採後盡快冷藏'],
+    notReady:['粉紅色未轉紅','果尖仍白色','觸感過硬'],
+    storage:'採後立即冷藏 0–4°C，可保 2–3 天'
+  },
+  '高麗菜':{
+    swatch:'#5aab60',colorDesc:'外葉深綠，球體結實包緊',
+    touch:'手掌按壓球頂，感覺硬實不鬆散',
+    size:'單球 1.0–2.5 kg，直徑 20–30 cm',
+    aroma:'葉片有清脆菜香',daysFlower:'定植後 70–90 天結球',
+    tips:['從基部用刀斜切','保留外層 2–3 片葉保護球體','避免雨後立即採收（易裂球）'],
+    notReady:['按壓球頂有鬆軟感','外葉浮起未包緊','球體未達預期大小'],
+    storage:'冷藏 1–2 週；常溫陰涼 3–5 天'
+  },
+  '敏豆':{
+    swatch:'#5aab60',colorDesc:'豆莢深綠，外觀平滑無明顯豆粒突起',
+    touch:'豆莢挺直，折斷時有清脆聲音',
+    size:'豆莢長 10–15 cm，寬度均勻',
+    aroma:'折斷後有清新豆香',daysFlower:'開花後 8–12 天即可採',
+    tips:['每 2–3 天巡視採收一次（過熟纖維化）','連莢輕拉或剪下','早晚採收避免日曬失水'],
+    notReady:['豆莢出現明顯豆粒突起（過熟）','外皮粗糙或有纖維感','顏色轉黃'],
+    storage:'冷藏 3–5 天；常溫易老化纖維化，盡快處理'
+  }
+};
+function renderHarvestMaturityCard(r,c,age){
+  const key=stageGuideKey(c,age);
+  if(key!=='果期'&&key!=='採收期')return'';
+  const m=HARVEST_MATURITY[r.crop];if(!m)return'';
+  const uid='hm-'+Date.now();
+  const checks=[
+    {ic:'🎨',lbl:'外觀顏色',val:m.colorDesc},
+    {ic:'👆',lbl:'觸感手感',val:m.touch},
+    {ic:'⚖️',lbl:'大小重量',val:m.size},
+    {ic:'👃',lbl:'香氣氣味',val:m.aroma},
+    {ic:'📅',lbl:'生長天數參考',val:m.daysFlower}
+  ];
+  const checksHtml=checks.map(function(ch){
+    return'<div class="hm-check"><span class="hm-check-ic">'+ch.ic+'</span><div><div class="hm-check-lbl">'+ch.lbl+'</div><div class="hm-check-val">'+ch.val+'</div></div></div>';
+  }).join('');
+  const notHtml=m.notReady.map(function(s){
+    return'<div class="hm-x">✗ '+s+'</div>';
+  }).join('');
+  const tipsHtml=m.tips.map(function(s){
+    return'<div class="hm-tip-row">✔ '+s+'</div>';
+  }).join('');
+  return'<div class="hm-card">'+
+    '<div class="hm-hd" onclick="var b=document.getElementById(\''+uid+'\');b.classList.toggle(\'open\');this.querySelector(\'.hm-arr\').classList.toggle(\'open\')">'+
+    '<span style="font-size:1.1rem">🍅</span>'+
+    '<span class="hm-title">採收熟度判斷指南</span>'+
+    '<span class="hm-arr">▶</span></div>'+
+    '<div class="hm-body" id="'+uid+'">'+
+    '<div style="display:flex;align-items:center;gap:8px;background:var(--card2);border-radius:9px;padding:8px 11px;margin-bottom:8px">'+
+    '<span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:'+m.swatch+';flex:none"></span>'+
+    '<span style="font-size:.76rem;color:var(--ink)">'+m.colorDesc+'</span></div>'+
+    '<div class="hm-sub">✅ 達到採收標準</div>'+
+    checksHtml+
+    '<div class="hm-sub" style="color:var(--warn);margin-top:12px">⛔ 尚未熟成，先別採</div>'+
+    notHtml+
+    '<div class="hm-sub" style="color:var(--grow);margin-top:12px">🌿 採收技巧</div>'+
+    tipsHtml+
+    '<div class="hm-storage">🏠 <b>儲存建議：</b>'+m.storage+'</div>'+
     '</div></div>';
 }
 function renderHarvestSafetyCard(r,c,age){
@@ -4002,6 +4114,7 @@ function renderPlots(){
     renderIpmTrendCard(r,c,age)+
     renderHarvestProgressCard(r,c,age)+
     renderHarvestSafetyCard(r,c,age)+
+    renderHarvestMaturityCard(r,c,age)+
     renderHarvestGuide(r,c,age)+
     renderPostHarvestGuide(r,c,age)+
     renderSeasonEndGuide(r,c,age)+
