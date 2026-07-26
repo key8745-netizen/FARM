@@ -908,6 +908,24 @@ nav button.on{color:var(--accent);}
 .hp-rec:last-child{border-bottom:none;}
 .hp-rec-dt{color:var(--ink-soft);flex:none;font-size:.68rem;}
 .hp-rec-qty{font-weight:800;color:var(--harv);flex:none;}
+/* 支架架設與引蔓指引 */
+.stk-card{background:var(--card);border:1px solid var(--grow);border-radius:13px;margin:8px 0;overflow:hidden;}
+.stk-hd{display:flex;align-items:center;gap:9px;padding:11px 14px;cursor:pointer;}
+.stk-title{flex:1;font-size:.88rem;font-weight:800;color:var(--grow);}
+.stk-arr{font-size:.85rem;color:var(--grow);transition:transform .2s;}
+.stk-arr.open{transform:rotate(90deg);}
+.stk-body{display:none;padding:0 14px 14px;}
+.stk-body.open{display:block;}
+.stk-sub{font-size:.78rem;font-weight:800;color:var(--ink);margin:10px 0 6px;}
+.stk-info{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;}
+.stk-cell{background:var(--card2);border-radius:9px;padding:7px 9px;}
+.stk-cell-lbl{font-size:.66rem;font-weight:800;color:var(--ink-soft);}
+.stk-cell-val{font-size:.75rem;color:var(--ink);line-height:1.5;margin-top:2px;}
+.stk-method{background:#e6f9f0;border:1px solid var(--grow);border-radius:9px;padding:9px 11px;font-size:.76rem;color:var(--ink);line-height:1.6;margin-bottom:8px;}
+.stk-tie-step{display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-bottom:1px dashed var(--line);font-size:.75rem;color:var(--ink);}
+.stk-tie-step:last-child{border-bottom:none;}
+.stk-tie-num{font-size:.68rem;font-weight:900;color:#fff;background:var(--grow);border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;flex:none;margin-top:2px;}
+.stk-err{font-size:.75rem;color:var(--warn);padding:4px 9px;background:var(--warn-bg);border-radius:7px;margin-bottom:4px;}
 /* 定植作業指引 */
 .tpg-card{background:var(--card);border:1px solid var(--accent);border-radius:13px;margin:8px 0;overflow:hidden;}
 .tpg-hd{display:flex;align-items:center;gap:9px;padding:11px 14px;cursor:pointer;}
@@ -1834,6 +1852,86 @@ function renderTransplantGuide(r,c,age){
     plantHtml+
     '<div class="tpg-sub" style="margin-top:12px">👀 定植後第一週觀察重點</div>'+
     watchHtml+
+    '</div></div>';
+}
+const STAKE_INFO={
+  '牛番茄':{
+    type:'單稈引線架',
+    material:'2 m 竹竿或鐵管，每株 1 根；或上方拉鐵線後垂下麻繩引蔓',
+    timing:'定植後 3–5 天、苗高達 20 cm 時立架',
+    height:'架高 2–2.5 m（配合植株最終高度）',
+    method:'單稈整枝：只保留主莖向上生長，腋芽（側枝）全部從基部摘除',
+    tieInterval:'每生長 20–25 cm 或每 2 個葉節綁一次，引導主莖攀附支架',
+    mistakes:['綁繩太緊勒傷莖部，應留 1–2 cm 餘量','支架太短後期無處可綁','忘記持續打側芽，養分被分散']
+  },
+  '玉女番茄':{
+    type:'單稈或雙稈引線架',
+    material:'1.5 m 竹竿，每株 1–2 根；或拉鐵線後用麻繩引蔓',
+    timing:'定植後 3–5 天、苗高 15 cm 時立架',
+    height:'架高 1.5–2 m',
+    method:'密植選單稈整枝；疏植可雙稈整枝（保留第一腋芽發展的側枝）',
+    tieInterval:'每長 20 cm 綁一次，輕輕環繞主莖引導向上',
+    mistakes:['蔓莖過長才綁導致倒伏折傷','疏植但選單稈，產量偏低']
+  },
+  '彩椒':{
+    type:'Y 型雙柱支架',
+    material:'1.2 m 竹竿，每株 2 根交叉成 V 字型，頂部用橫桿連接',
+    timing:'植株分叉後（苗高約 30–35 cm）立架',
+    height:'架高 1–1.2 m',
+    method:'Y 型整枝：保留第一分叉上方的兩主枝，分叉以下側芽全打除',
+    tieInterval:'兩主枝各每 20 cm 綁一次；果實期重果枝加強固定',
+    mistakes:['只立單柱，彩椒果重容易傾倒','分叉前就立架沒必要，浪費材料']
+  },
+  '敏豆':{
+    type:'網架或交叉支竿',
+    material:'1.5 m 竹竿 + 尼龍爬藤網，或每 30 cm 交叉竿一組',
+    timing:'播種前或定植前先架設好，讓蔓莖從小就有方向',
+    height:'架高 1.5 m（蔓性品種）',
+    method:'蔓莖自然攀爬網架，初期輕輕引導至網面方向即可',
+    tieInterval:'初期每株綁 1–2 次引導上網，之後自然攀爬不需再綁',
+    mistakes:['架設太晚，蔓莖倒地沾泥引發病菌','網目太小植株藤蔓卡住無法伸入']
+  }
+};
+const TIE_STEPS=[
+  '選用軟布條、夾子或麻繩，避免細線（易勒傷莖部）',
+  '先將繩子繞支架一圈固定，再從另一方向繞過莖部',
+  '呈 8 字型交叉，讓莖與支架之間保留 1–2 cm 空隙',
+  '綁在節間（兩葉節中間），不要綁在花序或葉節正上方',
+  '完成後輕輕搖晃確認穩固，但莖部可自由移動'
+];
+function renderStakeGuide(r,c,age){
+  const key=stageGuideKey(c,age);
+  if(key!=='苗期'&&key!=='生長期')return'';
+  const info=STAKE_INFO[r.crop];if(!info)return'';
+  const uid='stk-'+Date.now();
+  const specs=[
+    {lbl:'支架類型',val:info.type},
+    {lbl:'架設時機',val:info.timing},
+    {lbl:'所需材料',val:info.material},
+    {lbl:'架設高度',val:info.height}
+  ];
+  const specsHtml=specs.map(function(s){
+    return'<div class="stk-cell"><div class="stk-cell-lbl">'+s.lbl+'</div><div class="stk-cell-val">'+s.val+'</div></div>';
+  }).join('');
+  const tieHtml=TIE_STEPS.map(function(s,i){
+    return'<div class="stk-tie-step"><span class="stk-tie-num">'+(i+1)+'</span><span>'+s+'</span></div>';
+  }).join('');
+  const errHtml=info.mistakes.map(function(e){
+    return'<div class="stk-err">✗ '+e+'</div>';
+  }).join('');
+  return'<div class="stk-card">'+
+    '<div class="stk-hd" onclick="var b=document.getElementById(\''+uid+'\');b.classList.toggle(\'open\');this.querySelector(\'.stk-arr\').classList.toggle(\'open\')">'+
+    '<span style="font-size:1.1rem">🪵</span>'+
+    '<span class="stk-title">支架架設與引蔓指引</span>'+
+    '<span class="stk-arr">▶</span></div>'+
+    '<div class="stk-body" id="'+uid+'">'+
+    '<div class="stk-info">'+specsHtml+'</div>'+
+    '<div class="stk-sub">🌿 整枝與引蔓方式</div>'+
+    '<div class="stk-method">'+info.method+'<br><span style="color:var(--ink-soft)">引蔓頻率：'+info.tieInterval+'</span></div>'+
+    '<div class="stk-sub">🪢 正確綁定技巧（5 步驟）</div>'+
+    tieHtml+
+    '<div class="stk-sub" style="color:var(--warn);margin-top:12px">⛔ 常見錯誤</div>'+
+    errHtml+
     '</div></div>';
 }
 function renderRootHealthCard(r,c,age){
@@ -4194,6 +4292,7 @@ function renderPlots(){
     renderSeasonCalendar(r,c,age)+
     renderPrePlantChecklist(r,c,age)+
     renderTransplantGuide(r,c,age)+
+    renderStakeGuide(r,c,age)+
     renderRootHealthCard(r,c,age)+
     renderPruningGuide(r,c,age)+
     renderFertPlanCard(r,c,age)+
