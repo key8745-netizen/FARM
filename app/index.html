@@ -908,6 +908,28 @@ nav button.on{color:var(--accent);}
 .hp-rec:last-child{border-bottom:none;}
 .hp-rec-dt{color:var(--ink-soft);flex:none;font-size:.68rem;}
 .hp-rec-qty{font-weight:800;color:var(--harv);flex:none;}
+/* 定植作業指引 */
+.tpg-card{background:var(--card);border:1px solid var(--accent);border-radius:13px;margin:8px 0;overflow:hidden;}
+.tpg-hd{display:flex;align-items:center;gap:9px;padding:11px 14px;cursor:pointer;}
+.tpg-title{flex:1;font-size:.88rem;font-weight:800;color:var(--accent);}
+.tpg-arr{font-size:.85rem;color:var(--accent);transition:transform .2s;}
+.tpg-arr.open{transform:rotate(90deg);}
+.tpg-body{display:none;padding:0 14px 14px;}
+.tpg-body.open{display:block;}
+.tpg-sub{font-size:.78rem;font-weight:800;color:var(--ink);margin:8px 0 6px;}
+.tpg-spec{display:flex;gap:9px;align-items:flex-start;padding:5px 9px;background:var(--card2);border-radius:9px;margin-bottom:4px;}
+.tpg-spec-ic{font-size:.95rem;flex:none;margin-top:2px;}
+.tpg-spec-lbl{font-size:.68rem;font-weight:800;color:var(--ink-soft);}
+.tpg-spec-val{font-size:.76rem;color:var(--ink);line-height:1.5;}
+.tpg-step{display:flex;gap:9px;align-items:flex-start;padding:6px 0;border-bottom:1px dashed var(--line);}
+.tpg-step:last-child{border-bottom:none;}
+.tpg-snum{font-size:.72rem;font-weight:900;color:#fff;background:var(--accent);border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;flex:none;margin-top:2px;}
+.tpg-stxt{font-size:.76rem;color:var(--ink);line-height:1.55;}
+.tpg-good{font-size:.76rem;color:var(--grow);padding:3px 0;border-bottom:1px dashed var(--line);}
+.tpg-good:last-child{border-bottom:none;}
+.tpg-watch{font-size:.76rem;padding:5px 9px;border-radius:8px;margin-bottom:4px;}
+.tpg-watch.ok{background:#e6f9f0;color:var(--grow);}
+.tpg-watch.no{background:var(--warn-bg);color:var(--warn);}
 /* 根系健康管理指引 */
 .rh-card{background:var(--card);border:1px solid var(--grow);border-radius:13px;margin:8px 0;overflow:hidden;}
 .rh-hd{display:flex;align-items:center;gap:9px;padding:11px 14px;cursor:pointer;}
@@ -1742,6 +1764,78 @@ const PC_SECTIONS=[
     '拍照記錄初始植株狀況，方便未來比對生長情況',
   ]},
 ];
+const TRANSPLANT_INFO={
+  '牛番茄':{spacing:'株距 60 cm × 行距 120 cm',depth:'深植，子葉以下莖部全數埋入',support:'定植同時立 1.2 m 竹竿或引線',shade:'蓋遮光網 1–2 天',note:'深植可誘發莖部不定根，加強植株穩定性'},
+  '玉女番茄':{spacing:'株距 50 cm × 行距 100 cm',depth:'子葉以下埋入 1–2 cm',support:'定植同時立 1 m 支柱',shade:'蓋遮光網 1–2 天',note:'單稈整枝節省空間，密植時需特別注意通風'},
+  '彩椒':{spacing:'株距 50 cm × 行距 80 cm',depth:'與原土球等高即可，勿過深',support:'分叉後立雙支柱綁緊',shade:'蓋遮光網 1–3 天',note:'彩椒根系較淺，過深易導致根部積水腐爛'},
+  '高山草莓':{spacing:'株距 25 cm × 行距 50 cm',depth:'根冠（crown）需確實露出地面',support:'不需支架',shade:'適度遮光 1 天',note:'根冠埋太深易腐爛；太淺根系暴露易乾死，位置要精準'},
+  '高麗菜':{spacing:'株距 40 cm × 行距 60 cm',depth:'與原土球等高，輕壓固定',support:'不需支架',shade:'蓋遮光網 1–2 天',note:'風大田區可用土輕壓根圍四周固定，防止搖晃傷根'},
+  '敏豆':{spacing:'株距 15 cm × 行距 50 cm',depth:'種子 2–3 cm 或幼苗等高定植',support:'蔓性品種需設 1.5 m 網架',shade:'不需遮光',note:'敏豆建議直播以避免移植傷根；若育苗移植，動作要輕'}
+};
+function renderTransplantGuide(r,c,age){
+  const key=stageGuideKey(c,age);
+  if(key!=='定植前')return'';
+  const info=TRANSPLANT_INFO[r.crop];if(!info)return'';
+  const uid='tpg-'+Date.now();
+  const specs=[
+    {ic:'📐',lbl:'株行距',val:info.spacing},
+    {ic:'🕳️',lbl:'種植深度',val:info.depth},
+    {ic:'🪵',lbl:'支撐需求',val:info.support},
+    {ic:'⛱️',lbl:'遮光處理',val:info.shade},
+    {ic:'💡',lbl:'注意事項',val:info.note}
+  ];
+  const specsHtml=specs.map(function(s){
+    return'<div class="tpg-spec"><span class="tpg-spec-ic">'+s.ic+'</span><div><div class="tpg-spec-lbl">'+s.lbl+'</div><div class="tpg-spec-val">'+s.val+'</div></div></div>';
+  }).join('');
+  const hardenSteps=[
+    '定植前 7 天：移至半遮光處，減少澆水頻率',
+    '定植前 4–5 天：逐漸增加日照時數至每天 4–6 小時',
+    '定植前 2–3 天：完全移至戶外，接近定植環境',
+    '定植前 1 天：充分澆水，讓根球吸飽水分準備移動'
+  ];
+  const hardenHtml=hardenSteps.map(function(s,i){
+    return'<div class="tpg-step"><span class="tpg-snum">'+(i+1)+'</span><span class="tpg-stxt">'+s+'</span></div>';
+  }).join('');
+  const goodList=['葉片深綠飽滿，無黃化或病斑','莖幹粗壯直立，無細長徒長','根系白色健康，從穴孔底部略露出','高度適中（約 10–15 cm），不過高也不過矮'];
+  const goodHtml=goodList.map(function(s){return'<div class="tpg-good">✔ '+s+'</div>';}).join('');
+  const plantSteps=[
+    '選晴天傍晚或陰天進行，避免正午高溫（減少蒸散壓力）',
+    '挖定植穴，比穴盤孔大 1.5 倍，深度依品種規格',
+    '輕壓穴盤底部，整塊土球完整取出，不弄散根系',
+    '放入穴中確認深度，四周用土填回，輕輕壓實',
+    '立即澆透定根水（每株 500 mL–1 L），讓根與土密合',
+    '依需求覆蓋遮光網，並立好支柱綁上固定帶'
+  ];
+  const plantHtml=plantSteps.map(function(s,i){
+    return'<div class="tpg-step"><span class="tpg-snum">'+(i+1)+'</span><span class="tpg-stxt">'+s+'</span></div>';
+  }).join('');
+  const watchList=[
+    {ok:true,txt:'葉片稍微下垂，隔天即恢復 → 正常緊迫，繼續觀察'},
+    {ok:true,txt:'3–5 天後新葉繼續生長 → 活苗成功'},
+    {ok:false,txt:'葉片持續萎蔫 3 天以上 → 補澆水並加強遮光'},
+    {ok:false,txt:'莖基部變軟發黑 → 可能猝倒病，立即移除並消毒土壤'}
+  ];
+  const watchHtml=watchList.map(function(w){
+    return'<div class="tpg-watch '+(w.ok?'ok':'no')+'">'+(w.ok?'✅':'⚠️')+' '+w.txt+'</div>';
+  }).join('');
+  return'<div class="tpg-card">'+
+    '<div class="tpg-hd" onclick="var b=document.getElementById(\''+uid+'\');b.classList.toggle(\'open\');this.querySelector(\'.tpg-arr\').classList.toggle(\'open\')">'+
+    '<span style="font-size:1.1rem">🌱</span>'+
+    '<span class="tpg-title">定植作業指引</span>'+
+    '<span class="tpg-arr">▶</span></div>'+
+    '<div class="tpg-body" id="'+uid+'">'+
+    '<div class="tpg-sub">📋 '+r.crop+' 定植規格</div>'+
+    specsHtml+
+    '<div class="tpg-sub" style="margin-top:12px">🪴 定植前 7 天：馴化流程</div>'+
+    hardenHtml+
+    '<div class="tpg-sub" style="margin-top:12px">🔍 選苗標準（只挑健康苗定植）</div>'+
+    goodHtml+
+    '<div class="tpg-sub" style="margin-top:12px">🧑‍🌾 定植 6 步驟</div>'+
+    plantHtml+
+    '<div class="tpg-sub" style="margin-top:12px">👀 定植後第一週觀察重點</div>'+
+    watchHtml+
+    '</div></div>';
+}
 function renderRootHealthCard(r,c,age){
   const key=stageGuideKey(c,age);
   if(key!=='苗期'&&key!=='生長期')return'';
@@ -4099,6 +4193,7 @@ function renderPlots(){
     renderStageGuide(r,c,age)+
     renderSeasonCalendar(r,c,age)+
     renderPrePlantChecklist(r,c,age)+
+    renderTransplantGuide(r,c,age)+
     renderRootHealthCard(r,c,age)+
     renderPruningGuide(r,c,age)+
     renderFertPlanCard(r,c,age)+
