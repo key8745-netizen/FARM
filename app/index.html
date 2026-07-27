@@ -5602,6 +5602,91 @@ function renderTools(){
     '<button class="btn" id="c-go">計算</button><div id="c-res"></div></div>'+
     '<h2 style="margin-top:22px">年度輪種規劃</h2><p class="note">從起始月排全年輪種，收成卡高價月＋輪作。</p>'+
     '<div class="card"><label class="f">起始月</label><input class="t" id="p-start" type="month" value="'+nowM.getFullYear()+"-"+String(nowM.getMonth()+1).padStart(2,"0")+'"><button class="btn" id="p-go">產生規劃</button><div id="p-res"></div></div>'+
+    '<h2 style="margin-top:22px">📅 農場行事曆</h2><p class="note">今年所有田區的生育與採收時程一覽。綠=生長、橙=採收、底色深淺=當月行情、藍線=今天、藍點=現在位置。</p>'+
+    '<div class="card">'+
+    (()=>{
+      const plots=load();
+      if(!plots.length)return'<div class="note" style="color:var(--ink-soft)">尚無田區 — 新增田區後即自動產生行事曆。</div>';
+      const now=today();const yr=new Date().getFullYear();
+      const yrStart=new Date(yr,0,1).getTime();
+      const yrEnd=new Date(yr+1,0,1).getTime();
+      const yrRange=yrEnd-yrStart;
+      const W=320,HR=28,PL=68,PT=18,cW=W-PL;
+      const dx=d=>PL+(d-yrStart)/yrRange*cW;
+      const MN=['1','2','3','4','5','6','7','8','9','10','11','12'];
+      const CROP_IC={'牛番茄':'🍅','玉女番茄':'🍒','彩椒':'🫑','高山草莓':'🍓','高麗菜':'🥬','敏豆':'🌿','小黃瓜':'🥒','茄子':'🍆','甜玉米':'🌽','栗子南瓜':'🎃','百香果':'💛','茭白筍':'🎋'};
+      const rows=plots.filter(r=>CROPS[r.crop]&&r.date).map((r,i)=>{
+        const c=CROPS[r.crop];
+        const plantD=parseD(r.date);
+        const harvS=addD(plantD,c.grow);
+        const harvE=addD(harvS,c.dur);
+        return{r,c,plantD,harvS,harvE};
+      });
+      if(!rows.length)return'<div class="note" style="color:var(--ink-soft)">尚無有效田區資料。</div>';
+      const totalH=PT+rows.length*HR+18;
+      let svg='';
+      // Month grid
+      for(let m=0;m<=12;m++){
+        const x=(PL+m/12*cW).toFixed(1);
+        svg+=`<line x1="${x}" y1="${PT-4}" x2="${x}" y2="${PT+rows.length*HR}" stroke="currentColor" stroke-opacity=".1" stroke-width="1"/>`;
+      }
+      MN.forEach((mn,m)=>{
+        const x=(PL+(m+0.5)/12*cW).toFixed(1);
+        svg+=`<text x="${x}" y="${PT-5}" text-anchor="middle" font-size="7.5" fill="currentColor" opacity=".5">${mn}</text>`;
+      });
+      // Today line
+      if(now>=yrStart&&now<=yrEnd){
+        const tx=dx(now).toFixed(1);
+        svg+=`<line x1="${tx}" y1="${PT-10}" x2="${tx}" y2="${PT+rows.length*HR}" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="3 2"/>`;
+        svg+=`<text x="${tx}" y="${PT-12}" text-anchor="middle" font-size="7" fill="var(--accent)" font-weight="bold">今</text>`;
+      }
+      rows.forEach(({r,c,plantD,harvS,harvE},i)=>{
+        const y=PT+i*HR;
+        // Alternating row bg
+        if(i%2===0)svg+=`<rect x="0" y="${y}" width="${W}" height="${HR}" fill="currentColor" opacity=".02"/>`;
+        // Plot label (truncate to 8 chars)
+        const lbl=(CROP_IC[r.crop]||'')+' '+(r.plot.length>5?r.plot.slice(0,5)+'…':r.plot);
+        svg+=`<text x="${PL-4}" y="${(y+HR/2+3.5).toFixed(1)}" text-anchor="end" font-size="8" fill="currentColor">${lbl}</text>`;
+        // Market price background per month
+        for(let m=0;m<12;m++){
+          const mp=MARKET_PRICE[r.crop];if(!mp)continue;
+          const idx=mp.monthly[m];if(!idx)continue;
+          const out=mktOutlook(r.crop,m+1);
+          const s=out.score;
+          const col=s>=65?'#5aab60':s>=40?'#e8a020':'#e05252';
+          const alpha=Math.round(s/400*100)/100;
+          const mx=(PL+m/12*cW).toFixed(1);const mw=(cW/12).toFixed(1);
+          svg+=`<rect x="${mx}" y="${(y+4).toFixed(1)}" width="${mw}" height="${(HR-8).toFixed(1)}" fill="${col}" opacity="${alpha}" rx="1"/>`;
+        }
+        // Growth bar (clip to year)
+        const gS=Math.max(plantD,yrStart),gE=Math.min(harvS,yrEnd);
+        if(gE>gS){
+          const x1=dx(gS).toFixed(1),x2=dx(gE).toFixed(1);
+          const bw=Math.max(2,+x2-(+x1));
+          svg+=`<rect x="${x1}" y="${(y+7).toFixed(1)}" width="${bw.toFixed(1)}" height="${(HR-14).toFixed(1)}" fill="#5aab60" rx="2.5" opacity=".9"/>`;
+        }
+        // Harvest bar (clip to year)
+        const hS=Math.max(harvS,yrStart),hE=Math.min(harvE,yrEnd);
+        if(hE>hS){
+          const x1=dx(hS).toFixed(1),x2=dx(hE).toFixed(1);
+          const bw=Math.max(2,+x2-(+x1));
+          svg+=`<rect x="${x1}" y="${(y+7).toFixed(1)}" width="${bw.toFixed(1)}" height="${(HR-14).toFixed(1)}" fill="#e8a020" rx="2.5" opacity=".9"/>`;
+        }
+        // Today dot on active row
+        if(now>=plantD&&now<=harvE&&now>=yrStart&&now<=yrEnd){
+          const tx=dx(now).toFixed(1);
+          svg+=`<circle cx="${tx}" cy="${(y+HR/2).toFixed(1)}" r="4.5" fill="var(--accent)" stroke="#fff" stroke-width="1.5"/>`;
+        }
+      });
+      return`<div style="overflow-x:auto"><svg viewBox="0 0 ${W} ${totalH}" width="100%" style="max-width:${W}px;display:block;font-family:inherit">${svg}</svg></div>`;
+    })()+
+    '<div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:8px;font-size:.62rem;color:var(--ink-soft)">'+
+    '<span style="display:flex;align-items:center;gap:3px"><span style="width:12px;height:8px;background:#5aab60;border-radius:2px;display:inline-block"></span>生長期</span>'+
+    '<span style="display:flex;align-items:center;gap:3px"><span style="width:12px;height:8px;background:#e8a020;border-radius:2px;display:inline-block"></span>採收期</span>'+
+    '<span style="display:flex;align-items:center;gap:3px"><span style="width:10px;height:10px;background:var(--accent);border-radius:50%;display:inline-block"></span>目前位置</span>'+
+    '<span>底色深淺 = 當月行情強弱</span>'+
+    '</div>'+
+    '</div>'+
     '<h2 style="margin-top:22px">📊 市場趨勢 · 投資策略儀表板</h2><p class="note">一眼看懂全年行情走勢，結合生長期推算「現在種什麼、能在好價期採收」，讓種植決策有數據支撐。</p>'+
     '<div class="card" id="mkt-strat-card">'+
     '<div style="display:flex;gap:6px;margin-bottom:12px">'+
@@ -6165,7 +6250,28 @@ function renderTools(){
         idx.map((x,i)=>'<div class="r"><span>'+mn[i]+'月</span><b style="color:'+(x>=1.15?'var(--harv)':x<=0.9?'var(--warn)':'var(--ink)')+'">'+x.toFixed(2)+'</b></div>').join("")+
         '</div>';
     }catch(e){
-      res.innerHTML='<div class="info" style="margin-top:12px;color:var(--warn)">校正失敗：'+e.message+'<br><br>此功能需部署到 Netlify 才能抓取。</div>';
+      const msg=e.message||'';
+      const isUpstream=msg.indexOf('502')>=0||msg.indexOf('上游')>=0||msg.indexOf('逾時')>=0;
+      const isNotDeployed=msg.indexOf('Failed to fetch')>=0||msg.indexOf('NetworkError')>=0;
+      let tip='';
+      if(isUpstream){
+        tip='<div class="info" style="margin-top:12px;background:var(--warn-bg);border:1.5px solid var(--warn);border-radius:10px;padding:10px 12px">'+
+          '<b style="color:var(--warn)">⚠ AMIS 上游查詢失敗</b>'+
+          '<p style="margin:6px 0 0;font-size:.74rem;line-height:1.6">農業部 AMIS API（data.moa.gov.tw）目前無回應或已逾時。'+
+          '這不是 App 問題，而是政府 API 伺服器的暫時性故障。</p>'+
+          '<p style="margin:6px 0 0;font-size:.74rem;line-height:1.6"><b>建議做法：</b></p>'+
+          '<ul style="margin:4px 0;padding-left:18px;font-size:.74rem;line-height:1.7">'+
+          '<li>等 <b>30–60 分鐘</b>後再試（交易時段後 AMIS 較穩定）</li>'+
+          '<li>週末或台灣非交易日 AMIS 資料較少，可等隔日</li>'+
+          '<li>目前「📈 作物行情參考」已有內建估計值，先用內建值做規劃即可</li>'+
+          '<li>長期使用「每日行情登錄」記錄實際收購價，系統會自動取代估計值</li>'+
+          '</ul></div>';
+      } else if(isNotDeployed){
+        tip='<div class="info" style="margin-top:12px;color:var(--warn)">此功能需部署到 Netlify 才能抓取。本地測試無法使用。</div>';
+      } else {
+        tip='<div class="info" style="margin-top:12px;color:var(--warn)">校正失敗：'+msg.slice(0,120)+'<br><small>請稍後再試。</small></div>';
+      }
+      res.innerHTML=tip;
     }
   };
   v.querySelector("#rb-go").onclick=()=>{
