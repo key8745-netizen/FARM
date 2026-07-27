@@ -3241,6 +3241,59 @@ function renderIpmTrendCard(r,c,age){
     {key:'ap',name:'🟢 蚜蟲',thr:IPM_THR.蚜蟲,ctrl:'黃板誘殺；苦楝油或皂液噴葉背；蚜蟲是病毒病媒介，發現即處置；天敵保護（瓢蟲、草蛉）'},
   ];
   const last8=recs.slice(-8);
+  let ipmChartSvg='';
+  if(last8.length>=2){
+    const VW=280,VH=110,LM=28,BM=18,TM=20,RM=6;
+    const CW=VW-LM-RM,CH=VH-TM-BM;
+    const PCOLS2=[
+      {key:'wf',c:'#e8c520',nm:'粉蝨',thr:IPM_THR.粉蝨},
+      {key:'th',c:'#4a9eff',nm:'薊馬',thr:IPM_THR.薊馬},
+      {key:'sm',c:'#e85c3a',nm:'葉蟎',thr:IPM_THR.葉蟎},
+      {key:'ap',c:'#5aab60',nm:'蚜蟲',thr:IPM_THR.蚜蟲}
+    ];
+    const allV2=[];
+    PCOLS2.forEach(p=>{last8.forEach(x=>{allV2.push(+x[p.key]||0);});allV2.push(p.thr);});
+    const maxY2=Math.max(...allV2)*1.15||20;
+    const n2=last8.length;
+    const xStep2=n2>1?CW/(n2-1):0;
+    const yPos2=v=>(TM+CH-Math.max(0,Math.min(CH,v/maxY2*CH))).toFixed(1);
+    const xPos2=i=>(LM+i*xStep2).toFixed(1);
+    let legS='',gridS='',thrS='',linesS='',xLblS='';
+    PCOLS2.forEach((p,i)=>{
+      const lx=2+i*68;
+      legS+='<line x1="'+lx+'" y1="6" x2="'+(lx+12)+'" y2="6" stroke="'+p.c+'" stroke-width="2.5" stroke-linecap="round"/>';
+      legS+='<circle cx="'+(lx+6)+'" cy="6" r="2.5" fill="'+p.c+'"/>';
+      legS+='<text x="'+(lx+15)+'" y="9.5" font-size="7.5" fill="currentColor" opacity=".8">'+p.nm+'</text>';
+    });
+    [0,Math.round(maxY2/2),Math.round(maxY2)].forEach(t=>{
+      const yy=yPos2(t);
+      gridS+='<line x1="'+LM+'" y1="'+yy+'" x2="'+(VW-RM)+'" y2="'+yy+'" stroke="currentColor" stroke-opacity=".08" stroke-width="1"/>';
+      gridS+='<text x="'+(LM-3)+'" y="'+(+yy+3).toFixed(1)+'" text-anchor="end" font-size="7" fill="currentColor" opacity=".5">'+t+'</text>';
+    });
+    PCOLS2.forEach(p=>{
+      const tyy=yPos2(p.thr);
+      thrS+='<line x1="'+LM+'" y1="'+tyy+'" x2="'+(VW-RM)+'" y2="'+tyy+'" stroke="'+p.c+'" stroke-opacity=".35" stroke-width="1" stroke-dasharray="3 3"/>';
+    });
+    PCOLS2.forEach(p=>{
+      const pts=last8.map((x,i)=>xPos2(i)+','+yPos2(+x[p.key]||0)).join(' ');
+      linesS+='<polyline points="'+pts+'" fill="none" stroke="'+p.c+'" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>';
+      const ldx=xPos2(n2-1),ldy=yPos2(+last8[n2-1][p.key]||0);
+      linesS+='<circle cx="'+ldx+'" cy="'+ldy+'" r="3" fill="'+p.c+'" stroke="white" stroke-width="1.2"/>';
+    });
+    const showI=[0,...(n2>2?[Math.round((n2-1)/2)]:[]),n2-1];
+    showI.forEach(i=>{
+      const dt=last8[i].date||'';
+      xLblS+='<text x="'+xPos2(i)+'" y="'+(VH-2)+'" text-anchor="middle" font-size="7" fill="currentColor" opacity=".55">'+(dt.length>=5?dt.slice(5):dt)+'</text>';
+    });
+    ipmChartSvg='<div style="margin:10px 0 6px">'+
+      '<div style="font-size:.74rem;font-weight:800;color:var(--ink);margin-bottom:4px">📈 四害綜合趨勢（近 '+n2+' 筆）</div>'+
+      '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">'+
+      '<svg viewBox="0 0 '+VW+' '+VH+'" width="100%" style="min-width:220px;max-width:'+VW+'px;display:block">'+
+      legS+gridS+thrS+linesS+xLblS+
+      '</svg></div>'+
+      '<div style="font-size:.66rem;color:var(--ink-soft);margin-top:3px">虛線 = 各蟲防治門檻</div>'+
+      '</div>';
+  }
   let anyOver=false;
   const pestHtml=PESTS.map(pest=>{
     const vals=last8.map(x=>+x[pest.key]||0);
@@ -3283,7 +3336,7 @@ function renderIpmTrendCard(r,c,age){
     headerBadge+'　'+schedBadge+
     '<span class="ipm-arr">▶</span></div>'+
     '<div class="ipm-body" id="'+uid+'">'+
-    (emptyNote||pestHtml)+
+    (emptyNote||(ipmChartSvg+pestHtml))+
     '<div style="font-size:.7rem;color:var(--ink-soft);margin-top:8px;line-height:1.6;background:var(--card2);border-radius:7px;padding:6px 9px">'+
     '📌 黃板：每 50 株 1 張，高度與植株頂端齊。每 7–10 天換板（舊板黏性大幅下降）。<br>'+
     '薊馬偏好藍色黏板；粉蝨/蚜蟲/葉蟎偏好黃色。兩種都放最全面。'+
