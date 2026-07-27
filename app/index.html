@@ -3612,6 +3612,76 @@ function renderIpmTrendCard(r,c,age){
     '薊馬偏好藍色黏板；粉蝨/蚜蟲/葉蟎偏好黃色。兩種都放最全面。'+
     '</div></div></div>';
 }
+function renderRotationPlanCard(r,c,age){
+  const stage=stageGuideKey(c,age);
+  if(!['果期','採收期','採收後'].includes(stage))return'';
+  const rot=ROTATION_MAP[r.crop];
+  if(!rot||!rot.next||!rot.next.length)return'';
+  const harvestEnd=addD(parseD(r.date),(c.grow||60)+(c.dur||30));
+  const restEnd=addD(harvestEnd,rot.rest||14);
+  const restEndMs=new Date(harvestEnd).getTime()+(rot.rest||14)*DAY;
+  const emojiMap={'小黃瓜':'🥒','茄子':'🍆','甜玉米':'🌽','栗子南瓜':'🎃','百香果':'💛','茭白筍':'🎋','牛番茄':'🍅','玉女番茄':'🍅','彩椒':'🌶️','高山草莓':'🍓','高麗菜':'🥬','敏豆':'🫘'};
+  const options=rot.next.slice(0,3).map(cropName=>{
+    const nc=CROPS[cropName];
+    if(!nc)return null;
+    let best=null;
+    for(let m=0;m<=12;m++){
+      const tryPlantMs=restEndMs+m*30*DAY;
+      const tryHarvestMs=tryPlantMs+nc.grow*DAY;
+      const harvestMn=new Date(tryHarvestMs).getMonth()+1;
+      const out=mktOutlook(cropName,harvestMn);
+      if(!best||out.score>best.out.score){
+        const pd=new Date(tryPlantMs),hd=new Date(tryHarvestMs);
+        best={plantMn:pd.getMonth()+1,plantD:pd.getDate(),harvestMn,out,
+          plantStr:(pd.getMonth()+1)+'月'+(pd.getDate()>20?'下旬':pd.getDate()>10?'中旬':'上旬')};
+      }
+    }
+    return best?{cropName,nc,...best}:null;
+  }).filter(Boolean);
+  if(!options.length)return'';
+  const bestScore=Math.max(...options.map(o=>o.out.score));
+  const cols=Math.min(options.length,3);
+  let cards='';
+  options.forEach(opt=>{
+    const isBest=opt.out.score===bestScore;
+    const em=emojiMap[opt.cropName]||'🌱';
+    const R=16,CX=20,CY=20,CIRC=2*Math.PI*R;
+    const dash=(opt.out.score/100*CIRC).toFixed(1);
+    const gap=(CIRC*(1-opt.out.score/100)).toFixed(1);
+    cards+=`<div style="background:var(--card2);border:2px solid ${isBest?'var(--accent)':'var(--line)'};border-radius:10px;padding:8px 5px;text-align:center;position:relative">
+      ${isBest?'<div style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;font-size:.6rem;padding:2px 7px;border-radius:10px;white-space:nowrap">✨ 最佳推薦</div>':''}
+      <div style="font-size:1.35rem;margin:5px 0 2px">${em}</div>
+      <div style="font-weight:700;font-size:.8rem;margin-bottom:5px">${opt.cropName}</div>
+      <svg width="42" height="42" viewBox="0 0 40 40" style="display:block;margin:0 auto 3px">
+        <circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="var(--line)" stroke-width="5"/>
+        <circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="${opt.out.col}" stroke-width="5"
+          stroke-dasharray="${dash} ${gap}" transform="rotate(-90 ${CX} ${CY})" stroke-linecap="round"/>
+        <text x="${CX}" y="${CY+4}" text-anchor="middle" font-size="8.5" fill="var(--ink)" font-weight="bold">${opt.out.score}</text>
+      </svg>
+      <div style="font-size:.7rem;color:${opt.out.col};font-weight:700;margin-bottom:4px">${opt.out.label}</div>
+      <div style="font-size:.67rem;color:var(--ink-soft);line-height:1.6">
+        種：${opt.plantStr}<br>
+        採：${opt.harvestMn}月
+        ${opt.out.avgPrice>0?`<br>估價 $${opt.out.avgPrice}/kg`:''}
+      </div>
+    </div>`;
+  });
+  return`<div style="margin-top:8px">
+  <div class="ipm-hd" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')">
+    <span>🔄 下輪種什麼好？輪作計畫建議</span><span class="ipm-arr">▶</span>
+  </div>
+  <div class="ipm-body">
+    <div style="font-size:.75rem;color:var(--ink-soft);margin-bottom:10px">
+      本季結束：<b>${fmtD(harvestEnd)}</b>
+      休耕 <b>${rot.rest}</b> 天 → 可種：<b>${fmtD(restEnd)}</b>
+      ${rot.avoid&&rot.avoid.length?`<br>⚠️ 忌連作：${rot.avoid.join('、')}（請勿選）`:''}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:8px;margin-bottom:10px">${cards}</div>
+    <div style="font-size:.72rem;color:var(--ink-soft);background:var(--card2);border-radius:7px;padding:8px 10px">
+      💡 ${rot.tip}
+    </div>
+  </div></div>`;
+}
 function renderSeasonEndGuide(r,c,age){
   if(age<c.grow)return'';
   const rot=ROTATION_MAP[r.crop]||{next:[],avoid:[],rest:30,tip:""};
@@ -4859,6 +4929,7 @@ function renderPlots(){
     renderGradingPackGuide(r,c,age)+
     renderPostHarvestGuide(r,c,age)+
     renderSeasonEndGuide(r,c,age)+
+    renderRotationPlanCard(r,c,age)+
     renderPlotDailyTasks(r.plot)+
     dynHtml+
     (tasks?'<div class="card"><h3 style="margin:0 0 4px;font-size:1rem">今日待辦</h3>'+tasks+soon+'</div>':'')+
