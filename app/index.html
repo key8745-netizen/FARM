@@ -993,6 +993,16 @@ nav button.on{color:var(--accent);}
 .rh-step:last-child{border-bottom:none;}
 .rh-sn{background:var(--grow);color:#fff;border-radius:50%;min-width:19px;height:19px;display:flex;align-items:center;justify-content:center;font-size:.66rem;font-weight:900;flex:none;margin-top:1px;}
 .rh-tip{background:var(--card2);border-radius:8px;padding:8px 10px;font-size:.72rem;color:var(--ink-soft);line-height:1.6;border-left:3px solid var(--grow);}
+/* 行情統計圖 */
+.mp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px;}
+.mp-crop-btn{background:var(--card2);border:1px solid var(--line);border-radius:9px;padding:8px 5px;font-size:.76rem;cursor:pointer;color:var(--ink);font-weight:700;transition:border-color .15s;}
+.mp-crop-btn.sel{border-color:var(--harv);background:var(--harv-bg,#fff8e6);color:var(--harv);}
+.mp-chart-lbl{font-size:.76rem;font-weight:800;color:var(--ink);margin:10px 0 4px;}
+.mp-tags{display:flex;gap:6px;margin:8px 0;flex-wrap:wrap;}
+.mp-tag{font-size:.7rem;border-radius:20px;padding:3px 10px;}
+.mp-tag.peak{background:#e6f9f0;color:var(--grow);}
+.mp-tag.low{background:var(--card2);color:var(--ink-soft);}
+.mp-proj{background:var(--card2);border-radius:9px;padding:9px 12px;margin-top:10px;font-size:.76rem;line-height:1.7;}
 /* 緊急應變手冊 */
 .emg-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:10px;}
 @media(max-width:480px){.emg-grid{grid-template-columns:repeat(3,1fr);}}
@@ -2472,6 +2482,14 @@ const YIELD_PER_PLANT={
   '牛番茄':{lo:6,hi:12,unit:'kg'},'玉女番茄':{lo:4,hi:7,unit:'kg'},
   '彩椒':{lo:2.5,hi:5,unit:'kg'},'高山草莓':{lo:0.25,hi:0.5,unit:'kg'},
   '高麗菜':{lo:1.2,hi:2.5,unit:'kg'},'敏豆':{lo:0.3,hi:0.6,unit:'kg'}
+};
+const MARKET_PRICE={
+  '牛番茄':{g1:[45,65],g2:[25,40],g3:[12,20],monthly:[72,68,55,42,36,38,42,50,60,70,72,70],peak:'10–1 月（冬季需求旺盛）',low:'5–7 月（夏季盛產量大）',note:'颱風過後價格通常急漲，建議掌握時機優先出貨特/優級品'},
+  '玉女番茄':{g1:[80,130],g2:[50,80],g3:[25,45],monthly:[90,85,72,58,50,52,55,62,78,88,92,90],peak:'10–1 月（禮盒旺季）',low:'5–7 月（盛產低價）',note:'特級禮盒包裝可達 130 元以上，春節前出貨最有利'},
+  '彩椒':{g1:[60,90],g2:[35,55],g3:[18,30],monthly:[85,80,68,55,48,50,55,62,72,82,85,84],peak:'11–2 月（年節需求）',low:'6–8 月（夏季供過於求）',note:'進口彩椒大量入市時需強調本土新鮮採摘優勢'},
+  '高山草莓':{g1:[200,350],g2:[120,180],g3:[60,100],monthly:[280,320,0,0,0,0,0,0,0,150,220,290],peak:'11–2 月（高山產季）',low:'3–9 月（不產季）',note:'產季短暫，把握品質即時出售；禮盒包裝可顯著提升售價'},
+  '高麗菜':{g1:[15,30],g2:[8,18],g3:[4,10],monthly:[28,25,20,15,12,10,12,15,20,25,28,28],peak:'10–2 月（冬季甜度最高）',low:'5–8 月（夏季市場充裕）',note:'價格波動大，建議與固定通路（餐廳/學校）契作穩定收入'},
+  '敏豆':{g1:[45,70],g2:[25,42],g3:[12,22],monthly:[60,58,50,42,38,40,42,48,55,62,62,60],peak:'10–12 月（秋冬品質佳）',low:'5–7 月（夏季盛產）',note:'保鮮期短，採後盡快出貨；固定量供應餐廳較穩定'}
 };
 function renderHarvestProgressCard(r,c,age){
   const key=stageGuideKey(c,age);
@@ -4907,6 +4925,18 @@ function renderTools(){
     '</div>'+
     '<h2 style="margin-top:22px">每日農場作業時程</h2><p class="note">依目前田區生育階段，生成今天的建議作業時程表。進到溫室前先看一遍，確保不遺漏重要工作。</p>'+
     '<div class="card" id="sched-card"><button class="btn" id="sched-go">生成今日作業時程</button><div id="sched-res"></div></div>'+
+    '<h2 style="margin-top:22px">📈 作物行情參考</h2><p class="note">參考市場行情，評估各等級收益。數據為台灣高山蔬菜市場一般參考，實際依供需與季節浮動。</p>'+
+    '<div class="card">'+
+    '<div class="mp-grid">'+
+    '<button class="mp-crop-btn" data-crop="牛番茄">🍅 牛番茄</button>'+
+    '<button class="mp-crop-btn" data-crop="玉女番茄">🍒 玉女番茄</button>'+
+    '<button class="mp-crop-btn" data-crop="彩椒">🫑 彩椒</button>'+
+    '<button class="mp-crop-btn" data-crop="高山草莓">🍓 高山草莓</button>'+
+    '<button class="mp-crop-btn" data-crop="高麗菜">🥬 高麗菜</button>'+
+    '<button class="mp-crop-btn" data-crop="敏豆">🌿 敏豆</button>'+
+    '</div>'+
+    '<div id="mp-chart"><p class="note" style="margin:0;color:var(--ink-soft)">點選上方作物查看行情統計圖</p></div>'+
+    '</div>'+
     '<h2 style="margin-top:22px">剩餘季節採購預算試算</h2><p class="note">依目前各田區作物、株數、剩餘天數，估算還需要採購哪些農資與預算。</p>'+
     '<div class="card"><button class="btn" id="bud-go">試算各田區採購清單</button><div id="bud-res"></div></div>'+
     '<h2 style="margin-top:22px">資料備份 / 還原</h2><p class="note">App 資料存在瀏覽器，清除快取會消失。定期備份 JSON 檔到手機相簿或雲端，需要時可還原。</p>'+
@@ -5703,6 +5733,97 @@ function renderTools(){
         '🛡️ <b>下次預防：</b>'+d.prevent+'</div>'+
         '</div>';
     };
+  })();
+  // 行情參考統計圖
+  (function(){
+    function bBar(d){
+      var gr=[{n:'特',k:'g1',c:'#5aab60'},{n:'優',k:'g2',c:'#e8a020'},{n:'次',k:'g3',c:'#999'}];
+      var mxP=Math.max.apply(null,gr.map(function(g){return d[g.k][1];}));
+      var BX=34,BW=162,RH=30;
+      var svh=gr.length*RH+24;
+      var s='<svg viewBox="0 0 275 '+svh+'" width="100%" style="display:block">';
+      [0,25,50,75,100].forEach(function(p){
+        if(p>mxP+5)return;
+        var x=BX+Math.round(p/mxP*BW);
+        s+='<line x1="'+x+'" y1="0" x2="'+x+'" y2="'+(gr.length*RH)+'" stroke="currentColor" stroke-opacity=".1" stroke-width="1"/>';
+        s+='<text x="'+x+'" y="'+(gr.length*RH+15)+'" font-size="8" text-anchor="middle" fill="currentColor" opacity=".5">'+p+'</text>';
+      });
+      gr.forEach(function(g,i){
+        var lo=d[g.k][0],hi=d[g.k][1];
+        var y=i*RH+Math.round(RH/2);
+        var x1=BX+Math.round(lo/mxP*BW);
+        var x2=BX+Math.round(hi/mxP*BW);
+        s+='<text x="'+(BX-3)+'" y="'+(y+4)+'" font-size="11" text-anchor="end" font-weight="bold" fill="'+g.c+'">'+g.n+'</text>';
+        s+='<rect x="'+BX+'" y="'+(y-7)+'" width="'+BW+'" height="14" rx="3" fill="currentColor" opacity=".06"/>';
+        s+='<rect x="'+x1+'" y="'+(y-7)+'" width="'+(Math.max(1,x2-x1))+'" height="14" rx="3" fill="'+g.c+'" opacity=".82"/>';
+        s+='<text x="'+(x2+5)+'" y="'+(y+4)+'" font-size="10" fill="'+g.c+'" font-weight="bold">'+lo+'–'+hi+' 元/kg</text>';
+      });
+      return s+'</svg>';
+    }
+    function bSpark(m){
+      var vp=m.map(function(v,i){return{v:v,i:i};}).filter(function(p){return p.v>0;});
+      if(vp.length<4)return'<div style="font-size:.73rem;color:var(--ink-soft);padding:6px 0">產季集中，月份走勢圖不適用</div>';
+      var mxV=Math.max.apply(null,vp.map(function(p){return p.v;}));
+      var mnV=Math.min.apply(null,vp.map(function(p){return p.v;}));
+      var rng=mxV-mnV||1;
+      var VW=260,VH=50,B=68;
+      function xi(i){return Math.round(i/11*VW);}
+      function yv(v){return Math.round((1-(v-mnV)/rng)*VH)+4;}
+      var s='<svg viewBox="0 0 '+VW+' '+B+'" width="100%" style="display:block">';
+      var segs=[],cur=[];
+      m.forEach(function(v,i){
+        if(v>0){cur.push({x:xi(i),y:yv(v),v:v,i:i});}
+        else if(cur.length){segs.push(cur);cur=[];}
+      });
+      if(cur.length)segs.push(cur);
+      segs.forEach(function(seg){
+        if(seg.length<2)return;
+        var pts=seg.map(function(p){return p.x+','+p.y;}).join(' ');
+        s+='<polygon points="'+seg[0].x+','+(VH+6)+' '+pts+' '+seg[seg.length-1].x+','+(VH+6)+'" fill="#e8a020" opacity=".15"/>';
+        s+='<polyline points="'+pts+'" fill="none" stroke="#e8a020" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+        seg.forEach(function(p){s+='<circle cx="'+p.x+'" cy="'+p.y+'" r="2.5" fill="#e8a020"/>';});
+      });
+      var pk=vp.reduce(function(a,b){return a.v>b.v?a:b;});
+      s+='<circle cx="'+xi(pk.i)+'" cy="'+yv(pk.v)+'" r="5" fill="none" stroke="#5aab60" stroke-width="2"/>';
+      s+='<text x="'+xi(pk.i)+'" y="'+(yv(pk.v)-8)+'" font-size="8" text-anchor="middle" fill="#5aab60" font-weight="bold">旺季</text>';
+      [1,3,5,7,9,11].forEach(function(mn){
+        s+='<text x="'+xi(mn-1)+'" y="'+(B-2)+'" font-size="9" text-anchor="middle" fill="currentColor" opacity=".55">'+mn+'月</text>';
+      });
+      return s+'</svg>';
+    }
+    function showMp(crop){
+      var d=MARKET_PRICE[crop];if(!d)return;
+      var yp=YIELD_PER_PLANT[crop];
+      var plots=load().filter(function(r){return r.crop===crop&&(+r.plants||0)>0;});
+      var totalPlants=plots.reduce(function(a,r){return a+(+r.plants||0);},0);
+      var projHtml='';
+      if(yp&&totalPlants>0){
+        var loRev=Math.round(totalPlants*yp.lo*d.g2[0]/1000)*1000;
+        var hiRev=Math.round(totalPlants*yp.hi*d.g1[1]/1000)*1000;
+        projHtml='<div class="mp-proj">'+
+          '💰 依您的 <b>'+totalPlants+' 株 '+crop+'</b> 估算季總收益：'+
+          '<span style="color:var(--harv);font-weight:900;font-size:.88rem"> '+loRev.toLocaleString()+'–'+hiRev.toLocaleString()+' 元</span>'+
+          '<br><span style="color:var(--ink-soft);font-size:.69rem">（次級最低–特級最高，實際以銷售通路議價為準）</span></div>';
+      }
+      document.getElementById('mp-chart').innerHTML=
+        '<div class="mp-chart-lbl">各等級行情區間（元/kg）</div>'+
+        bBar(d)+
+        '<div class="mp-chart-lbl" style="margin-top:12px">月份行情走勢指數</div>'+
+        bSpark(d.monthly)+
+        '<div class="mp-tags">'+
+        '<span class="mp-tag peak">📈 旺季：'+d.peak+'</span>'+
+        '<span class="mp-tag low">📉 淡季：'+d.low+'</span>'+
+        '</div>'+
+        '<div style="font-size:.73rem;color:var(--ink-soft);line-height:1.6;border-left:3px solid var(--harv);padding-left:8px;margin-bottom:4px">'+d.note+'</div>'+
+        projHtml;
+    }
+    document.querySelectorAll('.mp-crop-btn').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        document.querySelectorAll('.mp-crop-btn').forEach(function(b){b.classList.remove('sel');});
+        btn.classList.add('sel');
+        showMp(btn.dataset.crop);
+      });
+    });
   })();
   // 每日農場作業時程
   v.querySelector("#sched-go").onclick=()=>{
