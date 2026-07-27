@@ -1269,6 +1269,9 @@ const loadSync=()=>{try{return JSON.parse(localStorage.getItem("farm-sync")||"{}
 const saveSync=s=>localStorage.setItem("farm-sync",JSON.stringify(s));
 const loadMkt=()=>{try{return JSON.parse(localStorage.getItem('farm-mktprice')||'[]');}catch(e){return[];}};
 const saveMkt=a=>localStorage.setItem('farm-mktprice',JSON.stringify(a));
+const loadWeather=()=>{try{return JSON.parse(localStorage.getItem('farm-weather')||'[]');}catch(e){return[];}};
+const saveWeather=a=>localStorage.setItem('farm-weather',JSON.stringify(a));
+const CROP_GDD_BASE={'牛番茄':10,'玉女番茄':10,'彩椒':10,'高山草莓':7,'高麗菜':5,'敏豆':10,'小黃瓜':10,'茄子':12,'甜玉米':10,'栗子南瓜':10,'百香果':15,'茭白筍':15};
 // 收集/寫回本機全部資料
 const snapshot=()=>({plots:load(),contracts:loadC(),idxOverride:loadIdxOv(),favMarkets:loadFav()});
 function applySnapshot(d){
@@ -5469,6 +5472,19 @@ function renderTools(){
     '</div>'+
     '<div id="mp-chart"><p class="note" style="margin:0;color:var(--ink-soft)">點選上方作物查看行情統計圖</p></div>'+
     '</div>'+
+    '<h2 style="margin-top:22px">🌡️ 氣候記錄站</h2><p class="note">每天記錄最高/最低溫、濕度與降雨量。系統自動計算各田區積熱（GDD）進度，並在連續高濕時提示病害風險。</p>'+
+    '<div class="card">'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'+
+    '<div><label class="f">日期</label><input class="t" type="date" id="wx-date"></div>'+
+    '<div><label class="f">最高溫 (°C)</label><input class="t" type="number" id="wx-tmax" placeholder="28" step="0.1"></div>'+
+    '<div><label class="f">最低溫 (°C)</label><input class="t" type="number" id="wx-tmin" placeholder="18" step="0.1"></div>'+
+    '<div><label class="f">相對濕度 (%)</label><input class="t" type="number" id="wx-rh" placeholder="75"></div>'+
+    '<div style="grid-column:span 2"><label class="f">降雨量 (mm)（無降雨填 0）</label><input class="t" type="number" id="wx-rain" placeholder="0" step="0.5"></div>'+
+    '</div>'+
+    '<button class="btn" id="wx-save">📝 記錄今日氣候</button>'+
+    '<div id="wx-result" style="margin-top:12px"></div>'+
+    '</div>'+
+    '<div class="card" id="wx-gdd-card" style="display:none"></div>'+
     '<h2 style="margin-top:22px">剩餘季節採購預算試算</h2><p class="note">依目前各田區作物、株數、剩餘天數，估算還需要採購哪些農資與預算。</p>'+
     '<div class="card"><button class="btn" id="bud-go">試算各田區採購清單</button><div id="bud-res"></div></div>'+
     '<h2 style="margin-top:22px">資料備份 / 還原</h2><p class="note">App 資料存在瀏覽器，清除快取會消失。定期備份 JSON 檔到手機相簿或雲端，需要時可還原。</p>'+
@@ -6534,6 +6550,130 @@ function renderTools(){
       '<div class="r" style="font-size:1rem;font-weight:800"><span>所有田區剩餘預算合計</span><b style="color:var(--accent)">NT$'+grandTotal.toLocaleString()+'</b></div>'+
       '<div style="font-size:.68rem;color:var(--ink-soft);margin-top:4px">※ 估算基準：肥料 NT$28/kg、黏板 NT$15/板/週、農藥 NT$600/次，請依實際採購調整。</div></div>';
   };
+  // 氣候記錄站
+  ;(function(){
+    var wxDate=v.querySelector('#wx-date');
+    if(!wxDate)return;
+    wxDate.value=today();
+    var wxGdd=v.querySelector('#wx-gdd-card');
+    function gddD(hi,lo,base){return Math.max(0,((hi+lo)/2)-base);}
+    window._wxRefresh=function(){
+      var wxRes=v.querySelector('#wx-result');
+      if(!wxRes)return;
+      var recs=loadWeather().sort(function(a,b){return a.date>b.date?1:-1;}).slice(-14).reverse();
+      if(!recs.length){
+        wxRes.innerHTML='<p class="note" style="margin:0;color:var(--ink-soft)">尚無記錄，填寫上方表單開始建立氣候資料庫。</p>';
+        if(wxGdd)wxGdd.style.display='none';
+        return;
+      }
+      // SVG 溫度範圍圖（最近14天）
+      var W=300,H=112,pL=26,pR=8,pT=10,pB=24;
+      var cW=W-pL-pR,cH=H-pT-pB;
+      var n=recs.length,xStep=cW/n,barW=Math.max(6,Math.min(13,Math.floor(xStep)-3));
+      var allT=[];recs.forEach(function(r){allT.push(r.tmin||20,r.tmax||25);});
+      var yMin=Math.max(0,Math.floor(Math.min.apply(null,allT))-3);
+      var yMax=Math.ceil(Math.max.apply(null,allT))+3;
+      var yR=yMax-yMin||1;
+      function yPx(t){return pT+cH-(t-yMin)/yR*cH;}
+      var gSvg=[10,15,20,25,30].filter(function(t){return t>yMin&&t<yMax;}).map(function(t){
+        var y=yPx(t);
+        return'<line x1="'+pL+'" y1="'+y+'" x2="'+(W-pR)+'" y2="'+y+'" stroke="var(--line)" stroke-dasharray="3,3" stroke-width="1"/>'+
+          '<text x="'+(pL-3)+'" y="'+(y+3)+'" text-anchor="end" font-size="7" fill="var(--ink-soft)">'+t+'</text>';
+      }).join('');
+      var bSvg=recs.map(function(r,i){
+        var x=pL+i*xStep+(xStep-barW)/2;
+        var hi=r.tmax||25,lo=r.tmin||15,rh=r.rh||60,rain=r.rain||0;
+        var avg=(hi+lo)/2;
+        var col=avg<18?'#5b9bd5':avg<23?'#52b788':avg<28?'#f5a623':'#e74c3c';
+        var y1=yPx(hi),y2=yPx(lo),bH=Math.max(4,y2-y1);
+        var d=new Date(r.date+'T00:00:00');
+        var lbl=(d.getMonth()+1)+'/'+(d.getDate());
+        return'<g>'+
+          (rh>80?'<rect x="'+x+'" y="'+pT+'" width="'+barW+'" height="'+cH+'" fill="#5b9bd5" opacity=".13" rx="2"/>':'')+
+          '<rect x="'+x+'" y="'+y1+'" width="'+barW+'" height="'+bH+'" fill="'+col+'" rx="2.5" opacity=".88"/>'+
+          '<text x="'+(x+barW/2)+'" y="'+(y1-2)+'" text-anchor="middle" font-size="6.5" fill="var(--ink)" font-weight="bold">'+hi+'</text>'+
+          '<text x="'+(x+barW/2)+'" y="'+(y2+7)+'" text-anchor="middle" font-size="6" fill="var(--ink-soft)">'+lo+'</text>'+
+          (rain>0?'<text x="'+(x+barW/2)+'" y="'+(H-2)+'" text-anchor="middle" font-size="8" fill="#5b9bd5">·</text>':'')+
+          '<text x="'+(x+barW/2)+'" y="'+(H-9)+'" text-anchor="middle" font-size="6" fill="var(--ink-soft)">'+lbl+'</text>'+
+          '</g>';
+      }).join('');
+      // 風險警示
+      var r7=recs.slice(-7),consec=0,maxC=0;
+      var hiH=r7.filter(function(r){return(r.rh||0)>80;}).length;
+      var hiT=r7.filter(function(r){return(r.tmax||0)>30;}).length;
+      r7.forEach(function(r){consec=(r.rh||0)>80?consec+1:0;maxC=Math.max(maxC,consec);});
+      var alertHtml='';
+      if(maxC>=3)alertHtml+='<div style="background:var(--warn-bg);border-left:3px solid var(--accent);border-radius:7px;padding:8px 10px;font-size:.75rem;margin-bottom:6px">⚠️ 連續 <b>'+maxC+' 天</b>濕度 >80%！灰黴病、晚疫病高風險，請巡查葉背並噴施預防性殺菌劑。</div>';
+      if(hiT>=3)alertHtml+='<div style="background:#fff3e0;border-left:3px solid #f5a623;border-radius:7px;padding:8px 10px;font-size:.75rem;margin-bottom:6px;color:#7a4000">🌡️ 近7天高溫（>30°C）達 <b>'+hiT+' 天</b>，注意熱緊迫與白粉病，加強通風。</div>';
+      // 記錄表
+      var tRows=recs.slice().reverse().slice(0,7).map(function(r){
+        return'<tr><td>'+r.date.slice(5)+'</td>'+
+          '<td style="color:#e74c3c">'+r.tmax+'°</td>'+
+          '<td style="color:#5b9bd5">'+r.tmin+'°</td>'+
+          '<td>'+(r.rh!=null?r.rh+'%':'—')+'</td>'+
+          '<td>'+(r.rain||0)+'mm</td>'+
+          '<td><button onclick="(function(d){var a=loadWeather().filter(function(x){return x.date!==d;});saveWeather(a);window._wxRefresh();})(\''+r.date+'\')" style="font-size:.65rem;background:var(--warn-bg);color:var(--warn);border:none;border-radius:4px;padding:2px 5px;cursor:pointer">✕</button></td></tr>';
+      }).join('');
+      var tbl='<div style="overflow-x:auto;margin-top:6px"><table class="mkt-tbl">'+
+        '<thead><tr><th>日期</th><th>最高</th><th>最低</th><th>濕度</th><th>降雨</th><th></th></tr></thead>'+
+        '<tbody>'+tRows+'</tbody></table></div>';
+      wxRes.innerHTML='<svg width="100%" viewBox="0 0 '+W+' '+H+'" style="display:block;margin:6px 0 4px">'+gSvg+bSvg+'</svg>'+
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;font-size:.65rem;color:var(--ink-soft);margin-bottom:6px">'+
+        '<span><span style="color:#5b9bd5">■</span> 涼≤18°C</span><span><span style="color:#52b788">■</span> 適18–23°C</span>'+
+        '<span><span style="color:#f5a623">■</span> 暖23–28°C</span><span><span style="color:#e74c3c">■</span> 熱>28°C</span>'+
+        '　<span>藍底＝濕度>80%</span></div>'+
+        alertHtml+tbl;
+      // 積熱進度（GDD）
+      if(!wxGdd)return;
+      var plots=load(),wAll=loadWeather();
+      var active=plots.filter(function(r){
+        var c=CROPS[r.crop];if(!c||!r.date)return false;
+        var age=Math.floor((new Date(today())-new Date(r.date))/DAY);
+        return age>=0&&age<=c.grow+c.dur;
+      });
+      if(!active.length){wxGdd.style.display='none';return;}
+      wxGdd.style.display='block';
+      var gRows=active.map(function(r){
+        var c=CROPS[r.crop],base=CROP_GDD_BASE[r.crop]||10;
+        var matched=wAll.filter(function(w){return w.date>=r.date&&w.date<=today();});
+        var gdd=matched.reduce(function(s,w){return s+gddD(w.tmax||0,w.tmin||0,base);},0);
+        var avgD=matched.length?gdd/matched.length:6;
+        var pct=matched.length>=5&&avgD>0?Math.min(100,Math.round(gdd/(avgD*c.grow)*100)):
+          Math.min(100,Math.round(Math.floor((new Date(today())-new Date(r.date))/DAY)/c.grow*100));
+        var col=pct<40?'var(--grow)':pct<75?'var(--harv)':'var(--accent)';
+        return'<div style="margin-bottom:10px">'+
+          '<div style="display:flex;justify-content:space-between;font-size:.78rem;margin-bottom:4px">'+
+          '<span><b>'+r.plot+'</b>　<span style="color:var(--ink-soft)">'+r.crop+'</span></span>'+
+          '<span style="color:var(--ink-soft)">積熱 <b style="color:var(--ink)">'+Math.round(gdd)+'</b> GDD</span></div>'+
+          '<div style="height:8px;background:var(--line);border-radius:4px;overflow:hidden">'+
+          '<div style="height:100%;width:'+pct+'%;background:'+col+';border-radius:4px"></div></div>'+
+          '<div style="font-size:.68rem;color:var(--ink-soft);margin-top:3px">生長進度 <b>'+pct+'%</b>　基礎溫 '+base+'°C'+(matched.length<5?' · 記錄僅'+matched.length+'天，準確度偏低':' · '+matched.length+'天記錄')+
+          '</div></div>';
+      }).join('');
+      wxGdd.innerHTML='<h3 style="margin:0 0 8px;font-size:.9rem">🌿 各田區積熱進度（GDD）</h3>'+
+        '<p class="note" style="margin:0 0 10px">積熱（GDD）反映作物生理生長速度。比單純天數更能預測採收時機，記錄 7 天以上精度大幅提升。</p>'+
+        gRows;
+    };
+    v.querySelector('#wx-save').onclick=function(){
+      var date=wxDate.value;
+      var tmax=parseFloat(v.querySelector('#wx-tmax').value);
+      var tmin=parseFloat(v.querySelector('#wx-tmin').value);
+      var rhEl=v.querySelector('#wx-rh'),rainEl=v.querySelector('#wx-rain');
+      var rh=rhEl&&rhEl.value!==''?parseFloat(rhEl.value):null;
+      var rain=rainEl&&rainEl.value!==''?parseFloat(rainEl.value):0;
+      if(!date||isNaN(tmax)||isNaN(tmin)){alert('請填寫日期、最高溫和最低溫');return;}
+      if(tmax<tmin){alert('最高溫不能低於最低溫');return;}
+      var all=loadWeather().filter(function(x){return x.date!==date;});
+      all.push({date:date,tmax:tmax,tmin:tmin,rh:rh,rain:rain});
+      saveWeather(all);
+      v.querySelector('#wx-tmax').value='';
+      v.querySelector('#wx-tmin').value='';
+      if(rhEl)rhEl.value='';
+      if(rainEl)rainEl.value='0';
+      window._wxRefresh();
+    };
+    window._wxRefresh();
+  })();
 }
 
 /* ---------- 契作管理 ---------- */
