@@ -1076,6 +1076,23 @@ nav button.on{color:var(--accent);}
 </div>
 <div id="modal-root"></div>
 
+<!-- 鎖定畫面 -->
+<div id="lock-screen" style="display:none;position:fixed;inset:0;z-index:9999;background:linear-gradient(155deg,#0c2710,#1a4a20);align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:22px;padding:36px 28px 24px;width:min(300px,88vw);text-align:center;box-shadow:0 24px 80px rgba(0,0,0,.6)">
+    <div style="font-size:3rem;line-height:1;margin-bottom:10px">🌱</div>
+    <div style="font-size:1.1rem;font-weight:800;color:#1a2a1a;margin-bottom:3px">農務小幫手</div>
+    <div style="font-size:.75rem;color:#888;margin-bottom:22px">請輸入密碼繼續</div>
+    <input type="password" id="lock-pin" placeholder="密碼" autocomplete="current-password"
+      style="width:100%;box-sizing:border-box;border:1.5px solid #d0d0d0;border-radius:11px;padding:11px 14px;font-size:1.05rem;outline:none;margin-bottom:11px;text-align:center;letter-spacing:.2em"
+      onkeydown="if(event.key==='Enter')tryUnlock()">
+    <button onclick="tryUnlock()"
+      style="width:100%;background:#2a6e2a;color:#fff;border:none;border-radius:11px;padding:12px;font-size:.9rem;font-weight:700;cursor:pointer;margin-bottom:10px">
+      解鎖
+    </button>
+    <div id="lock-err" style="font-size:.74rem;color:#e05252;min-height:18px"></div>
+  </div>
+</div>
+
 <script>
 const CROPS={
  "牛番茄":{科:"茄科",grow:60,dur:120,density:20000,fert:{堆肥:10000,N:250,P2O5:200,K2O:180},ec:{"苗期":2.0,"生長期":2.5,"花期":2.8,"果期":3.0},idx:[.85,.85,.9,.95,1,1.2,1.3,1.35,1.25,1.05,.9,.85],sched:[[0,"定植、澆定根水"],[3,"巡查活著率、補植死苗"],[8,"立支架/牽繩固定"],[14,"開始摘側芽（單幹整枝）"],[21,"第一次追肥"],[35,"開花，輔助授粉"],[45,"疏果、摘老葉"],[60,"開始分批採收"]]},
@@ -6147,6 +6164,25 @@ function renderTools(){
     '<div class="card" id="wx-gdd-card" style="display:none"></div>'+
     '<h2 style="margin-top:22px">剩餘季節採購預算試算</h2><p class="note">依目前各田區作物、株數、剩餘天數，估算還需要採購哪些農資與預算。</p>'+
     '<div class="card"><button class="btn" id="bud-go">試算各田區採購清單</button><div id="bud-res"></div></div>'+
+    '<h2 style="margin-top:22px">🔐 存取密碼</h2><p class="note">設定後，每次重新開啟瀏覽器需輸入密碼才能使用 App。密碼只儲存在本裝置，忘記需清除 localStorage 重設。</p>'+
+    '<div class="card" id="pin-settings-card">'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
+      '<div>'+
+        '<div style="font-size:.82rem;font-weight:700;color:var(--ink)" id="pin-st-lbl">🔓 未設定密碼</div>'+
+        '<div style="font-size:.68rem;color:var(--ink-soft)" id="pin-st-sub">目前任何人開啟此頁面均可使用</div>'+
+      '</div>'+
+      '<button id="pin-lock-now" style="display:none;font-size:.71rem;padding:5px 11px;background:var(--card2);border:1px solid var(--line);border-radius:9px;cursor:pointer;color:var(--ink)">立即鎖定</button>'+
+    '</div>'+
+    '<label class="f" id="pin-new-lbl">設定新密碼（英數字，4–12位）</label>'+
+    '<input class="t" type="password" id="pin-new-val" placeholder="設定密碼" autocomplete="new-password">'+
+    '<label class="f">確認密碼</label>'+
+    '<input class="t" type="password" id="pin-conf-val" placeholder="再輸入一次" autocomplete="new-password">'+
+    '<div style="display:flex;gap:8px;margin-top:10px">'+
+      '<button class="btn" id="pin-save-btn" style="flex:1">儲存密碼</button>'+
+      '<button class="btn sec" id="pin-clear-btn">移除密碼</button>'+
+    '</div>'+
+    '<div id="pin-msg" style="font-size:.74rem;margin-top:8px;min-height:18px"></div>'+
+    '</div>'+
     '<h2 style="margin-top:22px">資料備份 / 還原</h2><p class="note">App 資料存在瀏覽器，清除快取會消失。定期備份 JSON 檔到手機相簿或雲端，需要時可還原。</p>'+
     '<div class="card"><div class="row2">'+
     '<button class="btn" id="bk-exp">⬇ 備份下載 JSON</button>'+
@@ -6734,6 +6770,55 @@ function renderTools(){
       res.innerHTML='<div class="info">✓ 已從雲端下載（'+(ts?new Date(ts).toLocaleString():"")+'）。回總覽查看。</div>';}
     catch(e){res.innerHTML='<div class="info" style="color:var(--warn)">下載失敗：'+e.message+'</div>';}
   };
+  // 密碼設定 IIFE
+  (function(){
+    var stLbl=v.querySelector('#pin-st-lbl');
+    var stSub=v.querySelector('#pin-st-sub');
+    var lockNow=v.querySelector('#pin-lock-now');
+    var saveBtn=v.querySelector('#pin-save-btn');
+    var clearBtn=v.querySelector('#pin-clear-btn');
+    var newVal=v.querySelector('#pin-new-val');
+    var confVal=v.querySelector('#pin-conf-val');
+    var msg=v.querySelector('#pin-msg');
+    if(!stLbl)return;
+    function hasPIN(){return!!localStorage.getItem(_PIN_KEY);}
+    function refresh(){
+      if(hasPIN()){
+        stLbl.textContent='🔒 已設定密碼';stSub.textContent='重新開啟瀏覽器後需輸入密碼';
+        lockNow.style.display='block';newVal.placeholder='更換密碼（留空則不變）';
+      }else{
+        stLbl.textContent='🔓 未設定密碼';stSub.textContent='目前任何人開啟此頁面均可使用';
+        lockNow.style.display='none';newVal.placeholder='設定密碼';
+      }
+    }
+    lockNow.addEventListener('click',function(){
+      sessionStorage.removeItem(_SESS_KEY);
+      document.getElementById('lock-screen').style.display='flex';
+      setTimeout(function(){document.getElementById('lock-pin').focus();},100);
+    });
+    saveBtn.addEventListener('click',function(){
+      var p=newVal.value;var c=confVal.value;
+      if(!p&&!hasPIN()){msg.style.color='var(--warn)';msg.textContent='請輸入密碼';return;}
+      if(p&&p.length<4){msg.style.color='var(--warn)';msg.textContent='密碼至少需要 4 個字元';return;}
+      if(p&&p!==c){msg.style.color='var(--warn)';msg.textContent='兩次密碼不相符';return;}
+      if(p){
+        var enc;try{enc=btoa(p);}catch(e){msg.style.color='var(--warn)';msg.textContent='密碼請使用英文、數字或符號';return;}
+        localStorage.setItem(_PIN_KEY,enc);sessionStorage.setItem(_SESS_KEY,'1');
+      }
+      newVal.value='';confVal.value='';
+      msg.style.color='var(--accent)';msg.textContent='✅ 密碼已儲存，下次重新開啟瀏覽器時生效';
+      refresh();
+    });
+    clearBtn.addEventListener('click',function(){
+      if(!hasPIN()){msg.style.color='var(--ink-soft)';msg.textContent='目前未設定密碼';return;}
+      if(!confirm('確定要移除密碼？移除後任何人都可以直接開啟 App。'))return;
+      localStorage.removeItem(_PIN_KEY);sessionStorage.removeItem(_SESS_KEY);
+      newVal.value='';confVal.value='';
+      msg.style.color='var(--accent)';msg.textContent='✅ 密碼已移除';
+      refresh();
+    });
+    refresh();
+  })();
   // 天氣緊急應對
   const WX={
     '颱風':{icon:'🌀',level:'red',levelTxt:'高警戒',
@@ -7688,6 +7773,31 @@ function go(v){
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{if(b.dataset.v==="plots")CUR=null;go(b.dataset.v);});
 // 套用已校正的真實月價指數（若有）覆蓋示範值
 applyIdxOverride();
+/* ---------- 密碼鎖 ---------- */
+const _PIN_KEY='farm-pin-v1',_SESS_KEY='farm-unlocked';
+function tryUnlock(){
+  var pin=document.getElementById('lock-pin').value;
+  var stored=localStorage.getItem(_PIN_KEY);
+  var ok=false;
+  try{ok=(!stored||btoa(pin)===stored);}catch(e){}
+  if(ok){
+    sessionStorage.setItem(_SESS_KEY,'1');
+    document.getElementById('lock-screen').style.display='none';
+    document.getElementById('lock-pin').value='';
+  }else{
+    var el=document.getElementById('lock-err');
+    el.textContent='密碼錯誤，請再試一次';
+    document.getElementById('lock-pin').value='';
+    setTimeout(function(){if(el)el.textContent='';},2500);
+    document.getElementById('lock-pin').focus();
+  }
+}
+(function(){
+  if(localStorage.getItem(_PIN_KEY)&&!sessionStorage.getItem(_SESS_KEY)){
+    document.getElementById('lock-screen').style.display='flex';
+    document.getElementById('lock-pin').focus();
+  }
+})();
 const APP_VERSION="OMO-v3 · 0722";
 const t=today();document.getElementById("hd-date").innerHTML=fmtD(t)+"<br>星期"+["日","一","二","三","四","五","六"][t.getDay()]+'<br><span style="color:#fff;font-weight:700;opacity:.95">'+APP_VERSION+'</span>';
 renderDash();
