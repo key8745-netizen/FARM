@@ -4091,6 +4091,72 @@ function renderProfitCard(r){
   return'<div class="profit-card"><div class="profit-hd">📊 本季收益試算</div>'+rows+profitHtml+'</div>';
 }
 
+/* 農場健康總覽儀表板 */
+function renderDailyBriefingCard(r,c,age){
+  if(age<0)return'';
+  const recs=r.records||[],tdy=today();
+  // 灌溉
+  const lastIrr=(recs.filter(x=>x.type==='irrig').sort((a,b)=>b.date<a.date?-1:1))[0]||null;
+  const dIrr=lastIrr?Math.floor((tdy-parseD(lastIrr.date))/DAY):null;
+  const irrSc=dIrr===null?0:dIrr<=2?100:dIrr<=4?72:dIrr<=7?42:12;
+  const irrLbl=dIrr===null?'未記錄':dIrr===0?'今日已澆':dIrr+'天前';
+  const irrCol=irrSc>=70?'var(--grow)':irrSc>=42?'var(--harv)':'var(--warn)';
+  // 蟲害
+  const lastIpm=(recs.filter(x=>x.type==='ipm').sort((a,b)=>b.date<a.date?-1:1))[0]||null;
+  let ipmSc=85,ipmLbl='未記錄',ipmCol='var(--harv)';
+  if(lastIpm){
+    const mr=Math.max((+lastIpm.wf||0)/IPM_THR.粉蝨,(+lastIpm.th||0)/IPM_THR.薊馬,(+lastIpm.sm||0)/IPM_THR.葉蟎,(+lastIpm.ap||0)/IPM_THR.蚜蟲);
+    ipmSc=mr>=1?10:mr>=0.6?48:mr>=0.3?78:100;
+    ipmLbl=mr>=1?'達門檻':mr>=0.6?'接近門檻':mr>=0.3?'輕微':'正常';
+    ipmCol=ipmSc>=78?'var(--grow)':ipmSc>=48?'var(--harv)':'var(--warn)';
+  }
+  // 施肥
+  const lastFert=(recs.filter(x=>x.type==='fert').sort((a,b)=>b.date<a.date?-1:1))[0]||null;
+  const dFert=lastFert?Math.floor((tdy-parseD(lastFert.date))/DAY):null;
+  const fertSc=dFert===null?0:dFert<=7?100:dFert<=14?72:dFert<=21?42:12;
+  const fertLbl=dFert===null?'未記錄':dFert===0?'今日已施':dFert+'天前';
+  const fertCol=fertSc>=70?'var(--grow)':fertSc>=42?'var(--harv)':'var(--warn)';
+  // 生育期進度
+  const totDays=c.grow+(c.dur||30);
+  const stagePct=Math.min(100,Math.max(0,Math.round(age/totDays*100)));
+  const stageName=stageGuideKey(c,age);
+  // 今日建議
+  const acts=[];
+  if(dIrr===null||dIrr>2)acts.push('💧 澆水');
+  if(dFert===null||dFert>14)acts.push('🌿 施肥');
+  if(!lastIpm||(tdy-parseD(lastIpm.date))/DAY>7)acts.push('🪤 黏板巡查');
+  if(ipmSc<=48)acts.push('⚠️ 蟲害防治');
+  // 環形進度 SVG
+  function ring(sc,col,lbl,icon){
+    const R=20,CX=26,CY=26,CC=2*Math.PI*R;
+    const da=(sc/100*CC).toFixed(2),dg=(CC-da).toFixed(2);
+    return'<div style="text-align:center;padding:6px 2px">'+
+      '<svg viewBox="0 0 52 52" width="52" height="52" style="display:block;margin:0 auto">'+
+      '<circle cx="'+CX+'" cy="'+CY+'" r="'+R+'" fill="none" stroke="currentColor" stroke-opacity=".1" stroke-width="6"/>'+
+      '<circle cx="'+CX+'" cy="'+CY+'" r="'+R+'" fill="none" stroke="'+col+'" stroke-width="6" stroke-dasharray="'+da+' '+dg+'" transform="rotate(-90 '+CX+' '+CY+')" stroke-linecap="round"/>'+
+      '<text x="'+CX+'" y="'+(CY+4)+'" text-anchor="middle" font-size="10" font-weight="bold" fill="currentColor">'+sc+'</text>'+
+      '</svg>'+
+      '<div style="font-size:.68rem;font-weight:800;color:'+col+';line-height:1.3">'+lbl+'</div>'+
+      '<div style="font-size:.62rem;color:var(--ink-soft)">'+icon+'</div>'+
+      '</div>';
+  }
+  return'<div style="background:var(--card);border:1px solid var(--accent);border-radius:14px;padding:11px 13px;margin:8px 0">'+
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'+
+    '<span style="font-size:1rem">📊</span>'+
+    '<div><div style="font-size:.84rem;font-weight:900;color:var(--accent)">農場健康總覽</div>'+
+    '<div style="font-size:.68rem;color:var(--ink-soft)">'+r.crop+' · '+stageName+' · 第 '+Math.max(0,age)+' 天</div></div>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:2px;margin-bottom:8px">'+
+    ring(irrSc,irrCol,irrLbl,'💧 灌溉')+
+    ring(ipmSc,ipmCol,ipmLbl,'🪤 蟲害')+
+    ring(fertSc,fertCol,fertLbl,'🌿 施肥')+
+    ring(stagePct,'#4a9eff',stagePct+'%','📅 生育期')+
+    '</div>'+
+    (acts.length
+      ?'<div style="background:var(--warn-bg);border-radius:9px;padding:7px 10px;font-size:.73rem;color:var(--warn)"><span style="font-weight:800">今日建議：</span>'+acts.join('　·　')+'</div>'
+      :'<div style="background:#e6f9f0;border-radius:9px;padding:7px 10px;font-size:.73rem;color:var(--grow);font-weight:700">✅ 今日狀態良好，繼續維持！</div>')+
+    '</div>';
+}
 /* 智能健康警告 — 根據田區資料自動產生個人化行動提示 */
 function renderHealthAlerts(r,c,age){
   if(age<3)return'';
@@ -4492,6 +4558,7 @@ function renderPlots(){
     ((()=>{const g=harvestGrades(r);return (g.g2||g.g3)?'<span class="pill ok" style="background:var(--accent-soft);color:var(--accent)">特'+g.g1+'/優'+g.g2+'/次'+g.g3+' kg</span>':'';})())+
     ((()=>{const costs=(r.records||[]).filter(x=>x.type==='cost'&&x.amount);if(!costs.length)return'';const tot=costs.reduce((a,x)=>a+(+x.amount||0),0);return '<span class="pill" style="background:var(--grow-bg);color:var(--grow)">💰 累計成本 NT$'+Math.round(tot).toLocaleString()+'</span>';})())+
     ipmWarn+'</div>'+
+    renderDailyBriefingCard(r,c,age)+
     renderHealthAlerts(r,c,age)+
     renderActivityStrip(r)+
     renderStageTimeline(r,c,age)+
