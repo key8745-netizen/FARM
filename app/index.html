@@ -2806,6 +2806,95 @@ function renderYieldChartCard(r,c,age){
     trendHtml+
     '</div></div>';
 }
+function renderSeasonRevenueCard(r,c,age){
+  const key=stageGuideKey(c,age);
+  if(key!=='採收期'&&key!=='採收後')return'';
+  const gd=harvestGrades(r);const tot=gd.g1+gd.g2+gd.g3;
+  const actualTot=harvestTotal(r);
+  if(actualTot<=0)return'';
+  const mp=MARKET_PRICE[r.crop];if(!mp)return'';
+  const g1=gd.g1,g2=gd.g2,g3=gd.g3;
+  // If no grade breakdown, estimate 60%/30%/10% split
+  const useGrade=tot>0;
+  const eg1=useGrade?g1:Math.round(actualTot*0.6*10)/10;
+  const eg2=useGrade?g2:Math.round(actualTot*0.3*10)/10;
+  const eg3=useGrade?g3:Math.round(actualTot*0.1*10)/10;
+  const revLo=Math.round(eg1*mp.g1[0]+eg2*mp.g2[0]+eg3*mp.g3[0]);
+  const revHi=Math.round(eg1*mp.g1[1]+eg2*mp.g2[1]+eg3*mp.g3[1]);
+  const revMid=Math.round((revLo+revHi)/2);
+  const cost=+(r.totalCost||0);
+  const plants=+r.plants||0;
+  const revPerKg=actualTot>0?Math.round(revMid/actualTot):0;
+  const netLo=revLo-cost,netHi=revHi-cost,netMid=revMid-cost;
+  const profitCol=netMid>=0?'#5aab60':'var(--warn)';
+  const uid='rev-'+r.plot.replace(/\W/g,'');
+  const cid='rcost-'+r.plot.replace(/\W/g,'');
+  // Profit bar: revLo / revHi / cost indicator
+  const maxVal=Math.max(revHi,cost,1);
+  const barPctRev=Math.min(100,Math.round(revMid/maxVal*100));
+  const barPctCost=cost>0?Math.min(100,Math.round(cost/maxVal*100)):0;
+  const winLo=cost>0?Math.round((revLo/cost-1)*100):null;
+  const winHi=cost>0?Math.round((revHi/cost-1)*100):null;
+  return'<div class="hp-card">'+
+    '<div class="hp-hd" onclick="var b=document.getElementById(\''+uid+'\');b.classList.toggle(\'open\');this.querySelector(\'.hp-arr\').classList.toggle(\'open\')">'+
+    '<span style="font-size:1.1rem">💰</span>'+
+    '<span class="hp-title">本季收益估算</span>'+
+    '<span class="hp-badge '+(netMid>=0?'hi':'lo')+'">'+(netMid>=0?'獲利':'虧損')+' '+(cost>0?'試算':'估算')+'</span>'+
+    '<span class="hp-arr">▶</span></div>'+
+    '<div class="hp-body" id="'+uid+'">'+
+    // Grade breakdown
+    '<div style="font-size:.72rem;font-weight:700;color:var(--ink);margin-bottom:8px">📦 採收等級 × 市場行情</div>'+
+    '<div style="display:grid;gap:5px;margin-bottom:12px">'+
+    (eg1>0?'<div style="display:flex;align-items:center;gap:8px;font-size:.72rem">'+
+      '<span style="color:#5aab60;font-weight:700;min-width:22px">特級</span>'+
+      '<span style="color:var(--ink-soft)">'+eg1+' kg × '+mp.g1[0]+'–'+mp.g1[1]+' 元</span>'+
+      '<span style="margin-left:auto;font-weight:800">'+Math.round(eg1*mp.g1[0])+'–'+Math.round(eg1*mp.g1[1])+' 元</span>'+
+      '</div>':'')+
+    (eg2>0?'<div style="display:flex;align-items:center;gap:8px;font-size:.72rem">'+
+      '<span style="color:#e8a020;font-weight:700;min-width:22px">優級</span>'+
+      '<span style="color:var(--ink-soft)">'+eg2+' kg × '+mp.g2[0]+'–'+mp.g2[1]+' 元</span>'+
+      '<span style="margin-left:auto;font-weight:800">'+Math.round(eg2*mp.g2[0])+'–'+Math.round(eg2*mp.g2[1])+' 元</span>'+
+      '</div>':'')+
+    (eg3>0?'<div style="display:flex;align-items:center;gap:8px;font-size:.72rem">'+
+      '<span style="color:#bbb;font-weight:700;min-width:22px">次級</span>'+
+      '<span style="color:var(--ink-soft)">'+eg3+' kg × '+mp.g3[0]+'–'+mp.g3[1]+' 元</span>'+
+      '<span style="margin-left:auto;font-weight:800">'+Math.round(eg3*mp.g3[0])+'–'+Math.round(eg3*mp.g3[1])+' 元</span>'+
+      '</div>':'')+
+    '<div style="border-top:1px solid var(--line);padding-top:6px;display:flex;justify-content:space-between;font-size:.78rem;font-weight:800">'+
+    '<span>預估收入</span><span>'+revLo.toLocaleString()+'–'+revHi.toLocaleString()+' 元</span></div>'+
+    '</div>'+
+    // Cost input
+    '<div style="background:var(--card2);border-radius:8px;padding:9px 10px;margin-bottom:10px">'+
+    '<div style="font-size:.72rem;font-weight:700;color:var(--ink);margin-bottom:6px">📥 本季總支出（種苗+肥料+農藥+人工…）</div>'+
+    '<div style="display:flex;gap:8px;align-items:center">'+
+    '<input type="number" id="'+cid+'" class="t" placeholder="輸入總支出 元" value="'+(cost||'')+'" min="0" style="flex:1;font-size:.85rem">'+
+    '<button class="btn" onclick="(function(){'+
+      'var v=+document.getElementById(\''+cid+'\').value;'+
+      'var p=load();if(CUR===null||!p[CUR])return;'+
+      'p[CUR].totalCost=v;save(p);renderPlots();'+
+    '})()">儲存</button></div>'+
+    (cost>0?'<div style="font-size:.65rem;color:var(--ink-soft);margin-top:4px">已記錄支出：<b>'+cost.toLocaleString()+' 元</b></div>':
+    '<div style="font-size:.65rem;color:var(--ink-soft);margin-top:4px">填入後系統計算淨利；不填則僅顯示收入估算。</div>')+
+    '</div>'+
+    // Net result
+    (cost>0?
+    '<div style="background:'+profitCol+'18;border:1.5px solid '+profitCol+';border-radius:10px;padding:10px 12px;margin-bottom:10px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center">'+
+    '<span style="font-size:.78rem;font-weight:700">預估淨利</span>'+
+    '<span style="font-size:1.1rem;font-weight:900;color:'+profitCol+'">'+(netMid>=0?'+':'')+netMid.toLocaleString()+' 元</span>'+
+    '</div>'+
+    '<div style="font-size:.67rem;color:var(--ink-soft);margin-top:4px">範圍 '+(netLo>=0?'+':'')+netLo.toLocaleString()+'～'+(netHi>=0?'+':'')+netHi.toLocaleString()+' 元</div>'+
+    (winLo!==null?'<div style="font-size:.67rem;margin-top:3px;color:var(--ink-soft)">投資報酬率 '+winLo+'%～'+winHi+'%</div>':'')+
+    '</div>':'') +
+    // Key metrics
+    '<div class="hp-nums">'+
+    '<div class="hp-num"><div class="hp-num-val">'+revMid.toLocaleString()+'</div><div class="hp-num-lbl">預估收入（元）</div></div>'+
+    '<div class="hp-num"><div class="hp-num-val">'+revPerKg+'</div><div class="hp-num-lbl">平均收益（元/kg）</div></div>'+
+    (plants>0?'<div class="hp-num"><div class="hp-num-val">'+Math.round(revMid/plants)+'</div><div class="hp-num-lbl">每株收益（元）</div></div>':'')+
+    '</div>'+
+    (useGrade?'':'<div style="font-size:.65rem;color:var(--ink-soft);margin-top:6px;background:var(--card2);padding:6px 8px;border-radius:6px">⚠️ 採收記錄無等級資料，以 特60%/優30%/次10% 估算。建議在採收登錄時填入各等級公斤數，以取得更準確的收益計算。</div>')+
+    '</div></div>';
+}
 const HARVEST_MATURITY={
   '牛番茄':{
     swatch:'#e63e2e',colorDesc:'由綠轉橘紅至全紅（果肩轉色即可搶先採）',
@@ -5024,6 +5113,7 @@ function renderPlots(){
     renderHarvestGuide(r,c,age)+
     renderGradingPackGuide(r,c,age)+
     renderPostHarvestGuide(r,c,age)+
+    renderSeasonRevenueCard(r,c,age)+
     renderSeasonEndGuide(r,c,age)+
     renderRotationPlanCard(r,c,age)+
     renderPlotDailyTasks(r.plot)+
