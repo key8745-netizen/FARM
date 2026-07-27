@@ -2518,8 +2518,28 @@ function renderHarvestProgressCard(r,c,age){
     const gTag=(x.g1||x.g2||x.g3)?'<span class="hp-grade g1">特'+( +x.g1||0)+'kg</span><span class="hp-grade g2">優'+(+x.g2||0)+'kg</span>'+'<span class="hp-grade g3">次'+(+x.g3||0)+'kg</span>':'';
     return'<div class="hp-rec"><span class="hp-rec-dt">'+x.date+'</span><span class="hp-rec-qty">'+x.qty+' kg</span>'+gTag+'</div>';
   }).join('');
-  const gradeHtml=grades.g1||grades.g2||grades.g3?
-    '<div class="hp-grades"><span class="hp-grade g1">特級 '+grades.g1+' kg</span><span class="hp-grade g2">優級 '+grades.g2+' kg</span><span class="hp-grade g3">次級 '+grades.g3+' kg</span></div>':'';
+  var g1v=+grades.g1||0,g2v=+grades.g2||0,g3v=+grades.g3||0,gtot=g1v+g2v+g3v;
+  var donutSvg='';
+  if(gtot>0){
+    var Rd=34,CXd=44,CYd=44,CCd=2*Math.PI*Rd;
+    var gcum=0,gcir='<circle cx="'+CXd+'" cy="'+CYd+'" r="'+Rd+'" fill="none" stroke="currentColor" stroke-opacity=".08" stroke-width="10"/>';
+    [{v:g1v,c:'#5aab60'},{v:g2v,c:'#e8a020'},{v:g3v,c:'#bbb'}].forEach(function(s){
+      if(s.v<=0){gcum+=s.v/gtot;return;}
+      var rt=s.v/gtot,da=(rt*CCd).toFixed(2),ga=(CCd-rt*CCd).toFixed(2),ro=(-90+gcum*360).toFixed(1);
+      gcir+='<circle cx="'+CXd+'" cy="'+CYd+'" r="'+Rd+'" fill="none" stroke="'+s.c+'" stroke-width="10" stroke-dasharray="'+da+' '+ga+'" transform="rotate('+ro+' '+CXd+' '+CYd+')" stroke-linecap="butt"/>';
+      gcum+=rt;
+    });
+    donutSvg='<div style="flex:none;text-align:center">'+
+      '<svg viewBox="0 0 88 88" width="84" height="84" style="display:block">'+gcir+
+      '<text x="'+CXd+'" y="'+(CYd-3)+'" text-anchor="middle" font-size="12" font-weight="bold" fill="currentColor">'+Math.round(g1v/gtot*100)+'%</text>'+
+      '<text x="'+CXd+'" y="'+(CYd+10)+'" text-anchor="middle" font-size="7.5" fill="currentColor" opacity=".6">特級佔比</text>'+
+      '</svg>'+
+      '<div style="font-size:.62rem;display:flex;gap:4px;justify-content:center;flex-wrap:wrap;color:var(--ink)">'+
+      '<span style="color:#5aab60">■特 '+g1v+'kg</span>'+
+      '<span style="color:#e8a020">■優 '+g2v+'kg</span>'+
+      '<span style="color:#bbb">■次 '+g3v+'kg</span>'+
+      '</div></div>';
+  }
   return'<div class="hp-card">'+
     '<div class="hp-hd" onclick="var b=document.getElementById(\''+uid+'\');b.classList.toggle(\'open\');this.querySelector(\'.hp-arr\').classList.toggle(\'open\')">'+
     '<span style="font-size:1.1rem">📊</span>'+
@@ -2527,16 +2547,18 @@ function renderHarvestProgressCard(r,c,age){
     '<span class="hp-badge '+badgeClass+'">'+badge+'</span>'+
     '<span class="hp-arr">▶</span></div>'+
     '<div class="hp-body" id="'+uid+'">'+
+    '<div style="display:flex;gap:8px;align-items:center">'+
+    '<div style="flex:1;min-width:0">'+
     '<div class="hp-nums">'+
     '<div class="hp-num"><div class="hp-num-val">'+actual+'</div><div class="hp-num-lbl">已採收 (kg)</div></div>'+
-    '<div class="hp-num"><div class="hp-num-val" style="color:var(--ink-soft);font-size:.95rem">'+targetLo+'–'+targetHi+'</div><div class="hp-num-lbl">目標範圍 (kg)</div></div>'+
+    '<div class="hp-num"><div class="hp-num-val" style="color:var(--ink-soft);font-size:.9rem">'+targetLo+'–'+targetHi+'</div><div class="hp-num-lbl">目標範圍 (kg)</div></div>'+
     '<div class="hp-num"><div class="hp-num-val">'+pct+'%</div><div class="hp-num-lbl">目標達成率</div></div>'+
     '</div>'+
     '<div class="hp-bar-wrap"><div class="hp-bar-fill" style="width:'+Math.min(100,pct)+'%"></div></div>'+
-    '<div style="display:flex;justify-content:space-between;font-size:.68rem;color:var(--ink-soft);margin-bottom:8px">'+
+    '<div style="display:flex;justify-content:space-between;font-size:.68rem;color:var(--ink-soft);margin-top:3px">'+
     '<span>採收第 '+daysIn+' 天</span><span>剩 '+daysLeft+' 天</span></div>'+
-    gradeHtml+
-    (dailyNeed>0?'<div style="font-size:.76rem;background:var(--warn-bg);border-radius:8px;padding:7px 10px;margin-bottom:8px;color:var(--warn)">⏰ 達到最低目標還需每天採收 <b>'+dailyNeed+' kg</b>（共 '+daysLeft+' 天）</div>':'')+
+    '</div>'+donutSvg+'</div>'+
+    (dailyNeed>0?'<div style="font-size:.76rem;background:var(--warn-bg);border-radius:8px;padding:7px 10px;margin:8px 0;color:var(--warn)">⏰ 達到最低目標還需每天採收 <b>'+dailyNeed+' kg</b>（共 '+daysLeft+' 天）</div>':'')+
     (recentHtml?'<div class="hp-recent"><div style="font-size:.74rem;font-weight:800;color:var(--ink);margin-bottom:5px">📋 近期採收記錄</div>'+recentHtml+'</div>':
     '<div style="font-size:.74rem;color:var(--ink-soft);padding:6px 0">尚無採收記錄 — 請在「記錄」中新增採收資料</div>')+
     '<div style="font-size:.68rem;color:var(--ink-soft);margin-top:8px;line-height:1.55">💡 目標產量依每株 '+yp.lo+'–'+yp.hi+' '+yp.unit+' 估算（品種、管理品質、季節均會影響實際產量）</div>'+
