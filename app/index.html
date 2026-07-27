@@ -2720,6 +2720,92 @@ function renderHarvestProgressCard(r,c,age){
     '<div style="font-size:.68rem;color:var(--ink-soft);margin-top:8px;line-height:1.55">💡 目標產量依每株 '+yp.lo+'–'+yp.hi+' '+yp.unit+' 估算（品種、管理品質、季節均會影響實際產量）</div>'+
     '</div></div>';
 }
+function renderYieldChartCard(r,c,age){
+  const key=stageGuideKey(c,age);
+  const harvs=(r.records||[]).filter(x=>x.type==='harv').sort((a,b)=>a.date>b.date?1:-1);
+  if(harvs.length<1)return'';
+  if(key!=='果期'&&key!=='採收期'&&key!=='採收後')return'';
+  const maxQty=Math.max(...harvs.map(x=>+x.qty||0));
+  if(maxQty<=0)return'';
+  const W=320,H=110,PAD=30,BOTT=18;
+  const cW=W-PAD,cH=H-BOTT;
+  const n=harvs.length;
+  const barW=Math.max(6,Math.min(28,Math.floor((cW-4)/n)-4));
+  const spacing=(cW-n*barW)/(n+1);
+  const G1='#5aab60',G2='#e8a020',G3='#bbb';
+  let svgInner='';
+  // Grid lines
+  [0.25,0.5,0.75,1].forEach(f=>{
+    const gy=H-BOTT-f*cH;
+    svgInner+=`<line x1="${PAD}" y1="${gy.toFixed(1)}" x2="${W}" y2="${gy.toFixed(1)}" stroke="currentColor" stroke-opacity=".08" stroke-width="1"/>`;
+    if(f===1||f===0.5){
+      const lv=Math.round(maxQty*f);
+      svgInner+=`<text x="${PAD-3}" y="${(gy+3).toFixed(1)}" text-anchor="end" font-size="7" fill="currentColor" opacity=".5">${lv}</text>`;
+    }
+  });
+  svgInner+=`<text x="${PAD-3}" y="${H-BOTT+3}" text-anchor="end" font-size="7" fill="currentColor" opacity=".5">0</text>`;
+  harvs.forEach((h,i)=>{
+    const qty=+h.qty||0;if(qty<=0)return;
+    const g1=+h.g1||0,g2=+h.g2||0,g3=+h.g3||0;
+    const tot=g1+g2+g3;
+    const x=PAD+spacing+i*(barW+spacing);
+    const scale=cH/maxQty;
+    const base=H-BOTT;
+    let cy=base;
+    if(tot>0){
+      const g3h=(g3/tot)*qty*scale;
+      const g2h=(g2/tot)*qty*scale;
+      const g1h=(g1/tot)*qty*scale;
+      if(g3h>0){cy-=g3h;svgInner+=`<rect x="${x.toFixed(1)}" y="${cy.toFixed(1)}" width="${barW}" height="${g3h.toFixed(1)}" fill="${G3}" rx="1"/>`;}
+      if(g2h>0){cy-=g2h;svgInner+=`<rect x="${x.toFixed(1)}" y="${cy.toFixed(1)}" width="${barW}" height="${g2h.toFixed(1)}" fill="${G2}" rx="1"/>`;}
+      if(g1h>0){cy-=g1h;svgInner+=`<rect x="${x.toFixed(1)}" y="${cy.toFixed(1)}" width="${barW}" height="${g1h.toFixed(1)}" fill="${G1}" rx="1"/>`;}
+    } else {
+      const fh=qty*scale;cy-=fh;
+      svgInner+=`<rect x="${x.toFixed(1)}" y="${cy.toFixed(1)}" width="${barW}" height="${fh.toFixed(1)}" fill="${G1}" rx="1"/>`;
+    }
+    if(qty*scale>14){
+      svgInner+=`<text x="${(x+barW/2).toFixed(1)}" y="${(cy-2).toFixed(1)}" text-anchor="middle" font-size="7.5" font-weight="bold" fill="currentColor">${qty}</text>`;
+    }
+    const dl=h.date.slice(5).replace('-','/');
+    svgInner+=`<text x="${(x+barW/2).toFixed(1)}" y="${H-3}" text-anchor="middle" font-size="6.5" fill="currentColor" opacity=".55">${dl}</text>`;
+  });
+  // Grade trend
+  const grRecs=harvs.filter(h=>(+h.g1||0)+(+h.g2||0)+(+h.g3||0)>0);
+  let trendHtml='';
+  if(grRecs.length>=2){
+    const g1R=arr=>{const s=arr.reduce((a,h)=>a+(+h.g1||0),0);const t=arr.reduce((a,h)=>a+(+h.g1||0)+(+h.g2||0)+(+h.g3||0),0);return t>0?s/t:0;};
+    const mid=Math.ceil(grRecs.length/2);
+    const r1=g1R(grRecs.slice(0,mid)),r2=g1R(grRecs.slice(Math.floor(grRecs.length/2)));
+    const d=r2-r1;
+    const ic=Math.abs(d)<0.05?'→':d>0?'↗':'↘';
+    const col=Math.abs(d)<0.05?'var(--ink-soft)':d>0?G1:'var(--warn)';
+    const txt=Math.abs(d)<0.05?'特級比例穩定':d>0?'特級比例提升中':'特級比例下滑，確認採收標準';
+    trendHtml=`<div style="font-size:.69rem;margin-top:6px;display:flex;gap:5px;align-items:center;flex-wrap:wrap">
+      <span style="font-size:.95rem;color:${col}">${ic}</span>
+      <span style="color:${col};font-weight:700">品質趨勢：${txt}</span>
+      <span style="color:var(--ink-soft);font-size:.62rem">前期特級 ${Math.round(r1*100)}% → 近期 ${Math.round(r2*100)}%</span>
+    </div>`;
+  }
+  const tot=harvestTotal(r);const gd=harvestGrades(r);
+  const g1pct=tot>0?Math.round(gd.g1/tot*100):0;
+  const uid='yc-'+r.plot.replace(/\W/g,'')+(age||0);
+  return'<div class="hp-card">'+
+    '<div class="hp-hd" onclick="var b=document.getElementById(\''+uid+'\');b.classList.toggle(\'open\');this.querySelector(\'.hp-arr\').classList.toggle(\'open\')">'+
+    '<span style="font-size:1.1rem">📈</span>'+
+    '<span class="hp-title">採收批次分析（'+n+'批）</span>'+
+    '<span class="hp-badge '+(g1pct>=60?'hi':g1pct>=35?'ok':'lo')+'">特級 '+g1pct+'%</span>'+
+    '<span class="hp-arr">▶</span></div>'+
+    '<div class="hp-body" id="'+uid+'">'+
+    '<div style="overflow-x:auto">'+
+    '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:'+W+'px;display:block">'+svgInner+'</svg></div>'+
+    '<div style="display:flex;gap:10px;font-size:.63rem;margin-top:4px;flex-wrap:wrap">'+
+    '<span style="display:flex;align-items:center;gap:3px"><span style="width:10px;height:10px;background:'+G1+';border-radius:2px;display:inline-block"></span>特級 '+Math.round(gd.g1*10)/10+' kg</span>'+
+    '<span style="display:flex;align-items:center;gap:3px"><span style="width:10px;height:10px;background:'+G2+';border-radius:2px;display:inline-block"></span>優級 '+Math.round(gd.g2*10)/10+' kg</span>'+
+    '<span style="display:flex;align-items:center;gap:3px"><span style="width:10px;height:10px;background:'+G3+';border-radius:2px;display:inline-block"></span>次級 '+Math.round(gd.g3*10)/10+' kg</span>'+
+    '</div>'+
+    trendHtml+
+    '</div></div>';
+}
 const HARVEST_MATURITY={
   '牛番茄':{
     swatch:'#e63e2e',colorDesc:'由綠轉橘紅至全紅（果肩轉色即可搶先採）',
@@ -4931,6 +5017,7 @@ function renderPlots(){
     renderIpmTrendCard(r,c,age)+
     renderDiseaseRiskCard(r,c,age)+
     renderHarvestProgressCard(r,c,age)+
+    renderYieldChartCard(r,c,age)+
     renderPriceTimingCard(r,c,age)+
     renderHarvestSafetyCard(r,c,age)+
     renderHarvestMaturityCard(r,c,age)+
