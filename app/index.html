@@ -1100,9 +1100,18 @@ nav button.on{color:var(--accent);}
     </div>
     <!-- 尚未設定提示 -->
     <div id="lock-setup-hint" style="display:none;font-size:.67rem;color:#aaa;line-height:1.6;margin-top:6px">
-      在工具頁 →「雲端同步」設定 Firebase<br>並啟用 Google 登入後即可使用
+      此 App 需要授權才能存取
     </div>
-    <div id="lock-err" style="font-size:.73rem;color:#e05252;min-height:18px;margin-top:4px"></div>
+    <!-- 管理員初次設定（用於新裝置） -->
+    <div style="margin-top:14px;text-align:center">
+      <span onclick="var d=document.getElementById('lock-fb-setup');d.style.display=d.style.display==='block'?'none':'block'" style="font-size:.62rem;color:#999;cursor:pointer;text-decoration:underline">管理員初次設定</span>
+    </div>
+    <div id="lock-fb-setup" style="display:none;margin-top:10px;text-align:left">
+      <div style="font-size:.65rem;color:#555;margin-bottom:6px">貼上 Firebase Config JSON：</div>
+      <textarea id="lock-fb-cfg" style="width:100%;box-sizing:border-box;height:90px;font-size:.63rem;border:1.5px solid #d0d0d0;border-radius:9px;padding:8px;resize:none;color:#333" placeholder='{ "apiKey": "…", "authDomain": "…", "projectId": "…", "appId": "…" }'></textarea>
+      <button onclick="lockSetupFB()" style="margin-top:7px;width:100%;background:#2a6e2a;color:#fff;border:none;border-radius:9px;padding:10px;font-size:.82rem;font-weight:700;cursor:pointer">儲存並重新載入</button>
+    </div>
+    <div id="lock-err" style="font-size:.73rem;color:#e05252;min-height:18px;margin-top:8px"></div>
   </div>
 </div>
 
@@ -7847,6 +7856,18 @@ function _showLockScreen(){
     else{var gb=document.getElementById('lock-google-btn');if(gb&&gb.style.display!=='none')gb.focus();}
   },120);
 }
+function lockSetupFB(){
+  var cfg=document.getElementById('lock-fb-cfg').value.trim();
+  var err=document.getElementById('lock-err');
+  try{
+    var obj=JSON.parse(cfg);
+    if(!obj.apiKey)throw new Error('缺少 apiKey');
+    var s=loadSync();s.config=obj;s.configText=cfg;saveSync(s);
+    location.reload();
+  }catch(e){
+    if(err)err.textContent='格式錯誤：'+e.message;
+  }
+}
 function tryUnlock(){
   var pin=document.getElementById('lock-pin').value;
   var stored=localStorage.getItem(_PIN_KEY);
@@ -7929,7 +7950,7 @@ async function googleSignOut(){
   }else{
     if(gb)gb.style.display='none';
     if(hasPIN){if(ps)ps.style.display='block';}else{if(hint)hint.style.display='block';}
-    if((hasPIN||authEmail)&&!sessionStorage.getItem(_SESS_KEY))_showLockScreen();
+    if(!sessionStorage.getItem(_SESS_KEY))_showLockScreen();
   }
 })();
 const APP_VERSION="OMO-v3 · 0722";
