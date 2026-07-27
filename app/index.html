@@ -3543,6 +3543,120 @@ function renderEcPhAdjCard(r,c,age){
     tips.map(t=>'💡 '+t).join('<br>')+'</div>'+
     '</div></div>';
 }
+function renderEcPhTrendCard(r,c,age){
+  if(age<0)return'';
+  const key=stageGuideKey(c,age);
+  if(key==='定植前'||key==='採收後')return'';
+  const ecRecs=(r.records||[]).filter(x=>x.type==='ecph'&&(+x.ec||+x.ph)).sort((a,b)=>a.date<b.date?-1:1);
+  if(ecRecs.length<2)return''; // need ≥ 2 points for a trend
+  const pts=ecRecs.slice(-16); // show last 16 readings
+  const[,ecTarget]=ecStage(c,age);
+  const phRange=(CROP_PH||{})[r.crop]||{lo:5.8,hi:6.5};
+  // EC chart
+  const ecVals=pts.map(p=>+(p.ec)||null);
+  const phVals=pts.map(p=>+(p.ph)||null);
+  const ecMax=Math.max(ecTarget*1.5,...ecVals.filter(Boolean))+0.3;
+  const phMax=Math.max(8,phRange.hi+0.5,...phVals.filter(Boolean));
+  const phMin=Math.max(0,phRange.lo-0.5);
+  const W=320,H=80,PAD=28,BOTT=14;
+  const cW=W-PAD,cH=H-BOTT;
+  const n=pts.length;
+  const xStep=cW/(n-1);
+
+  function buildChart(vals,lo,hi,maxV,minV,col,targetLo,targetHi){
+    if(minV===undefined)minV=0;
+    const range=maxV-minV||1;
+    const scaleY=v=>(H-BOTT)-((v-minV)/range)*cH;
+    // target band
+    const bandY1=scaleY(Math.min(targetHi,maxV));
+    const bandY2=scaleY(Math.max(targetLo,minV));
+    let svg=`<rect x="${PAD}" y="${bandY1.toFixed(1)}" width="${cW}" height="${(bandY2-bandY1).toFixed(1)}" fill="#5aab6020"/>`;
+    // target lines
+    svg+=`<line x1="${PAD}" y1="${scaleY(targetLo).toFixed(1)}" x2="${W}" y2="${scaleY(targetLo).toFixed(1)}" stroke="#5aab60" stroke-width="0.8" stroke-dasharray="3 2" opacity=".6"/>`;
+    svg+=`<line x1="${PAD}" y1="${scaleY(targetHi).toFixed(1)}" x2="${W}" y2="${scaleY(targetHi).toFixed(1)}" stroke="#5aab60" stroke-width="0.8" stroke-dasharray="3 2" opacity=".6"/>`;
+    // line path
+    const validPts=[];
+    vals.forEach((v,i)=>{if(v===null)return;const x=(PAD+i*xStep).toFixed(1);const y=scaleY(v).toFixed(1);validPts.push({x,y,v,i});});
+    if(validPts.length>=2){
+      let d='M'+validPts[0].x+' '+validPts[0].y;
+      for(let k=1;k<validPts.length;k++)d+=' L'+validPts[k].x+' '+validPts[k].y;
+      svg+=`<path d="${d}" fill="none" stroke="${col}" stroke-width="1.8" stroke-linejoin="round"/>`;
+    }
+    // dots with in/out color
+    validPts.forEach(({x,y,v})=>{
+      const inRange=v>=targetLo&&v<=targetHi;
+      const dotC=inRange?'#5aab60':v>targetHi?'#e05252':'#e8a020';
+      svg+=`<circle cx="${x}" cy="${y}" r="3" fill="${dotC}" stroke="#fff" stroke-width="0.8"/>`;
+    });
+    // last value label
+    if(validPts.length>0){
+      const lp=validPts[validPts.length-1];
+      svg+=`<text x="${(+lp.x+4).toFixed(0)}" y="${(+lp.y+3).toFixed(0)}" font-size="8" font-weight="bold" fill="${col}">${lp.v.toFixed(1)}</text>`;
+    }
+    // axis labels
+    svg+=`<text x="${PAD-3}" y="${(scaleY(targetHi)+3).toFixed(0)}" text-anchor="end" font-size="7" fill="#5aab60" opacity=".8">${targetHi}</text>`;
+    svg+=`<text x="${PAD-3}" y="${(scaleY(targetLo)+3).toFixed(0)}" text-anchor="end" font-size="7" fill="#5aab60" opacity=".8">${targetLo}</text>`;
+    return svg;
+  }
+
+  const ecSvgInner=buildChart(ecVals,null,null,ecMax,0,
+    'var(--accent)',ecTarget*0.85,ecTarget*1.15);
+  const phSvgInner=buildChart(phVals,null,null,phMax,phMin,
+    '#b05acd',phRange.lo,phRange.hi);
+
+  // Date labels (first and last)
+  function dateTick(i){
+    const svg=`<text x="${(PAD+i*xStep).toFixed(1)}" y="${H-1}" text-anchor="middle" font-size="6.5" fill="currentColor" opacity=".5">${pts[i].date.slice(5).replace('-','/')}</text>`;
+    return svg;
+  }
+
+  // Trend analysis
+  function trendOf(vals){
+    const v=vals.filter(Boolean);if(v.length<2)return null;
+    const first=v.slice(0,Math.ceil(v.length/2)).reduce((a,b)=>a+b,0)/Math.ceil(v.length/2);
+    const last=v.slice(-Math.ceil(v.length/2)).reduce((a,b)=>a+b,0)/Math.ceil(v.length/2);
+    return{diff:last-first,first,last};}
+  const ecTr=trendOf(ecVals);const phTr=trendOf(phVals);
+  const ecLo=ecTarget*0.85,ecHi=ecTarget*1.15;
+  const lastEC=ecVals.filter(Boolean).slice(-1)[0];
+  const lastPH=phVals.filter(Boolean).slice(-1)[0];
+  const ecOk=lastEC!=null&&lastEC>=ecLo&&lastEC<=ecHi;
+  const phOk=lastPH!=null&&lastPH>=phRange.lo&&lastPH<=phRange.hi;
+  let alerts='';
+  if(!ecOk&&lastEC!=null){
+    const col=lastEC>ecHi?'var(--warn)':'var(--harv)';
+    const txt=lastEC>ecHi?'EC 偏高（'+lastEC.toFixed(1)+'），需稀釋':'EC 偏低（'+lastEC.toFixed(1)+'），需補肥';
+    alerts+=`<div style="font-size:.68rem;color:${col};font-weight:700;margin-top:4px">⚠ ${txt}（目標 ${ecLo.toFixed(1)}–${ecHi.toFixed(1)} dS/m）</div>`;
+  }
+  if(!phOk&&lastPH!=null){
+    const col=lastPH>phRange.hi?'var(--warn)':'var(--harv)';
+    const txt=lastPH>phRange.hi?'pH 偏高（'+lastPH.toFixed(1)+'），需降酸':'pH 偏低（'+lastPH.toFixed(1)+'），需提鹼';
+    alerts+=`<div style="font-size:.68rem;color:${col};font-weight:700;margin-top:4px">⚠ ${txt}（目標 ${phRange.lo}–${phRange.hi}）</div>`;
+  }
+  if(!alerts&&ecOk&&phOk)alerts='<div style="font-size:.68rem;color:#5aab60;font-weight:700;margin-top:4px">✓ EC/pH 均在目標範圍</div>';
+
+  const uid='ect-'+r.plot.replace(/\W/g,'')+(age||0);
+  const tickHtml=dateTick(0)+(n>2?dateTick(n-1):'');
+  const tickHtml2=n>2?dateTick(0)+dateTick(n-1):'';
+  return'<div class="hp-card">'+
+    '<div class="hp-hd" onclick="var b=document.getElementById(\''+uid+'\');b.classList.toggle(\'open\');this.querySelector(\'.hp-arr\').classList.toggle(\'open\')">'+
+    '<span style="font-size:1.1rem">📉</span>'+
+    '<span class="hp-title">EC/pH 趨勢追蹤</span>'+
+    '<span class="hp-badge '+(ecOk&&phOk?'hi':'lo')+'">'+(ecOk&&phOk?'正常':'需調整')+'</span>'+
+    '<span class="hp-arr">▶</span></div>'+
+    '<div class="hp-body" id="'+uid+'">'+
+    '<div style="font-size:.7rem;font-weight:700;color:var(--ink);margin-bottom:3px">EC 電導度 (dS/m)　<span style="font-weight:400;color:var(--ink-soft)">綠帶 = 目標範圍</span></div>'+
+    '<div style="overflow-x:auto">'+
+    `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px;display:block">${ecSvgInner}${tickHtml}</svg>'+
+    '</div>'+
+    '<div style="font-size:.7rem;font-weight:700;color:var(--ink);margin:8px 0 3px">pH 酸鹼值　<span style="font-weight:400;color:var(--ink-soft)">綠帶 = 目標範圍</span></div>'+
+    '<div style="overflow-x:auto">'+
+    '<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px;display:block">${phSvgInner}${tickHtml2}</svg>`+
+    '</div>'+
+    alerts+
+    '<div style="font-size:.63rem;color:var(--ink-soft);margin-top:7px">顯示最近 '+pts.length+' 筆記錄。超出目標的點標為紅/橙，在範圍內的點標為綠色。每 2–3 天量測一次，記錄才能看出趨勢。</div>'+
+    '</div></div>';
+}
 const DISEASE_GUIDE={
   '牛番茄':[
     {name:'灰黴病',em:'🔘',stage:'花期/果期',symp:'花、果、葉柄出現灰褐色絨毛狀黴層（Botrytis），高濕低溫最嚴重',prev:'摘除老葉改善通風；避免夜間溫差過大；花朵凋謝後及早摘除',tx:'腐黴利（Pyrimethanil）或異菌脲（Iprodione），注意 PHI，與其他殺菌劑輪替使用'},
@@ -5095,6 +5209,7 @@ function renderPlots(){
     renderPruningGuide(r,c,age)+
     renderFertPlanCard(r,c,age)+
     renderEcPhAdjCard(r,c,age)+
+    renderEcPhTrendCard(r,c,age)+
     renderIrrigGuide(r,c,age)+
     renderIrrigCalcCard(r,c,age)+
     renderEnvGuide(r,c,age)+
