@@ -5310,6 +5310,15 @@ function renderTools(){
     '<button class="btn" id="c-go">計算</button><div id="c-res"></div></div>'+
     '<h2 style="margin-top:22px">年度輪種規劃</h2><p class="note">從起始月排全年輪種，收成卡高價月＋輪作。</p>'+
     '<div class="card"><label class="f">起始月</label><input class="t" id="p-start" type="month" value="'+nowM.getFullYear()+"-"+String(nowM.getMonth()+1).padStart(2,"0")+'"><button class="btn" id="p-go">產生規劃</button><div id="p-res"></div></div>'+
+    '<h2 style="margin-top:22px">📊 市場趨勢 · 投資策略儀表板</h2><p class="note">一眼看懂全年行情走勢，結合生長期推算「現在種什麼、能在好價期採收」，讓種植決策有數據支撐。</p>'+
+    '<div class="card" id="mkt-strat-card">'+
+    '<div style="display:flex;gap:6px;margin-bottom:12px">'+
+    '<button class="mkt-ch sel" id="mks-heat">🗓️ 全年行情熱度</button>'+
+    '<button class="mkt-ch" id="mks-plant">🌱 現在種什麼划算</button>'+
+    '<button class="mkt-ch" id="mks-best">📅 最佳種植月份</button>'+
+    '</div>'+
+    '<div id="mks-view"><div class="note" style="color:var(--ink-soft)">載入中…</div></div>'+
+    '</div>'+
     '<h2 style="margin-top:22px">市場行情比價（送哪個市場）</h2><p class="note">抓 AMIS 各批發市場的上/中/下/均價，判斷上貨、下貨分別送哪裡最划算，並試算這批貨收入。需部署到 Netlify 才能即時抓取。</p>'+
     '<div class="card"><div class="row2"><div><label class="f">作物</label><select class="t" id="mk-crop">'+opts+'</select></div>'+
     '<div><label class="f">查詢天數</label><select class="t" id="mk-days"><option value="7">近 7 天</option><option value="14">近 14 天</option><option value="30">近 30 天</option><option value="3">近 3 天</option></select></div></div>'+
@@ -5509,6 +5518,119 @@ function renderTools(){
     '<div id="sy-res"></div>'+
     '<div class="foot" style="text-align:left">取得設定：Firebase 主控台 → 專案設定 → 你的應用程式 → SDK 設定與設定 → Config。需啟用 Firestore Database。首次請設定安全規則（見 docs/雲端同步設定.md）。</div>'+
     '</div>';
+  // 市場趨勢投資策略儀表板
+  (()=>{
+    const ICONS={'牛番茄':'🍅','玉女番茄':'🍒','彩椒':'🫑','高山草莓':'🍓','高麗菜':'🥬','敏豆':'🌿','小黃瓜':'🥒','茄子':'🍆','甜玉米':'🌽','栗子南瓜':'🎃','百香果':'💛','茭白筍':'🎋'};
+    const MN=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+    const crops=Object.keys(MARKET_PRICE);
+    const sCol=(idx,s)=>!idx?'#d0d0d0':s<30?'#e05252':s<55?'#e8a020':s<75?'#5aab60':'#2a8e3f';
+    const sTxt=(idx,s)=>!idx?'—':s<30?'低':s<55?'普':s<75?'好':'旺';
+
+    function renderHeatView(){
+      const currMo=new Date().getMonth();
+      let h='<div style="overflow-x:auto"><table class="mkt-tbl" style="min-width:540px">';
+      h+='<tr><th style="text-align:left;padding:4px 3px;min-width:82px">作物</th>';
+      MN.forEach((m,i)=>{h+='<th style="text-align:center;padding:2px 1px;font-size:.6rem;min-width:28px'+(i===currMo?';color:var(--accent);font-weight:900':'')+'">' +m+'</th>';});
+      h+='</tr>';
+      crops.forEach(crop=>{
+        const mp=MARKET_PRICE[crop];if(!mp)return;
+        h+='<tr><td style="font-size:.7rem;font-weight:700;padding:3px;white-space:nowrap">'+(ICONS[crop]||'🌿')+' '+crop+'</td>';
+        mp.monthly.forEach((idx,i)=>{
+          const out=mktOutlook(crop,i+1);
+          const col=sCol(idx,out.score);const lbl=sTxt(idx,out.score);
+          h+='<td style="text-align:center;padding:2px 1px'+(i===currMo?';outline:2px solid var(--accent);outline-offset:-1px':'')+'"><div style="background:'+col+';color:#fff;border-radius:3px;font-size:.58rem;font-weight:800;padding:3px 0">'+lbl+'</div></td>';
+        });
+        h+='</tr>';
+      });
+      h+='</table></div>';
+      h+='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:.62rem;color:var(--ink-soft)">';
+      [['#2a8e3f','旺季'],['#5aab60','好價'],['#e8a020','普通'],['#e05252','低價'],['#d0d0d0','非產季']].forEach(([c,l])=>{
+        h+='<span style="display:flex;align-items:center;gap:3px"><span style="width:11px;height:11px;background:'+c+';border-radius:2px;display:inline-block"></span>'+l+'</span>';
+      });
+      h+='<span style="color:var(--accent);font-weight:700">框=本月</span></div>';
+      return h;
+    }
+
+    function renderPlantNowView(){
+      const now=today();const currMo=new Date().getMonth()+1;
+      const items=crops.map(crop=>{
+        const c=CROPS[crop];const mp=MARKET_PRICE[crop];if(!c||!mp)return null;
+        const hd=new Date(addD(now,c.grow));const hMo=hd.getMonth()+1;
+        const out=mktOutlook(crop,hMo);const idx=mp.monthly[hMo-1];
+        return{crop,grow:c.grow,hMo,score:idx?out.score:0,idx,label:out.label,avgPrice:out.avgPrice};
+      }).filter(Boolean).sort((a,b)=>b.score-a.score);
+      let h='<p style="font-size:.73rem;color:var(--ink-soft);margin:0 0 12px">今天（<b>'+MN[currMo-1]+'</b>）種下，各作物預計採收月份與行情評估：</p>';
+      h+='<div style="display:grid;gap:7px">';
+      items.forEach(it=>{
+        const col=sCol(it.idx,it.score);const ic=ICONS[it.crop]||'🌿';
+        const wk=Math.round(it.grow/7);
+        h+='<div style="display:flex;align-items:center;gap:10px;border-radius:8px;padding:9px 11px;background:var(--card2);border-left:4px solid '+col+'">';
+        h+='<div style="font-size:1.25rem">'+ic+'</div>';
+        h+='<div style="flex:1"><div style="font-size:.77rem;font-weight:800">'+it.crop+'</div>';
+        h+='<div style="font-size:.63rem;color:var(--ink-soft)">生長期 '+it.grow+'天（約'+wk+'週）→ 預計 <b>'+MN[it.hMo-1]+'</b> 採收</div></div>';
+        h+='<div style="text-align:right;min-width:52px">';
+        if(!it.idx){h+='<div style="font-size:.65rem;color:#bbb;font-weight:700">非產季</div>';}
+        else{h+='<div style="font-size:.84rem;font-weight:900;color:'+col+'">'+it.label+'</div>';
+          if(it.avgPrice>0)h+='<div style="font-size:.6rem;color:var(--ink-soft)">≈ '+it.avgPrice+' 元/kg</div>';}
+        h+='</div></div>';
+      });
+      h+='</div>';
+      h+='<p style="font-size:.63rem;color:var(--ink-soft);margin-top:10px">* 行情依月度指數估算，有本地記錄者優先採用實際數據。採收月以生長期天數估算。</p>';
+      return h;
+    }
+
+    function renderBestMonthView(){
+      const currMo=new Date().getMonth();
+      let h='<p style="font-size:.73rem;color:var(--ink-soft);margin:0 0 12px">反推「哪個月定植，能讓採收剛好落在好價期」。<b style="color:var(--accent)">★ 本月可種</b>。</p>';
+      h+='<div style="display:grid;gap:9px">';
+      crops.forEach(crop=>{
+        const c=CROPS[crop];const mp=MARKET_PRICE[crop];if(!c||!mp)return;
+        const ic=ICONS[crop]||'🌿';const growMo=Math.round(c.grow/30);
+        const wins=[];
+        for(let pm=0;pm<12;pm++){
+          const hm=(pm+growMo)%12;
+          const idx=mp.monthly[hm];if(!idx)continue;
+          const out=mktOutlook(crop,hm+1);
+          if(out.score>=55)wins.push({pm,hm,score:out.score,label:out.label});
+        }
+        wins.sort((a,b)=>b.score-a.score);
+        h+='<div style="border-radius:8px;padding:10px 11px;background:var(--card2)">';
+        h+='<div style="display:flex;align-items:center;gap:7px;margin-bottom:7px">';
+        h+='<span style="font-size:1.15rem">'+ic+'</span><span style="font-size:.78rem;font-weight:800">'+crop+'</span>';
+        h+='<span style="font-size:.62rem;color:var(--ink-soft);margin-left:auto">生長期 '+c.grow+'天</span></div>';
+        if(!wins.length){
+          h+='<div style="font-size:.67rem;color:#aaa">全年行情較平穩，無特別旺季</div>';
+        } else {
+          h+='<div style="display:flex;flex-wrap:wrap;gap:5px">';
+          wins.slice(0,5).forEach(w=>{
+            const isNow=w.pm===currMo;
+            const col=w.score>=75?'#2a8e3f':'#5aab60';
+            h+='<div style="border-radius:6px;padding:5px 9px;background:'+col+(isNow?';box-shadow:0 0 0 2.5px var(--accent)':'')+';color:#fff;font-size:.64rem;font-weight:700">';
+            h+=MN[w.pm]+'種 → '+MN[w.hm]+'收'+(isNow?' ★':'');
+            h+='</div>';
+          });
+          h+='</div>';
+        }
+        h+='</div>';
+      });
+      h+='</div>';
+      h+='<p style="font-size:.63rem;color:var(--ink-soft);margin-top:10px">★ 本月即可種植。月份以生長期÷30估算，農業實際依品種、管理而異。</p>';
+      return h;
+    }
+
+    const stratView=v.querySelector('#mks-view');
+    const stratTabs={heat:renderHeatView,plant:renderPlantNowView,best:renderBestMonthView};
+    const stratBtns={heat:v.querySelector('#mks-heat'),plant:v.querySelector('#mks-plant'),best:v.querySelector('#mks-best')};
+    Object.keys(stratBtns).forEach(k=>{
+      if(!stratBtns[k])return;
+      stratBtns[k].onclick=()=>{
+        Object.values(stratBtns).forEach(b=>{if(b)b.classList.remove('sel');});
+        stratBtns[k].classList.add('sel');
+        if(stratView)stratView.innerHTML=stratTabs[k]();
+      };
+    });
+    if(stratView)stratView.innerHTML=renderHeatView();
+  })();
   v.querySelector("#dl-go").onclick=()=>{
     const ratio=+v.querySelector("#dl-ratio").value;
     const vol=+v.querySelector("#dl-vol").value;
