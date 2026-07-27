@@ -1423,6 +1423,15 @@ function loadWx(container){
         if(ha){ha.innerHTML=hints.map(h=>'<div class="info" style="margin-bottom:6px;background:var(--warn-bg);color:var(--warn)">'+h+'</div>').join('');ha.style.display='';}
       }
     }catch(e){/* 離線或受限網路時靜默忽略 */}
+    // AMIS 市場行情：獨立執行，不依賴 daily function 是否成功
+    try{
+      const plots=load();
+      const harvCrops=plots.filter(rec=>{
+        const c=CROPS[rec.crop];if(!c||!rec.date)return false;
+        const[,,age]=stageOf(rec);return age>=0&&age>=c.grow;
+      }).map(rec=>rec.crop);
+      if(harvCrops.length)loadAmisWidget(container,harvCrops);
+    }catch(e){}
     // 每日智慧行動清單 — 呼叫 daily Function（天氣×病害×田區狀態統一整合）
     try{
       const dr=container.querySelector('#disease-risk');if(!dr)return;
@@ -1462,9 +1471,6 @@ function loadWx(container){
         dr.innerHTML=renderDecisions(data.decisions,data.weather)+
           renderDailyTasks(data.tasks)+
           renderDiseaseRisk(data.risks,data.weather);
-        // 採收期田區自動抓 AMIS 行情
-        const harvCrops=plots.filter(rec=>{const[,,age]=stageOf(rec);return age>=0&&age>=CROPS[rec.crop].grow;}).map(rec=>rec.crop);
-        if(harvCrops.length)loadAmisWidget(container,harvCrops);
       }
     }catch(e){/* 離線 / 本機開發時靜默忽略 */}
   })();
