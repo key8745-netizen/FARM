@@ -993,6 +993,17 @@ nav button.on{color:var(--accent);}
 .rh-step:last-child{border-bottom:none;}
 .rh-sn{background:var(--grow);color:#fff;border-radius:50%;min-width:19px;height:19px;display:flex;align-items:center;justify-content:center;font-size:.66rem;font-weight:900;flex:none;margin-top:1px;}
 .rh-tip{background:var(--card2);border-radius:8px;padding:8px 10px;font-size:.72rem;color:var(--ink-soft);line-height:1.6;border-left:3px solid var(--grow);}
+/* 緊急應變手冊 */
+.emg-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:10px;}
+@media(max-width:480px){.emg-grid{grid-template-columns:repeat(3,1fr);}}
+.emg-btn{background:var(--card2);border:1px solid var(--line);border-radius:9px;padding:7px 4px;font-size:.68rem;cursor:pointer;text-align:center;line-height:1.4;color:var(--ink);}
+.emg-btn.sel{border-color:var(--warn);background:var(--warn-bg);}
+.emg-detail-hd{font-size:.88rem;font-weight:900;color:var(--warn);margin-bottom:8px;}
+.emg-cause{font-size:.74rem;background:var(--warn-bg);border-radius:8px;padding:7px 10px;margin-bottom:8px;color:var(--ink);line-height:1.6;}
+.emg-section{font-size:.76rem;font-weight:800;color:var(--ink);margin:8px 0 5px;}
+.emg-step{display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-bottom:1px dashed var(--line);font-size:.75rem;color:var(--ink);}
+.emg-step:last-child{border-bottom:none;}
+.emg-snum{font-size:.68rem;font-weight:900;color:#fff;background:var(--warn);border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;flex:none;margin-top:2px;}
 /* 黏板判讀指南 */
 .trap-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px;}
 .trap-btn{border:1.5px solid var(--line);background:var(--card2);border-radius:11px;padding:9px 4px;cursor:pointer;text-align:center;transition:border-color .15s,background .15s;}
@@ -4883,6 +4894,17 @@ function renderTools(){
     '</div>'+
     '<div id="trap-detail" style="display:none"></div>'+
     '</div>'+
+    '<h2 style="margin-top:22px">🚨 緊急應變手冊</h2><p class="note">發現田間緊急狀況時保持冷靜，按步驟處理。點選情境立即查看處置流程。</p>'+
+    '<div class="card">'+
+    '<div class="emg-grid">'+
+    '<button class="emg-btn" onclick="showEmg(\'wilt\')">😵 突然<br>大量萎蔫</button>'+
+    '<button class="emg-btn" onclick="showEmg(\'pest\')">🐛 蟲害<br>大爆發</button>'+
+    '<button class="emg-btn" onclick="showEmg(\'disease\')">🦠 病害<br>快速蔓延</button>'+
+    '<button class="emg-btn" onclick="showEmg(\'storm\')">🌪️ 強風<br>颱風災害</button>'+
+    '<button class="emg-btn" onclick="showEmg(\'spray\')">☠️ 急性<br>藥害</button>'+
+    '</div>'+
+    '<div id="emg-detail"></div>'+
+    '</div>'+
     '<h2 style="margin-top:22px">每日農場作業時程</h2><p class="note">依目前田區生育階段，生成今天的建議作業時程表。進到溫室前先看一遍，確保不遺漏重要工作。</p>'+
     '<div class="card" id="sched-card"><button class="btn" id="sched-go">生成今日作業時程</button><div id="sched-res"></div></div>'+
     '<h2 style="margin-top:22px">剩餘季節採購預算試算</h2><p class="note">依目前各田區作物、株數、剩餘天數，估算還需要採購哪些農資與預算。</p>'+
@@ -5593,6 +5615,94 @@ function renderTools(){
           '<div style="font-size:.73rem;color:var(--ink-soft);background:var(--card);border-radius:8px;padding:7px 10px;margin-top:6px;line-height:1.65">💡 '+d.tip+'</div>';
       });
     });
+  })();
+  // 緊急應變手冊
+  (function(){
+    var EMG={
+      wilt:{icon:'😵',title:'突然大量萎蔫',
+        cause:'常見原因：根部積水腐爛、土壤過乾、根結線蟲、莖基腐病、高溫蒸散失控',
+        now:['立即檢查根圈土壤：插手指入土 5 cm，判斷過乾或過濕',
+          '過濕 → 停止灌溉，開排水、加強通風，觀察 2 小時',
+          '過乾 → 緩慢補充水分，避免冷水急澆傷根',
+          '觀察莖基部：若變黑軟化 → 疑根腐，拔除受害株立即隔離',
+          '清晨或傍晚再觀察：若葉片自行恢復 → 高溫緊迫，非急症'],
+        h24:['記錄受影響株數與位置（拍照留存）',
+          '多株呈同一區域萎蔫 → 排查灌溉均勻度（是否有堵塞）',
+          '確認排水溝是否暢通',
+          '必要時取根部樣本送農改場或農會診斷'],
+        prevent:'定期檢查滴頭/噴頭是否堵塞；建立灌溉紀錄，避免連日大量灌溉'},
+      pest:{icon:'🐛',title:'蟲害大爆發',
+        cause:'常見原因：天氣悶熱、相鄰田區遷移、上次防治不徹底、黏板未即時更換監測',
+        now:['拍照記錄蟲害種類、受害部位與嚴重程度',
+          '快速評估：是否超過防治門檻（參考工具頁黏板判讀指南）',
+          '超過門檻 → 確認手邊農藥、查安全期與稀釋倍數',
+          '立即摘除嚴重受害葉片、果實，裝袋帶出田區銷毀',
+          '通知周邊農友，防止族群互相擴散'],
+        h24:['選早晨或傍晚（無強風、無雨）進行防治噴藥',
+          '噴藥後填寫記錄：日期/農藥/稀釋倍數/安全期',
+          '更換黏板，重新建立計數基準',
+          '3–5 天後複查是否有殘存族群'],
+        prevent:'每週固定黏板計數，早發現早處理；改善通風環境，減少族群快速繁殖條件'},
+      disease:{icon:'🦠',title:'病害快速蔓延',
+        cause:'常見原因：高濕低通風、密植、連作、剪刀未消毒傳播、施藥間隔太長',
+        now:['立即停止過頭噴水，改滴灌；開窗加強通風',
+          '拍照記錄病斑形態（葉斑/水浸/白粉/灰黴），對照工具頁病害速查',
+          '病害已蔓延超過 20% 植株 → 先剪除病葉裝袋帶出',
+          '每剪一株立即用 75% 酒精消毒剪刀，防止交叉感染',
+          '核對現有農藥是否有防治此病的登記'],
+        h24:['選乾燥早晨噴施殺菌劑（初期保護型；蔓延期治療型）',
+          '移除所有落葉、病果，不留在田間分解',
+          '適當疏枝降低植株密度，改善通風',
+          '記錄噴藥資料，設定下次施藥提醒'],
+        prevent:'高濕季節縮短預防施藥至 7 天一次；保持行間通風；剪刀使用前後消毒'},
+      storm:{icon:'🌪️',title:'強風颱風災害',
+        cause:'颱風/強對流：斷枝、倒伏、落果、設施損壞、積水根部缺氧',
+        now:['颱風過境中人身安全第一，不入田作業',
+          '颱風前 24 小時：將成熟果實先行採收，降低損失',
+          '颱風前：確認支架、引線、覆蓋材料是否牢固，補強鬆動部分',
+          '颱風後立即巡查：評估斷枝率、倒伏數、設施損毀',
+          '倒伏植株：輕扶回正後重新綁紮；已折斷莖部不強行扶起'],
+        h24:['優先清除積水（根部積水比風害更致命）',
+          '剪除斷枝與嚴重損傷葉片，傷口噴保護性殺菌劑',
+          '強風後高濕環境極易爆發病害，預防性施藥 1 次',
+          '拍照記錄災損，向農保/農會通報申請救助'],
+        prevent:'颱風季前加強支架固定、備防風網；成熟果實提前採收'},
+      spray:{icon:'☠️',title:'急性藥害',
+        cause:'症狀：噴藥後 1–3 天內出現葉緣焦枯、大量落葉、幼葉扭曲、花朵脫落',
+        now:['立即以大量清水沖洗植株，稀釋殘留農藥',
+          '停止所有施藥，記錄上次噴藥日期/農藥/稀釋倍數',
+          '確認稀釋比例是否有誤（濃度過高是最常見原因）',
+          '確認農藥是否適用此作物（查農藥資訊網登記）',
+          '移除嚴重受藥害葉片，減少植株持續吸收'],
+        h24:['加強水分補充，協助植株代謝排除',
+          '觀察新葉生長：若 5–7 天後新葉正常 → 植株可恢復',
+          '嚴重落葉超過 70% → 評估是否重植',
+          '向農藥行反映，確認藥品標示是否有誤'],
+        prevent:'噴藥前雙重確認稀釋倍數；用量杯量取，不憑感覺；換藥前先確認此作物有登記'}
+    };
+    window.showEmg=function(key){
+      var d=EMG[key];if(!d)return;
+      document.querySelectorAll('.emg-btn').forEach(function(b){b.classList.remove('sel');});
+      var btn=document.querySelector('.emg-btn[onclick*="\''+key+'\'"]');
+      if(btn)btn.classList.add('sel');
+      var nowHtml=d.now.map(function(s,i){
+        return'<div class="emg-step"><span class="emg-snum">'+(i+1)+'</span><span>'+s+'</span></div>';
+      }).join('');
+      var h24Html=d.h24.map(function(s){
+        return'<div style="font-size:.76rem;color:var(--ink);padding:3px 0;border-bottom:1px dashed var(--line)">• '+s+'</div>';
+      }).join('');
+      document.getElementById('emg-detail').innerHTML=
+        '<div style="margin-top:8px">'+
+        '<div class="emg-detail-hd">'+d.icon+' '+d.title+'</div>'+
+        '<div class="emg-cause">⚠️ '+d.cause+'</div>'+
+        '<div class="emg-section">🚨 30 分鐘內立即處置</div>'+
+        nowHtml+
+        '<div class="emg-section">⏰ 接下來 24 小時</div>'+
+        h24Html+
+        '<div style="background:var(--card2);border-radius:8px;padding:8px 10px;margin-top:10px;font-size:.74rem;border-left:3px solid var(--accent);line-height:1.6">'+
+        '🛡️ <b>下次預防：</b>'+d.prevent+'</div>'+
+        '</div>';
+    };
   })();
   // 每日農場作業時程
   v.querySelector("#sched-go").onclick=()=>{
