@@ -2193,6 +2193,91 @@ function renderPlantTimingCard(r,c,age){
     </div>
   </div>`;
 }
+const SEEDLING_PRICE={
+  '牛番茄':{self:1,normal:12,grafted:35},
+  '玉女番茄':{self:1,normal:10,grafted:35},
+  '彩椒':{self:1.5,normal:15,grafted:45},
+  '高山草莓':{self:0,normal:50,grafted:0},
+  '高麗菜':{self:0.3,normal:5,grafted:0},
+  '敏豆':{self:0.2,normal:4,grafted:0},
+  '小黃瓜':{self:0.8,normal:8,grafted:30},
+  '茄子':{self:0.8,normal:8,grafted:30},
+  '甜玉米':{self:0.3,normal:5,grafted:0},
+  '栗子南瓜':{self:0.5,normal:8,grafted:0},
+  '百香果':{self:0,normal:60,grafted:0},
+  '茭白筍':{self:0,normal:40,grafted:0},
+};
+function renderSeedlingCostCard(r,c,age){
+  const key=stageGuideKey(c,age);
+  if(key!=='定植前')return'';
+  if(!r.crop||!r.plants)return'';
+  const plants=+r.plants;
+  const sp=SEEDLING_PRICE[r.crop]||{self:1,normal:10,grafted:30};
+  const sel=r.seedlingType||(sp.normal>0?'normal':sp.grafted>0?'grafted':'self');
+  const selPrice=sp[sel]||0;
+  const seedCost=Math.round(selPrice*plants);
+  const mp=MARKET_PRICE[r.crop];
+  const ypp=YIELD_PER_PLANT[r.crop];
+  const BUY_TIPS={
+    '牛番茄':'善化種苗區（台南）為全台番茄嫁接苗最大集散地，100 株以上批量可省 30–50%。',
+    '玉女番茄':'善化種苗區（台南）有多家專業苗廠，小番茄品種選擇多，建議提前電詢預訂。',
+    '彩椒':'彩椒嫁接苗建議向專業苗廠訂購，農會推廣站也常有配合苗商可詢問。',
+    '高山草莓':'草莓子株（匍匐莖繁殖）建議向苗栗大湖或產地農友購取，可詢問農會推廣站。',
+    '高麗菜':'高麗菜實生苗單價低，農會、農資行皆有；量多可自育（1 包種子育數百株）。',
+    '敏豆':'敏豆通常直播種子，農友種苗公司有販售，可比較農資行與網路蝦皮。',
+    '小黃瓜':'嫁接苗（砧木南瓜）善化有專業苗場，夏季種植特別建議嫁接以抗土傳病害。',
+    '茄子':'嫁接苗（砧木托魯巴姆）善化、彰化均有，病害多的地塊嫁接效益最高。',
+    '甜玉米':'通常直播種子，農友/台農種苗皆有，1 包可播數百株，比較克重折算單價最划算。',
+    '栗子南瓜':'可直播或育苗移植，農資行或蝦皮均有種子，選有信譽品牌確保發芽率。',
+    '百香果':'建議向農會或專業苗場購扦插苗，勿買來路不明苗以防病毒病（黃化捲葉）。',
+    '茭白筍':'分株苗向信義鄉農會或專業農友購取，需確認品種為茭白筍正確品系。',
+  };
+  const buyTip=BUY_TIPS[r.crop]||'建議向當地農會推廣站詢問，或至農資行比較各苗商價格。';
+  const TYPES=[
+    {t:'self',lbl:'🌱 自育苗',desc:'省錢·需育苗設備與 3–4 週前置',col:'var(--grow)'},
+    {t:'normal',lbl:'🪴 實生苗',desc:'方便快速·平衡選擇',col:'var(--blue)'},
+    {t:'grafted',lbl:'💪 嫁接苗',desc:'貴但抗病力強·設施首選',col:'var(--harv)'},
+  ].filter(x=>sp[x.t]>0);
+  const btnHtml=TYPES.map(({t,lbl,desc,col})=>{
+    const isSel=sel===t;
+    return '<div onclick="(function(){var p=load();p[CUR].seedlingType=\''+t+'\';save(p);renderPlots()})();"'+
+      ' style="flex:1;border:2px solid '+(isSel?'var(--accent)':'var(--line)')+';background:'+(isSel?'var(--accent-soft)':'var(--card2)')+';border-radius:10px;padding:8px 5px;text-align:center;cursor:pointer">'+
+      '<div style="font-size:.82rem;font-weight:700">'+lbl+'</div>'+
+      '<div style="font-size:1rem;font-weight:800;color:'+col+';margin:3px 0">$'+sp[t]+'/株</div>'+
+      '<div style="font-size:.62rem;color:var(--ink-soft)">'+desc+'</div></div>';
+  }).join('');
+  let breakevenHtml='';
+  if(mp&&ypp){
+    const bkKg=(seedCost/mp.g2[0]).toFixed(1);
+    const revLo=Math.round(ypp.lo*plants*mp.g2[0]);
+    const revHi=Math.round(ypp.hi*plants*mp.g2[1]);
+    breakevenHtml='<div style="background:var(--grow-bg);border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:.73rem;line-height:1.7">'+
+      '📊 <b>回本分析：</b>種苗費 NT$'+seedCost.toLocaleString()+' ÷ G2 最低均價 $'+mp.g2[0]+'/kg = 回本需賣出 <b style="color:var(--grow)">'+bkKg+' kg</b><br>'+
+      '預估總產量 '+Math.round(ypp.lo*plants)+'–'+Math.round(ypp.hi*plants)+' kg → 預估收益 NT$'+revLo.toLocaleString()+'–$'+revHi.toLocaleString()+'（完整損益採收後記錄）'+
+      '</div>';
+  }
+  return'<div class="hp-card">'+
+    '<div class="hp-hd" onclick="this.nextElementSibling.classList.toggle(\'open\');this.querySelector(\'.hp-arr\').classList.toggle(\'open\')">'+
+    '<span>🌿</span><span>種苗採購與成本預算</span>'+
+    '<span style="font-size:.68rem;padding:2px 8px;border-radius:10px;background:var(--accent-soft);color:var(--accent);font-weight:700">苗費 NT$'+seedCost.toLocaleString()+'</span>'+
+    '<span class="hp-arr open">▶</span></div>'+
+    '<div class="hp-body open">'+
+    '<div style="font-size:.72rem;font-weight:700;color:var(--ink);margin-bottom:6px">選擇種苗類型（'+plants+' 株）：</div>'+
+    '<div style="display:flex;gap:7px;margin-bottom:12px">'+btnHtml+'</div>'+
+    '<div style="background:var(--card2);border-radius:10px;padding:10px 12px;margin-bottom:10px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center">'+
+    '<span style="font-size:.76rem;color:var(--ink-soft)">種苗費（'+selPrice+' 元/株 × '+plants+' 株）</span>'+
+    '<b style="font-size:.9rem;color:var(--ink)">NT$'+seedCost.toLocaleString()+'</b>'+
+    '</div>'+
+    '<div style="font-size:.67rem;color:var(--ink-soft);margin-top:5px;line-height:1.6">'+
+    '其他參考：介質/培養土 NT$500–2,000 · 基礎肥料 NT$300–800 · 農藥備品 NT$200–500<br>'+
+    '完整成本請於採收後在「本季損益」卡輸入實際支出。'+
+    '</div></div>'+
+    breakevenHtml+
+    '<div style="background:var(--card2);border-radius:8px;padding:8px 10px;font-size:.72rem;line-height:1.7;color:var(--ink-soft)">'+
+    '🛒 <b style="color:var(--ink)">採購建議：</b>'+buyTip+
+    '</div></div></div>';
+}
 function renderPrePlantChecklist(r,c,age){
   const key=stageGuideKey(c,age);
   if(key!=='定植前')return'';
@@ -5272,6 +5357,7 @@ function renderPlots(){
     renderStageTimeline(r,c,age)+
     renderStageGuide(r,c,age)+
     renderPlantTimingCard(r,c,age)+
+    renderSeedlingCostCard(r,c,age)+
     renderSeasonCalendar(r,c,age)+
     renderPrePlantChecklist(r,c,age)+
     renderTransplantGuide(r,c,age)+
