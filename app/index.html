@@ -1945,6 +1945,44 @@ const TIE_STEPS=[
   '綁在節間（兩葉節中間），不要綁在花序或葉節正上方',
   '完成後輕輕搖晃確認穩固，但莖部可自由移動'
 ];
+const DISEASE_RISK_DB={
+'牛番茄':[
+  {n:'晚疫病',i:'🍂',c:'低溫高濕（15–20°C，RH>85%）',pm:[1,2,3,11,12],sw:{苗期:1,生長期:2,花期:2,果期:3,採收期:2},p:'預防噴施銅製劑或百克敏；保持通風；避免葉面積水；雨後立即檢查'},
+  {n:'早疫病',i:'🟫',c:'溫差大、葉面結露（20–25°C）',pm:[3,4,5,9,10],sw:{苗期:1,生長期:3,花期:3,果期:3,採收期:2},p:'摘除下位老葉；噴施代森錳鋅；避免密植影響通風'},
+  {n:'灰黴病',i:'🌫️',c:'低溫高濕、通風不良',pm:[1,2,3,11,12],sw:{生長期:1,花期:4,果期:2,採收期:2},p:'花期務必通風；摘除殘花萼；避免傍晚澆水；施用腐黴利'},
+  {n:'病毒病',i:'🦠',c:'高溫乾燥、蚜蟲媒介',pm:[5,6,7,8,9],sw:{苗期:3,生長期:2,花期:1},p:'徹底防治蚜蟲；淘汰疑似病株；工具使用前消毒'},
+],
+'玉女番茄':[
+  {n:'晚疫病',i:'🍂',c:'低溫高濕（15–20°C，RH>85%）',pm:[1,2,3,11,12],sw:{苗期:1,生長期:2,花期:2,果期:3,採收期:2},p:'設施內保持通風；預防噴施銅製劑；葉面避免積水'},
+  {n:'灰黴病',i:'🌫️',c:'低溫高濕、通風不良',pm:[1,2,3,11,12],sw:{生長期:1,花期:4,果期:3,採收期:2},p:'花期通風排濕；摘除殘花；夜間降低棚內濕度；施用腐黴利'},
+  {n:'葉黴病',i:'🍃',c:'高濕密閉（溫室常見，葉背顯霉）',pm:[4,5,6,7,8,9],sw:{生長期:2,花期:3,果期:2},p:'定期檢查葉背；降低棚內濕度；施用保護性殺菌劑'},
+  {n:'病毒病',i:'🦠',c:'高溫乾燥、粉蝨蚜蟲媒介',pm:[5,6,7,8,9],sw:{苗期:3,生長期:2},p:'防治粉蝨與蚜蟲；淘汰病株；設置防蟲網'},
+],
+'彩椒':[
+  {n:'疫病',i:'💧',c:'高溫高濕積水（25–30°C）',pm:[6,7,8,9],sw:{苗期:2,生長期:3,花期:3,果期:3,採收期:2},p:'高畦避免積水；噴施甲霜靈；改善田間排水系統'},
+  {n:'灰黴病',i:'🌫️',c:'低溫高濕、通風不良',pm:[1,2,3,11,12],sw:{花期:4,果期:3,採收期:2},p:'花期保持通風；摘除殘花；施用腐黴利（Iprodione）'},
+  {n:'炭疽病',i:'⚫',c:'高溫多雨、果實傷口感染',pm:[6,7,8,9],sw:{果期:4,採收期:3},p:'避免機械傷害；採收前勿淋雨；採後立即預冷處理'},
+  {n:'病毒病',i:'🦠',c:'高溫乾燥、薊馬媒介',pm:[5,6,7,8,9],sw:{苗期:3,生長期:2,花期:1},p:'徹底防治薊馬；淘汰病株；工具消毒'},
+],
+'高山草莓':[
+  {n:'灰黴病',i:'🌫️',c:'低溫高濕（15–20°C，花果期最危險）',pm:[1,2,3,11,12],sw:{花期:5,果期:4,採收期:3},p:'花期保持通風；避免積濕；施用腐黴利；成熟果及時採收'},
+  {n:'白粉病',i:'🤍',c:'乾燥溫暖日夜溫差大（20–30°C）',pm:[3,4,5,10,11],sw:{苗期:2,生長期:3,花期:3,果期:2},p:'葉面噴硫黃懸浮劑；保持通風；避免密植'},
+  {n:'根腐病',i:'🪱',c:'高溫積水、育苗期最常見',pm:[6,7,8],sw:{苗期:3,生長期:2},p:'高畦種植；減少灌水量；使用健康種苗'},
+  {n:'炭疽病',i:'⚫',c:'高溫多雨（苗期傳播迅速）',pm:[6,7,8,9],sw:{苗期:4,生長期:2},p:'種苗期定期噴施保護性殺菌劑；避免積水'},
+],
+'高麗菜':[
+  {n:'黑腐病',i:'⬛',c:'高溫多濕、害蟲傷口傳播',pm:[5,6,7,8,9],sw:{苗期:3,生長期:3,採收期:1},p:'種子消毒；防蟲避免傷口；施用銅製劑預防；選抗病品種'},
+  {n:'露菌病',i:'💦',c:'低溫高濕（15–18°C，葉片積水）',pm:[1,2,3,10,11,12],sw:{苗期:2,生長期:3,採收期:1},p:'保持通風；葉面乾燥；噴施代森錳鋅或銅製劑'},
+  {n:'根腫病',i:'🪱',c:'酸性土（pH<6.5）高濕（最難根治）',pm:[1,2,3,10,11,12],sw:{定植前:4,苗期:4,生長期:3},p:'土壤pH調至6.8以上；施石灰；嚴格輪作4年以上'},
+  {n:'軟腐病',i:'💧',c:'高溫多雨、傷口細菌感染',pm:[6,7,8,9],sw:{生長期:2,花期:3,採收期:3},p:'避免機械傷害；排水良好；採收前停止灌水'},
+],
+'敏豆':[
+  {n:'炭疽病',i:'⚫',c:'高溫多雨（22–28°C，果莢最易感）',pm:[5,6,7,8,9],sw:{生長期:2,花期:3,果期:4,採收期:3},p:'避免葉面積水；雨後立即噴施代森錳鋅保護'},
+  {n:'銹病',i:'🟠',c:'溫和濕潤（16–22°C，夜間結露）',pm:[3,4,5,10,11],sw:{生長期:3,花期:3,果期:2},p:'噴施丙環唑（Propiconazole）；摘除病葉；選抗銹品種'},
+  {n:'根腐病',i:'🪱',c:'土壤積水排水不良',pm:[6,7,8],sw:{苗期:3,生長期:2,花期:1},p:'高畦種植；避免積水；減少氮肥過量；輪作換土'},
+  {n:'病毒病',i:'🦠',c:'高溫乾燥、蚜蟲媒介',pm:[5,6,7,8,9],sw:{苗期:3,生長期:2,花期:1},p:'防治蚜蟲；淘汰病株；工具使用前酒精消毒'},
+],
+};
 function renderStakeGuide(r,c,age){
   const key=stageGuideKey(c,age);
   if(key!=='苗期'&&key!=='生長期')return'';
@@ -3220,6 +3258,63 @@ function renderDiseaseGuide(r,c,age){
     '<div class="dg-intro">點擊各病害查看症狀 / 預防 / 用藥。橙色標籤表示本生長階段需特別警戒。🔴 優先拔除病株避免傳播；🟡 預防比治療更重要。</div>'+
     itemsHtml+
     '</div></div>';
+}
+function renderDiseaseRiskCard(r,c,age){
+  if(age<0)return'';
+  const diseases=DISEASE_RISK_DB[r.crop];
+  if(!diseases||!diseases.length)return'';
+  const recs=r.records||[],tdy=today();
+  const mn=new Date(tdy).getMonth()+1;
+  const stage=stageGuideKey(c,age);
+  const hasSpray=(recs.filter(x=>x.type==='spray'&&(tdy-parseD(x.date))/DAY<=14)).length>0;
+  const sprayF=hasSpray?0.7:1.0;
+  const risks=diseases.map(d=>{
+    const mS=d.pm.includes(mn)?60:20;
+    const stS=(d.sw[stage]||0)*8;
+    return Object.assign({},d,{score:Math.min(100,Math.max(5,Math.round((mS+stS)*sprayF)))});
+  }).sort((a,b)=>b.score-a.score);
+  const top=risks[0].score;
+  const lvl=top>=70?'高風險':top>=45?'中風險':'低風險';
+  const col=top>=70?'var(--warn)':top>=45?'var(--harv)':'var(--grow)';
+  const bg=top>=70?'var(--warn-bg)':top>=45?'#fff8e6':'#e6f9f0';
+  const uid='dr-'+Date.now();
+  const fillW=(top/100*240).toFixed(1);
+  const fillCol=top>=70?'#e85c3a':top>=45?'#e8a020':'#5aab60';
+  const meterSvg='<div style="margin:8px 0 2px">'+
+    '<svg viewBox="0 0 240 12" width="100%" style="max-width:240px;display:block">'+
+    '<rect x="0" y="0" width="240" height="12" rx="6" fill="currentColor" fill-opacity=".08"/>'+
+    '<rect x="0" y="0" width="'+fillW+'" height="12" rx="6" fill="'+fillCol+'"/>'+
+    '<rect x="108" y="0" width="2" height="12" fill="white" opacity=".45"/>'+
+    '<rect x="168" y="0" width="2" height="12" fill="white" opacity=".45"/>'+
+    '</svg>'+
+    '<div style="display:flex;justify-content:space-between;font-size:.6rem;color:var(--ink-soft);margin-top:2px;padding:0 2px">'+
+    '<span>低風險</span><span>中風險</span><span>高風險</span><span>極高</span></div></div>';
+  const rowsHtml=risks.slice(0,3).map(d=>{
+    const dc=d.score>=70?'var(--warn)':d.score>=45?'var(--harv)':'var(--grow)';
+    return'<div style="padding:6px 0;border-bottom:1px dashed var(--line)">'+
+      '<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px">'+
+      '<span>'+d.i+'</span>'+
+      '<span style="font-size:.76rem;font-weight:800;color:var(--ink)">'+d.n+'</span>'+
+      '<span style="margin-left:auto;font-size:.68rem;font-weight:700;background:'+bg+';color:'+dc+';border-radius:20px;padding:1px 7px">'+d.score+'</span>'+
+      '</div>'+
+      '<div style="height:4px;background:rgba(0,0,0,.08);border-radius:2px;margin-bottom:3px">'+
+      '<div style="height:100%;width:'+d.score+'%;background:'+dc+';border-radius:2px"></div></div>'+
+      '<div style="font-size:.68rem;color:var(--ink-soft)">⚙️ '+d.c+'</div>'+
+      '</div>';
+  }).join('');
+  return'<div style="background:var(--card);border:1px solid '+col+';border-radius:12px;padding:11px 13px;margin:8px 0">'+
+    '<div class="ipm-hd" onclick="var b=document.getElementById(\''+uid+'\');b.classList.toggle(\'open\');this.querySelector(\'.ipm-arr\').classList.toggle(\'open\')">'+
+    '<span style="font-size:1rem">🦠</span>'+
+    '<span style="font-size:.84rem;font-weight:900;color:var(--ink);margin:0 6px">病害預警指數</span>'+
+    '<span style="font-size:.7rem;font-weight:700;background:'+bg+';color:'+col+';border-radius:20px;padding:2px 9px">'+lvl+'</span>'+
+    '<span class="ipm-arr">▶</span></div>'+
+    '<div class="ipm-body" id="'+uid+'">'+
+    '<div style="font-size:.7rem;color:var(--ink-soft);margin:4px 0 6px">'+mn+' 月 · '+stage+
+    (hasSpray?' · 已噴保護藥劑（風險 −30%）':' · 近期未噴藥，請注意預防')+'</div>'+
+    meterSvg+rowsHtml+
+    '<div style="background:'+bg+';border-radius:9px;padding:8px 11px;margin-top:8px;font-size:.74rem;color:var(--ink);line-height:1.7">'+
+    '<span style="font-weight:800;color:'+col+'">🛡️ 優先預防：'+risks[0].n+'</span><br>'+risks[0].p+
+    '</div></div></div>';
 }
 function renderIpmTrendCard(r,c,age){
   if(age<0)return'';
@@ -4580,6 +4675,7 @@ function renderPlots(){
     renderSprayGuide(r,c,age)+
     renderDiseaseGuide(r,c,age)+
     renderIpmTrendCard(r,c,age)+
+    renderDiseaseRiskCard(r,c,age)+
     renderHarvestProgressCard(r,c,age)+
     renderHarvestSafetyCard(r,c,age)+
     renderHarvestMaturityCard(r,c,age)+
