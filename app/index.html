@@ -1081,15 +1081,28 @@ nav button.on{color:var(--accent);}
   <div style="background:#fff;border-radius:22px;padding:36px 28px 24px;width:min(300px,88vw);text-align:center;box-shadow:0 24px 80px rgba(0,0,0,.6)">
     <div style="font-size:3rem;line-height:1;margin-bottom:10px">🌱</div>
     <div style="font-size:1.1rem;font-weight:800;color:#1a2a1a;margin-bottom:3px">農務小幫手</div>
-    <div style="font-size:.75rem;color:#888;margin-bottom:22px">請輸入密碼繼續</div>
-    <input type="password" id="lock-pin" placeholder="密碼" autocomplete="current-password"
-      style="width:100%;box-sizing:border-box;border:1.5px solid #d0d0d0;border-radius:11px;padding:11px 14px;font-size:1.05rem;outline:none;margin-bottom:11px;text-align:center;letter-spacing:.2em"
-      onkeydown="if(event.key==='Enter')tryUnlock()">
-    <button onclick="tryUnlock()"
-      style="width:100%;background:#2a6e2a;color:#fff;border:none;border-radius:11px;padding:12px;font-size:.9rem;font-weight:700;cursor:pointer;margin-bottom:10px">
-      解鎖
+    <div style="font-size:.75rem;color:#888;margin-bottom:20px">請登入繼續</div>
+    <!-- Google 登入按鈕 -->
+    <button id="lock-google-btn" onclick="googleLogin()"
+      style="display:none;width:100%;background:#fff;color:#3c4043;border:1.5px solid #dadce0;border-radius:11px;padding:11px 14px;font-size:.88rem;font-weight:600;cursor:pointer;margin-bottom:10px;align-items:center;justify-content:center;gap:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+      <svg width="18" height="18" viewBox="0 0 18 18" style="flex:none;vertical-align:middle;margin-right:8px"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.616z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"/></svg>
+      使用 Google 帳號登入
     </button>
-    <div id="lock-err" style="font-size:.74rem;color:#e05252;min-height:18px"></div>
+    <!-- PIN 備用 -->
+    <div id="lock-pin-section" style="display:none">
+      <input type="password" id="lock-pin" placeholder="PIN 密碼" autocomplete="current-password"
+        style="width:100%;box-sizing:border-box;border:1.5px solid #d0d0d0;border-radius:11px;padding:11px 14px;font-size:1rem;outline:none;margin-bottom:10px;text-align:center;letter-spacing:.2em"
+        onkeydown="if(event.key==='Enter')tryUnlock()">
+      <button onclick="tryUnlock()"
+        style="width:100%;background:#2a6e2a;color:#fff;border:none;border-radius:11px;padding:12px;font-size:.88rem;font-weight:700;cursor:pointer;margin-bottom:8px">
+        PIN 解鎖
+      </button>
+    </div>
+    <!-- 尚未設定提示 -->
+    <div id="lock-setup-hint" style="display:none;font-size:.67rem;color:#aaa;line-height:1.6;margin-top:6px">
+      在工具頁 →「雲端同步」設定 Firebase<br>並啟用 Google 登入後即可使用
+    </div>
+    <div id="lock-err" style="font-size:.73rem;color:#e05252;min-height:18px;margin-top:4px"></div>
   </div>
 </div>
 
@@ -1304,12 +1317,10 @@ function applySnapshot(d){
 function parseCfg(txt){const m=String(txt).match(/\{[\s\S]*\}/);if(!m)throw new Error("找不到設定物件 { }");return (new Function("return ("+m[0]+")"))();}
 // 動態載入 Firebase compat SDK（僅一次）
 function loadFirebase(){return new Promise((res,rej)=>{
-  if(window.firebase&&window.firebase.firestore){res();return;}
+  if(window.firebase&&window.firebase.firestore&&window.firebase.auth){res();return;}
   const base="https://www.gstatic.com/firebasejs/10.12.2/";
-  const s1=document.createElement("script");s1.src=base+"firebase-app-compat.js";
-  s1.onload=()=>{const s2=document.createElement("script");s2.src=base+"firebase-firestore-compat.js";
-    s2.onload=()=>res();s2.onerror=()=>rej(new Error("載入 Firestore SDK 失敗"));document.head.appendChild(s2);};
-  s1.onerror=()=>rej(new Error("載入 Firebase SDK 失敗（需連線）"));document.head.appendChild(s1);
+  const ld=src=>new Promise((r,j)=>{const s=document.createElement('script');s.src=src;s.onload=r;s.onerror=j;document.head.appendChild(s);});
+  ld(base+'firebase-app-compat.js').then(()=>ld(base+'firebase-firestore-compat.js')).then(()=>ld(base+'firebase-auth-compat.js')).then(res).catch(e=>rej(new Error('載入 Firebase SDK 失敗')));
 });}
 async function fbDb(){const s=loadSync();if(!s.config||!s.code)throw new Error("尚未設定雲端同步");
   await loadFirebase();if(!window.firebase.apps.length)window.firebase.initializeApp(s.config);
@@ -6164,22 +6175,31 @@ function renderTools(){
     '<div class="card" id="wx-gdd-card" style="display:none"></div>'+
     '<h2 style="margin-top:22px">剩餘季節採購預算試算</h2><p class="note">依目前各田區作物、株數、剩餘天數，估算還需要採購哪些農資與預算。</p>'+
     '<div class="card"><button class="btn" id="bud-go">試算各田區採購清單</button><div id="bud-res"></div></div>'+
-    '<h2 style="margin-top:22px">🔐 存取密碼</h2><p class="note">設定後，每次重新開啟瀏覽器需輸入密碼才能使用 App。密碼只儲存在本裝置，忘記需清除 localStorage 重設。</p>'+
+    '<h2 style="margin-top:22px">🔐 帳號安全</h2><p class="note">設定登入方式，防止未授權存取。Google 登入為主要方式（需先設定 Firebase）；PIN 碼為備用方式，儲存在本裝置。</p>'+
     '<div class="card" id="pin-settings-card">'+
-    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
+    '<div style="border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:14px">'+
+      '<div style="font-size:.82rem;font-weight:700;color:var(--ink);margin-bottom:4px">Google 帳號登入</div>'+
+      '<div style="font-size:.74rem;color:var(--ink-soft);margin-bottom:10px" id="gauth-status">需先在下方設定 Firebase 才能使用 Google 登入</div>'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+        '<button class="btn" id="gauth-login-btn" style="display:none">🔑 登入 Google 帳號</button>'+
+        '<button class="btn sec" id="gauth-signout-btn" style="display:none">登出</button>'+
+        '<button class="btn sec" id="gauth-reset-btn" style="display:none">重設授權帳號</button>'+
+      '</div>'+
+    '</div>'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'+
       '<div>'+
-        '<div style="font-size:.82rem;font-weight:700;color:var(--ink)" id="pin-st-lbl">🔓 未設定密碼</div>'+
-        '<div style="font-size:.68rem;color:var(--ink-soft)" id="pin-st-sub">目前任何人開啟此頁面均可使用</div>'+
+        '<div style="font-size:.82rem;font-weight:700;color:var(--ink)" id="pin-st-lbl">🔓 未設定 PIN 碼</div>'+
+        '<div style="font-size:.68rem;color:var(--ink-soft)" id="pin-st-sub">PIN 碼為備用登入方式</div>'+
       '</div>'+
       '<button id="pin-lock-now" style="display:none;font-size:.71rem;padding:5px 11px;background:var(--card2);border:1px solid var(--line);border-radius:9px;cursor:pointer;color:var(--ink)">立即鎖定</button>'+
     '</div>'+
-    '<label class="f" id="pin-new-lbl">設定新密碼（英數字，4–12位）</label>'+
-    '<input class="t" type="password" id="pin-new-val" placeholder="設定密碼" autocomplete="new-password">'+
-    '<label class="f">確認密碼</label>'+
+    '<label class="f" id="pin-new-lbl">設定 PIN 碼（英數字，4–12位）</label>'+
+    '<input class="t" type="password" id="pin-new-val" placeholder="設定 PIN 碼" autocomplete="new-password">'+
+    '<label class="f">確認 PIN 碼</label>'+
     '<input class="t" type="password" id="pin-conf-val" placeholder="再輸入一次" autocomplete="new-password">'+
     '<div style="display:flex;gap:8px;margin-top:10px">'+
-      '<button class="btn" id="pin-save-btn" style="flex:1">儲存密碼</button>'+
-      '<button class="btn sec" id="pin-clear-btn">移除密碼</button>'+
+      '<button class="btn" id="pin-save-btn" style="flex:1">儲存 PIN 碼</button>'+
+      '<button class="btn sec" id="pin-clear-btn">移除 PIN 碼</button>'+
     '</div>'+
     '<div id="pin-msg" style="font-size:.74rem;margin-top:8px;min-height:18px"></div>'+
     '</div>'+
@@ -6770,8 +6790,53 @@ function renderTools(){
       res.innerHTML='<div class="info">✓ 已從雲端下載（'+(ts?new Date(ts).toLocaleString():"")+'）。回總覽查看。</div>';}
     catch(e){res.innerHTML='<div class="info" style="color:var(--warn)">下載失敗：'+e.message+'</div>';}
   };
-  // 密碼設定 IIFE
+  // 帳號安全 IIFE
   (function(){
+    // --- Google auth UI ---
+    var gauthStatus=v.querySelector('#gauth-status');
+    var gauthLoginBtn=v.querySelector('#gauth-login-btn');
+    var gauthSignoutBtn=v.querySelector('#gauth-signout-btn');
+    var gauthResetBtn=v.querySelector('#gauth-reset-btn');
+    function refreshGAuthUI(){
+      var s=loadSync();
+      var hasFB=!!(s&&s.config&&s.config.apiKey);
+      var authEmail=localStorage.getItem(_AUTH_EMAIL);
+      var isLoggedIn=!!sessionStorage.getItem(_SESS_KEY);
+      if(gauthLoginBtn)gauthLoginBtn.style.display=(hasFB&&(!authEmail||!isLoggedIn))?'inline-block':'none';
+      if(gauthSignoutBtn)gauthSignoutBtn.style.display=(hasFB&&authEmail&&isLoggedIn)?'inline-block':'none';
+      if(gauthResetBtn)gauthResetBtn.style.display=(hasFB&&authEmail)?'inline-block':'none';
+      if(gauthStatus&&!isLoggedIn){
+        if(!hasFB)gauthStatus.textContent='需先在下方設定 Firebase 才能使用 Google 登入';
+        else if(!authEmail)gauthStatus.textContent='尚未設定授權帳號，點下方按鈕以登入授權';
+        else gauthStatus.textContent='授權帳號：'+authEmail+'（需重新登入）';
+      }
+    }
+    if(gauthLoginBtn){
+      gauthLoginBtn.addEventListener('click',function(){
+        gauthLoginBtn.disabled=true;gauthLoginBtn.textContent='登入中...';
+        googleLogin().finally(function(){
+          gauthLoginBtn.disabled=false;gauthLoginBtn.textContent='🔑 登入 Google 帳號';
+          setTimeout(refreshGAuthUI,800);
+        });
+      });
+    }
+    if(gauthSignoutBtn){
+      gauthSignoutBtn.addEventListener('click',function(){
+        googleSignOut();
+      });
+    }
+    if(gauthResetBtn){
+      gauthResetBtn.addEventListener('click',function(){
+        if(!confirm('確定要重設授權帳號？重設後下次需以新 Google 帳號重新登入授權。'))return;
+        localStorage.removeItem(_AUTH_EMAIL);
+        try{if(window.firebase&&window.firebase.auth)window.firebase.auth().signOut();}catch(e){}
+        sessionStorage.removeItem(_SESS_KEY);
+        refreshGAuthUI();
+        _showLockScreen();
+      });
+    }
+    refreshGAuthUI();
+    // --- PIN management ---
     var stLbl=v.querySelector('#pin-st-lbl');
     var stSub=v.querySelector('#pin-st-sub');
     var lockNow=v.querySelector('#pin-lock-now');
@@ -6784,37 +6849,36 @@ function renderTools(){
     function hasPIN(){return!!localStorage.getItem(_PIN_KEY);}
     function refresh(){
       if(hasPIN()){
-        stLbl.textContent='🔒 已設定密碼';stSub.textContent='重新開啟瀏覽器後需輸入密碼';
-        lockNow.style.display='block';newVal.placeholder='更換密碼（留空則不變）';
+        stLbl.textContent='🔒 已設定 PIN 碼';stSub.textContent='重新開啟瀏覽器後需輸入 PIN 碼';
+        lockNow.style.display='block';newVal.placeholder='更換 PIN 碼（留空則不變）';
       }else{
-        stLbl.textContent='🔓 未設定密碼';stSub.textContent='目前任何人開啟此頁面均可使用';
-        lockNow.style.display='none';newVal.placeholder='設定密碼';
+        stLbl.textContent='🔓 未設定 PIN 碼';stSub.textContent='PIN 碼為備用登入方式';
+        lockNow.style.display='none';newVal.placeholder='設定 PIN 碼';
       }
     }
     lockNow.addEventListener('click',function(){
       sessionStorage.removeItem(_SESS_KEY);
-      document.getElementById('lock-screen').style.display='flex';
-      setTimeout(function(){document.getElementById('lock-pin').focus();},100);
+      _showLockScreen();
     });
     saveBtn.addEventListener('click',function(){
       var p=newVal.value;var c=confVal.value;
-      if(!p&&!hasPIN()){msg.style.color='var(--warn)';msg.textContent='請輸入密碼';return;}
-      if(p&&p.length<4){msg.style.color='var(--warn)';msg.textContent='密碼至少需要 4 個字元';return;}
-      if(p&&p!==c){msg.style.color='var(--warn)';msg.textContent='兩次密碼不相符';return;}
+      if(!p&&!hasPIN()){msg.style.color='var(--warn)';msg.textContent='請輸入 PIN 碼';return;}
+      if(p&&p.length<4){msg.style.color='var(--warn)';msg.textContent='PIN 碼至少需要 4 個字元';return;}
+      if(p&&p!==c){msg.style.color='var(--warn)';msg.textContent='兩次 PIN 碼不相符';return;}
       if(p){
-        var enc;try{enc=btoa(p);}catch(e){msg.style.color='var(--warn)';msg.textContent='密碼請使用英文、數字或符號';return;}
+        var enc;try{enc=btoa(p);}catch(e){msg.style.color='var(--warn)';msg.textContent='PIN 碼請使用英文、數字或符號';return;}
         localStorage.setItem(_PIN_KEY,enc);sessionStorage.setItem(_SESS_KEY,'1');
       }
       newVal.value='';confVal.value='';
-      msg.style.color='var(--accent)';msg.textContent='✅ 密碼已儲存，下次重新開啟瀏覽器時生效';
+      msg.style.color='var(--accent)';msg.textContent='✅ PIN 碼已儲存，下次重新開啟瀏覽器時生效';
       refresh();
     });
     clearBtn.addEventListener('click',function(){
-      if(!hasPIN()){msg.style.color='var(--ink-soft)';msg.textContent='目前未設定密碼';return;}
-      if(!confirm('確定要移除密碼？移除後任何人都可以直接開啟 App。'))return;
+      if(!hasPIN()){msg.style.color='var(--ink-soft)';msg.textContent='目前未設定 PIN 碼';return;}
+      if(!confirm('確定要移除 PIN 碼？移除後此登入方式將停用。'))return;
       localStorage.removeItem(_PIN_KEY);sessionStorage.removeItem(_SESS_KEY);
       newVal.value='';confVal.value='';
-      msg.style.color='var(--accent)';msg.textContent='✅ 密碼已移除';
+      msg.style.color='var(--accent)';msg.textContent='✅ PIN 碼已移除';
       refresh();
     });
     refresh();
@@ -7773,29 +7837,99 @@ function go(v){
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{if(b.dataset.v==="plots")CUR=null;go(b.dataset.v);});
 // 套用已校正的真實月價指數（若有）覆蓋示範值
 applyIdxOverride();
-/* ---------- 密碼鎖 ---------- */
-const _PIN_KEY='farm-pin-v1',_SESS_KEY='farm-unlocked';
+/* ---------- 帳號安全（Google Auth + PIN） ---------- */
+const _PIN_KEY='farm-pin-v1',_SESS_KEY='farm-unlocked',_AUTH_EMAIL='farm-auth-email';
+function _showLockScreen(){
+  var ls=document.getElementById('lock-screen');if(ls)ls.style.display='flex';
+  setTimeout(function(){
+    var ps=document.getElementById('lock-pin-section');
+    if(ps&&ps.style.display!=='none'){var p=document.getElementById('lock-pin');if(p)p.focus();}
+    else{var gb=document.getElementById('lock-google-btn');if(gb&&gb.style.display!=='none')gb.focus();}
+  },120);
+}
 function tryUnlock(){
   var pin=document.getElementById('lock-pin').value;
   var stored=localStorage.getItem(_PIN_KEY);
-  var ok=false;
-  try{ok=(!stored||btoa(pin)===stored);}catch(e){}
+  var ok=false;try{ok=(!stored||btoa(pin)===stored);}catch(e){}
   if(ok){
     sessionStorage.setItem(_SESS_KEY,'1');
     document.getElementById('lock-screen').style.display='none';
     document.getElementById('lock-pin').value='';
   }else{
     var el=document.getElementById('lock-err');
-    el.textContent='密碼錯誤，請再試一次';
+    el.textContent='PIN 錯誤，請再試一次';
     document.getElementById('lock-pin').value='';
     setTimeout(function(){if(el)el.textContent='';},2500);
     document.getElementById('lock-pin').focus();
   }
 }
-(function(){
-  if(localStorage.getItem(_PIN_KEY)&&!sessionStorage.getItem(_SESS_KEY)){
-    document.getElementById('lock-screen').style.display='flex';
-    document.getElementById('lock-pin').focus();
+async function googleLogin(){
+  var btn=document.getElementById('lock-google-btn');
+  var err=document.getElementById('lock-err');
+  if(btn){btn.disabled=true;btn.style.opacity='.6';}
+  if(err)err.textContent='';
+  try{
+    var s=loadSync();
+    if(!s.config)throw new Error('請先在工具頁設定 Firebase 雲端同步');
+    await loadFirebase();
+    if(!window.firebase.apps.length)window.firebase.initializeApp(s.config);
+    var provider=new window.firebase.auth.GoogleAuthProvider();
+    var result=await window.firebase.auth().signInWithPopup(provider);
+    var email=result.user.email;
+    var allowed=localStorage.getItem(_AUTH_EMAIL);
+    if(allowed&&email!==allowed){
+      await window.firebase.auth().signOut();
+      throw new Error('此帳號（'+email+'）未獲授權，授權帳號為 '+allowed);
+    }
+    if(!allowed)localStorage.setItem(_AUTH_EMAIL,email);
+    // onAuthStateChanged will unlock
+  }catch(e){
+    if(err)err.textContent=e.message||'登入失敗';
+    if(btn){btn.disabled=false;btn.style.opacity='1';}
+  }
+}
+async function googleSignOut(){
+  try{if(window.firebase&&window.firebase.auth)await window.firebase.auth().signOut();}catch(e){}
+  sessionStorage.removeItem(_SESS_KEY);
+  _showLockScreen();
+}
+(async function setupAuth(){
+  var s=loadSync();
+  var hasFB=!!s.config;
+  var hasPIN=!!localStorage.getItem(_PIN_KEY);
+  var authEmail=localStorage.getItem(_AUTH_EMAIL);
+  var gb=document.getElementById('lock-google-btn');
+  var ps=document.getElementById('lock-pin-section');
+  var hint=document.getElementById('lock-setup-hint');
+  if(hasFB){
+    if(gb)gb.style.display='flex';
+    if(hasPIN&&ps)ps.style.display='block';
+    if(hint)hint.style.display='none';
+    try{
+      await loadFirebase();
+      if(!window.firebase.apps.length)window.firebase.initializeApp(s.config);
+      window.firebase.auth().onAuthStateChanged(function(user){
+        if(user){
+          var allowed=localStorage.getItem(_AUTH_EMAIL);
+          if(allowed&&user.email!==allowed){window.firebase.auth().signOut();return;}
+          if(!allowed)localStorage.setItem(_AUTH_EMAIL,user.email);
+          sessionStorage.setItem(_SESS_KEY,'1');
+          document.getElementById('lock-screen').style.display='none';
+          var ui=document.getElementById('gauth-status');if(ui)ui.textContent='已登入：'+user.displayName+' ('+user.email+')';
+          var gb2=document.getElementById('lock-google-btn');if(gb2){gb2.disabled=false;gb2.style.opacity='1';}
+        }else{
+          sessionStorage.removeItem(_SESS_KEY);
+          if(authEmail||hasPIN)_showLockScreen();
+        }
+      });
+    }catch(e){
+      // Firebase載入失敗，退回PIN
+      if(hasPIN&&!sessionStorage.getItem(_SESS_KEY))_showLockScreen();
+    }
+  }else{
+    if(gb)gb.style.display='none';
+    if(hasPIN){if(ps)ps.style.display='block';}else{if(hint)hint.style.display='block';}
+    if((hasPIN||authEmail)&&!sessionStorage.getItem(_SESS_KEY))_showLockScreen();
   }
 })();
 const APP_VERSION="OMO-v3 · 0722";
