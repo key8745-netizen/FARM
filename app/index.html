@@ -998,6 +998,8 @@ nav button.on{color:var(--accent);}
 .mkt-cb.sel{border-color:var(--accent);background:var(--accent-soft,#eef4ff);color:var(--accent);}
 .mkt-ch{background:var(--card2);border:1px solid var(--line);border-radius:20px;padding:4px 12px;font-size:.72rem;cursor:pointer;color:var(--ink);transition:all .15s;}
 .mkt-ch.sel{background:var(--accent);color:#fff;border-color:var(--accent);}
+.scp-b{background:var(--card2);border:1px solid var(--line);border-radius:20px;padding:4px 12px;font-size:.72rem;cursor:pointer;color:var(--ink);transition:all .15s;}
+.scp-b.sel{background:var(--accent);color:#fff;border-color:var(--accent);}
 .mkt-tbl{width:100%;border-collapse:collapse;font-size:.72rem;}
 .mkt-tbl th{padding:4px 6px;color:var(--ink-soft);font-weight:700;border-bottom:2px solid var(--line);}
 .mkt-tbl td{padding:5px 6px;border-bottom:1px solid var(--line);}
@@ -5934,6 +5936,25 @@ function renderTools(){
     '<span>底色深淺 = 當月行情強弱</span>'+
     '</div>'+
     '</div>'+
+    '<h2 style="margin-top:22px">📆 連續採收計畫</h2><p class="note">分批種植讓採收期拉長、現金流穩定。選作物、批次數量、每批株數，系統算出每批種植日期、甘特時程圖和每月預估收入。</p>'+
+    '<div class="card" id="scp-card">'+
+    '<div class="row2">'+
+    '<div><label class="f">作物</label><select class="t" id="scp-crop">'+opts+'</select></div>'+
+    '<div><label class="f">首批種植月</label><select class="t" id="scp-month">'+
+    Array.from({length:12},(_,i)=>'<option value="'+(i+1)+'">'+(i+1)+'月</option>').join('')+
+    '</select></div>'+
+    '</div>'+
+    '<div class="row2">'+
+    '<div><label class="f">每批株數</label><input class="t" id="scp-plants" type="number" min="1" value="20"></div>'+
+    '<div><label class="f">批次數量</label><div id="scp-batch-row" style="display:flex;gap:6px;margin-top:6px">'+
+    '<button class="scp-b" data-b="2">2批</button>'+
+    '<button class="scp-b sel" data-b="3">3批</button>'+
+    '<button class="scp-b" data-b="4">4批</button>'+
+    '<button class="scp-b" data-b="5">5批</button>'+
+    '</div></div>'+
+    '</div>'+
+    '<div id="scp-result" style="margin-top:10px"></div>'+
+    '</div>'+
     '<h2 style="margin-top:22px">📊 市場趨勢 · 投資策略儀表板</h2><p class="note">一眼看懂全年行情走勢，結合生長期推算「現在種什麼、能在好價期採收」，讓種植決策有數據支撐。</p>'+
     '<div class="card" id="mkt-strat-card">'+
     '<div style="display:flex;gap:6px;margin-bottom:12px">'+
@@ -6254,6 +6275,132 @@ function renderTools(){
       };
     });
     if(stratView)stratView.innerHTML=renderHeatView();
+  })();
+  // ── 連續採收計畫 IIFE ──
+  (()=>{
+    const cropEl=v.querySelector('#scp-crop');
+    const plantsEl=v.querySelector('#scp-plants');
+    const monthEl=v.querySelector('#scp-month');
+    const batchRow=v.querySelector('#scp-batch-row');
+    const result=v.querySelector('#scp-result');
+    if(!cropEl||!result)return;
+    monthEl.value=new Date().getMonth()+1;
+    let selBatch=3;
+    batchRow.querySelectorAll('[data-b]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        batchRow.querySelectorAll('[data-b]').forEach(function(b){b.classList.remove('sel');});
+        btn.classList.add('sel');selBatch=+btn.dataset.b;scpRender();
+      });
+    });
+    [cropEl,plantsEl,monthEl].forEach(function(el){el.addEventListener('change',scpRender);});
+    plantsEl.addEventListener('input',scpRender);
+    function scpRender(){
+      var cropName=cropEl.value;
+      var c=CROPS[cropName];if(!c)return;
+      var mp=MARKET_PRICE[cropName];if(!mp)return;
+      var ypp=YIELD_PER_PLANT[cropName]||{lo:1,hi:2,unit:'kg'};
+      var plants=Math.max(1,+plantsEl.value||20);
+      var startMn=+monthEl.value;
+      var nb=selBatch;
+      var grow=c.grow,dur=c.dur;
+      var stagger=Math.max(Math.round(dur/nb),7);
+      var yr=new Date().getFullYear();
+      var tStart=new Date(yr,startMn-1,1).getTime();
+      var batches=Array.from({length:nb},function(_,i){
+        var pMs=tStart+i*stagger*DAY;
+        return{pMs:pMs,hSMs:pMs+grow*DAY,hEMs:pMs+(grow+dur)*DAY,idx:i+1};
+      });
+      var tEnd=batches[nb-1].hEMs;
+      var tSpan=tEnd-tStart;if(tSpan<=0)return;
+      // ── Gantt SVG ──
+      var W=300,PL=32,PT=18,HR=20,cW=W-PL;
+      var totalH=PT+nb*HR+10;
+      function dx(ms){return PL+Math.round((ms-tStart)/tSpan*cW);}
+      var svg='<svg viewBox="0 0 '+W+' '+totalH+'" width="100%" style="display:block;max-width:'+W+'px;font-family:inherit">';
+      // Month grid
+      var firstMo=new Date(tStart).getMonth();
+      for(var m=0;m<=Math.ceil(tSpan/DAY/28)+2;m++){
+        var mMs=new Date(yr,firstMo+m,1).getTime();
+        if(mMs>tEnd+5*DAY)break;
+        var mx=Math.max(PL,Math.min(W-1,dx(mMs)));
+        svg+='<line x1="'+mx+'" y1="'+(PT-4)+'" x2="'+mx+'" y2="'+(PT+nb*HR)+'" stroke="currentColor" stroke-opacity=".12" stroke-width="1"/>';
+        if(mMs>=tStart){var ml=(firstMo+m)%12+1;svg+='<text x="'+(mx+2)+'" y="'+(PT-6)+'" font-size="7" fill="currentColor" opacity=".5">'+ml+'月</text>';}
+      }
+      // Batch rows
+      batches.forEach(function(b,i){
+        var y=PT+i*HR;
+        svg+='<text x="'+(PL-2)+'" y="'+(y+HR/2+3)+'" text-anchor="end" font-size="7.5" fill="currentColor">第'+b.idx+'批</text>';
+        var gx1=dx(b.pMs),gx2=dx(b.hSMs);
+        if(gx2>gx1)svg+='<rect x="'+gx1+'" y="'+(y+4)+'" width="'+(gx2-gx1)+'" height="'+(HR-8)+'" fill="#5aab60" rx="2" opacity=".85"/>';
+        var hx1=dx(b.hSMs),hx2=dx(b.hEMs);
+        if(hx2>hx1)svg+='<rect x="'+hx1+'" y="'+(y+4)+'" width="'+(hx2-hx1)+'" height="'+(HR-8)+'" fill="#e8a020" rx="2" opacity=".85"/>';
+        var pD=new Date(b.pMs);
+        svg+='<text x="'+Math.min(gx1+2,W-24)+'" y="'+(y+HR/2+3.5)+'" font-size="6.5" fill="#fff" font-weight="700">'+(pD.getMonth()+1)+'/'+(pD.getDate())+'</text>';
+      });
+      svg+='</svg>';
+      var legend='<div style="display:flex;gap:9px;flex-wrap:wrap;font-size:.6rem;color:var(--ink-soft);margin-top:4px">'+
+        '<span style="display:flex;align-items:center;gap:3px"><span style="width:10px;height:7px;background:#5aab60;border-radius:2px;display:inline-block"></span>生長 '+grow+'天</span>'+
+        '<span style="display:flex;align-items:center;gap:3px"><span style="width:10px;height:7px;background:#e8a020;border-radius:2px;display:inline-block"></span>採收 '+dur+'天（錯開 '+stagger+'天/批）</span>'+
+        '</div>';
+      // ── Monthly income chart ──
+      var months=[];
+      var mCurMs=new Date(new Date(batches[0].hSMs).getFullYear(),new Date(batches[0].hSMs).getMonth(),1).getTime();
+      while(mCurMs<=batches[nb-1].hEMs){
+        var mD=new Date(mCurMs);
+        var mEndMs=new Date(mD.getFullYear(),mD.getMonth()+1,1).getTime();
+        var kg=0;
+        batches.forEach(function(b){
+          var oS=Math.max(b.hSMs,mCurMs),oE=Math.min(b.hEMs,mEndMs);
+          if(oE>oS)kg+=ypp.hi*plants*(oE-oS)/(dur*DAY);
+        });
+        var mnNum=mD.getMonth()+1;
+        months.push({mn:mnNum,kg:kg,score:mktOutlook(cropName,mnNum).score});
+        mCurMs=mEndMs;
+      }
+      var g2Avg=(mp.g2[0]+mp.g2[1])/2;
+      months.forEach(function(m){m.rev=Math.round(m.kg*g2Avg);});
+      var maxRev=Math.max(1,Math.max.apply(null,months.map(function(m){return m.rev;})));
+      var BW=300,BH=70,BPB=16,BPPT=14;
+      var bW=months.length>0?Math.max(8,Math.floor((BW-BPB)/months.length)-2):20;
+      var bSvg='<svg viewBox="0 0 '+BW+' '+(BH+BPPT+10)+'" width="100%" style="display:block;max-width:'+BW+'px;font-family:inherit;margin-top:10px">';
+      months.forEach(function(m,i){
+        var bx=BPB+i*(bW+2);
+        var bh=Math.max(2,Math.round(m.rev/maxRev*BH*0.88));
+        var by=BH-bh+BPPT;
+        var col=m.score>=65?'#5aab60':m.score>=40?'#e8a020':'#e05252';
+        bSvg+='<rect x="'+bx+'" y="'+by+'" width="'+bW+'" height="'+bh+'" fill="'+col+'" rx="2" opacity=".85"/>';
+        bSvg+='<text x="'+(bx+bW/2)+'" y="'+(BH+BPPT+10)+'" text-anchor="middle" font-size="7.5" fill="currentColor">'+m.mn+'月</text>';
+        var rl=m.rev>=1000?(m.rev/1000).toFixed(1)+'k':String(m.rev);
+        bSvg+='<text x="'+(bx+bW/2)+'" y="'+(by-3)+'" text-anchor="middle" font-size="6" fill="currentColor" font-weight="700">$'+rl+'</text>';
+      });
+      bSvg+='<text x="2" y="'+(BPPT+9)+'" font-size="6" fill="currentColor" opacity=".4">元</text>';
+      bSvg+='</svg>';
+      var totalKg=Math.round(ypp.hi*plants*nb);
+      var totalRev=months.reduce(function(s,m){return s+m.rev;},0);
+      var harvestMns=months.filter(function(m){return m.rev>0;}).length;
+      var summary='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px">'+
+        '<div style="background:var(--card2);border-radius:10px;padding:10px;text-align:center">'+
+          '<div style="font-size:.63rem;color:var(--ink-soft)">總株數</div>'+
+          '<div style="font-size:1.1rem;font-weight:800;color:var(--accent)">'+(plants*nb)+'</div>'+
+          '<div style="font-size:.58rem;color:var(--ink-soft)">株 × '+nb+' 批</div>'+
+        '</div>'+
+        '<div style="background:var(--card2);border-radius:10px;padding:10px;text-align:center">'+
+          '<div style="font-size:.63rem;color:var(--ink-soft)">預估總產量</div>'+
+          '<div style="font-size:1.1rem;font-weight:800;color:var(--accent)">'+totalKg+'</div>'+
+          '<div style="font-size:.58rem;color:var(--ink-soft)">'+ypp.unit+'（高估）</div>'+
+        '</div>'+
+        '<div style="background:var(--card2);border-radius:10px;padding:10px;text-align:center">'+
+          '<div style="font-size:.63rem;color:var(--ink-soft)">預估總收入</div>'+
+          '<div style="font-size:1.1rem;font-weight:800;color:var(--accent)">$'+(totalRev/1000).toFixed(1)+'k</div>'+
+          '<div style="font-size:.58rem;color:var(--ink-soft)">共 '+harvestMns+' 個月有收益</div>'+
+        '</div>'+
+      '</div>'+
+      '<div style="font-size:.6rem;color:var(--ink-soft);margin-top:6px">* 以 G2 均價 $'+g2Avg.toFixed(0)+'/'+ypp.unit+' 試算，顏色=行情強弱。實際依品種、管理、氣候而異。</div>';
+      result.innerHTML='<div style="overflow-x:auto">'+svg+'</div>'+legend+
+        '<div style="font-size:.72rem;font-weight:700;color:var(--ink);margin-top:12px;margin-bottom:2px">📈 每月預估收入</div>'+
+        '<div style="overflow-x:auto">'+bSvg+'</div>'+summary;
+    }
+    scpRender();
   })();
   v.querySelector("#dl-go").onclick=()=>{
     const ratio=+v.querySelector("#dl-ratio").value;
