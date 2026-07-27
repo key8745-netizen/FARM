@@ -7905,6 +7905,7 @@ async function googleSignOut(){
     if(gb)gb.style.display='flex';
     if(hasPIN&&ps)ps.style.display='block';
     if(hint)hint.style.display='none';
+    if(!sessionStorage.getItem(_SESS_KEY))_showLockScreen();
     try{
       await loadFirebase();
       if(!window.firebase.apps.length)window.firebase.initializeApp(s.config);
@@ -7919,12 +7920,11 @@ async function googleSignOut(){
           var gb2=document.getElementById('lock-google-btn');if(gb2){gb2.disabled=false;gb2.style.opacity='1';}
         }else{
           sessionStorage.removeItem(_SESS_KEY);
-          if(authEmail||hasPIN)_showLockScreen();
+          _showLockScreen();
         }
       });
     }catch(e){
-      // Firebase載入失敗，退回PIN
-      if(hasPIN&&!sessionStorage.getItem(_SESS_KEY))_showLockScreen();
+      if(!sessionStorage.getItem(_SESS_KEY))_showLockScreen();
     }
   }else{
     if(gb)gb.style.display='none';
