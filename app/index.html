@@ -1077,41 +1077,43 @@ nav button.on{color:var(--accent);}
 <div id="modal-root"></div>
 
 <!-- 鎖定畫面 -->
-<div id="lock-screen" style="display:none;position:fixed;inset:0;z-index:9999;background:linear-gradient(155deg,#0c2710,#1a4a20);align-items:center;justify-content:center">
-  <div style="background:#fff;border-radius:22px;padding:36px 28px 24px;width:min(300px,88vw);text-align:center;box-shadow:0 24px 80px rgba(0,0,0,.6)">
-    <div style="font-size:3rem;line-height:1;margin-bottom:10px">🌱</div>
-    <div style="font-size:1.1rem;font-weight:800;color:#1a2a1a;margin-bottom:3px">農務小幫手</div>
-    <div style="font-size:.75rem;color:#888;margin-bottom:20px">請登入繼續</div>
+<div id="lock-screen" style="display:none;position:fixed;inset:0;z-index:9999;background:#f5f2ee;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:18px;padding:44px 36px 32px;width:min(340px,88vw);text-align:center;border:0.5px solid #e0dbd4">
+    <div style="font-size:2.8rem;line-height:1;margin-bottom:12px">🌱</div>
+    <div style="font-size:1.05rem;font-weight:600;color:#1a1a12;letter-spacing:.06em;margin-bottom:4px">農務小幫手</div>
+    <div style="font-size:.72rem;color:#9a9a8a;letter-spacing:.04em;margin-bottom:28px">請使用授權帳號登入</div>
     <!-- Google 登入按鈕 -->
     <button id="lock-google-btn" onclick="googleLogin()"
-      style="display:none;width:100%;background:#fff;color:#3c4043;border:1.5px solid #dadce0;border-radius:11px;padding:11px 14px;font-size:.88rem;font-weight:600;cursor:pointer;margin-bottom:10px;align-items:center;justify-content:center;gap:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
-      <svg width="18" height="18" viewBox="0 0 18 18" style="flex:none;vertical-align:middle;margin-right:8px"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.616z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"/></svg>
+      style="display:none;width:100%;background:#fff;color:#1a1a12;border:0.5px solid #dadce0;border-radius:10px;padding:12px 14px;font-size:.88rem;font-weight:400;cursor:pointer;margin-bottom:12px;align-items:center;justify-content:center;gap:10px"
+      onmouseover="this.style.background='#f5f2ee'" onmouseout="this.style.background='#fff'">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" height="18" alt="G" style="vertical-align:middle;margin-right:8px">
       使用 Google 帳號登入
     </button>
     <!-- PIN 備用 -->
     <div id="lock-pin-section" style="display:none">
-      <input type="password" id="lock-pin" placeholder="PIN 密碼" autocomplete="current-password"
-        style="width:100%;box-sizing:border-box;border:1.5px solid #d0d0d0;border-radius:11px;padding:11px 14px;font-size:1rem;outline:none;margin-bottom:10px;text-align:center;letter-spacing:.2em"
+      <div style="font-size:.68rem;color:#c8c4be;margin:2px 0 14px;letter-spacing:.04em">── 或輸入 PIN 碼 ──</div>
+      <input type="password" id="lock-pin" placeholder="PIN 碼" autocomplete="current-password"
+        style="width:100%;box-sizing:border-box;border:0.5px solid #dadce0;border-radius:10px;padding:12px 14px;font-size:1rem;outline:none;margin-bottom:10px;text-align:center;letter-spacing:.2em;color:#1a1a12"
         onkeydown="if(event.key==='Enter')tryUnlock()">
       <button onclick="tryUnlock()"
-        style="width:100%;background:#2a6e2a;color:#fff;border:none;border-radius:11px;padding:12px;font-size:.88rem;font-weight:700;cursor:pointer;margin-bottom:8px">
-        PIN 解鎖
+        style="width:100%;background:#2d6a4f;color:#fff;border:none;border-radius:10px;padding:12px;font-size:.88rem;font-weight:600;cursor:pointer;margin-bottom:8px">
+        確認
       </button>
     </div>
     <!-- 尚未設定提示 -->
-    <div id="lock-setup-hint" style="display:none;font-size:.67rem;color:#aaa;line-height:1.6;margin-top:6px">
+    <div id="lock-setup-hint" style="display:none;font-size:.72rem;color:#aaa;line-height:1.6;margin-top:4px">
       此 App 需要授權才能存取
     </div>
     <!-- 管理員初次設定（用於新裝置） -->
-    <div style="margin-top:14px;text-align:center">
-      <span onclick="var d=document.getElementById('lock-fb-setup');d.style.display=d.style.display==='block'?'none':'block'" style="font-size:.62rem;color:#999;cursor:pointer;text-decoration:underline">管理員初次設定</span>
+    <div style="margin-top:18px;text-align:center">
+      <span onclick="var d=document.getElementById('lock-fb-setup');d.style.display=d.style.display==='block'?'none':'block'" style="font-size:.65rem;color:#c0bcb6;cursor:pointer;letter-spacing:.02em">管理員初次設定</span>
     </div>
     <div id="lock-fb-setup" style="display:none;margin-top:10px;text-align:left">
-      <div style="font-size:.65rem;color:#555;margin-bottom:6px">貼上 Firebase Config JSON：</div>
-      <textarea id="lock-fb-cfg" style="width:100%;box-sizing:border-box;height:90px;font-size:.63rem;border:1.5px solid #d0d0d0;border-radius:9px;padding:8px;resize:none;color:#333" placeholder='{ "apiKey": "…", "authDomain": "…", "projectId": "…", "appId": "…" }'></textarea>
-      <button onclick="lockSetupFB()" style="margin-top:7px;width:100%;background:#2a6e2a;color:#fff;border:none;border-radius:9px;padding:10px;font-size:.82rem;font-weight:700;cursor:pointer">儲存並重新載入</button>
+      <div style="font-size:.68rem;color:#888;margin-bottom:6px">貼上 Firebase Config JSON：</div>
+      <textarea id="lock-fb-cfg" style="width:100%;box-sizing:border-box;height:90px;font-size:.65rem;border:0.5px solid #dadce0;border-radius:9px;padding:8px;resize:none;color:#333" placeholder='{ "apiKey": "…", "authDomain": "…", "projectId": "…", "appId": "…" }'></textarea>
+      <button onclick="lockSetupFB()" style="margin-top:7px;width:100%;background:#2d6a4f;color:#fff;border:none;border-radius:9px;padding:10px;font-size:.82rem;font-weight:600;cursor:pointer">儲存並重新載入</button>
     </div>
-    <div id="lock-err" style="font-size:.73rem;color:#e05252;min-height:18px;margin-top:8px"></div>
+    <div id="lock-err" style="font-size:.72rem;color:#b94040;min-height:18px;margin-top:10px"></div>
   </div>
 </div>
 
