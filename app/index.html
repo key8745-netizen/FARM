@@ -5743,7 +5743,10 @@ function aiModal(){
     try{
       // 從快取的 daily.js 回應組出病害風險摘要，讓 AI 可以交叉對照
       const _dc=(_dailyData?.risks||[]).slice(0,4).map(x=>x.name+'('+x.score+'分)').join('、');
-      const rp=await fetch("/.netlify/functions/diagnose",{method:"POST",headers:{"Content-Type":"application/json"},
+      const _u=window.firebase&&window.firebase.apps.length&&window.firebase.auth().currentUser;
+      if(!_u){res.innerHTML='<div class="info" style="color:var(--warn);margin-top:10px">AI 診斷需先用授權的 Google 帳號登入。</div>';return;}
+      const _tok=await _u.getIdToken();
+      const rp=await fetch("/.netlify/functions/diagnose",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+_tok},
         body:JSON.stringify({crop:r.crop,stage:st,ageDays:Math.max(age,0),plot:r.plot,data:data,observation:obs,recentTrend:ecs,images:imgs,diseaseContext:_dc||null})});
       const d=await rp.json();
       if(!d.ok){res.innerHTML='<div class="info" style="color:var(--warn);margin-top:10px">'+(d.error||"診斷失敗")+'<br><br>此功能需部署到 Netlify 並設定 ANTHROPIC_API_KEY 才能使用。</div>';return;}
@@ -7939,6 +7942,7 @@ async function googleSignOut(){
           if(!allowed)localStorage.setItem(_AUTH_EMAIL,user.email);
           sessionStorage.setItem(_SESS_KEY,'1');
           document.getElementById('lock-screen').style.display='none';
+          startupPull();
           var ui=document.getElementById('gauth-status');if(ui)ui.textContent='已登入：'+user.displayName+' ('+user.email+')';
           var gb2=document.getElementById('lock-google-btn');if(gb2){gb2.disabled=false;gb2.style.opacity='1';}
         }else{
@@ -7959,7 +7963,9 @@ const APP_VERSION="OMO-v3 · 0722";
 const t=today();document.getElementById("hd-date").innerHTML=fmtD(t)+"<br>星期"+["日","一","二","三","四","五","六"][t.getDay()]+'<br><span style="color:#fff;font-weight:700;opacity:.95">'+APP_VERSION+'</span>';
 renderDash();
 // 啟動時：若開了自動同步，先從雲端拉取最新，再重繪
-(async function(){const s=loadSync();if(s.auto&&s.config&&s.code){try{await cloudPull();_lastPushSnap=JSON.stringify(snapshot());go("dash");}catch(e){}}})();
+// 啟動時：若開了自動同步，登入完成後才從雲端拉取（Firestore 規則要求已登入的授權帳號）
+let _startupPulled=false;
+async function startupPull(){if(_startupPulled)return;_startupPulled=true;const s=loadSync();if(s.auto&&s.config&&s.code){try{await cloudPull();_lastPushSnap=JSON.stringify(snapshot());go("dash");}catch(e){}}}
 setInterval(autoSyncTick,15000);
 window.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")autoSyncTick();});
 

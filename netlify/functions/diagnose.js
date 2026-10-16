@@ -8,7 +8,8 @@
  * （灌溉/施肥/用藥/其他）、信心與資料缺口。前端可把「立即處置」套用為當日
  * 動態調整。
  *
- * 需在 Netlify 環境變數設定 ANTHROPIC_API_KEY。
+ * 需在 Netlify 環境變數設定 ANTHROPIC_API_KEY、FIREBASE_API_KEY（Firebase 網頁設定的 apiKey）、
+ * ALLOWED_EMAIL（授權的 Google 帳號）。請求需帶 Authorization: Bearer <Firebase ID Token>。
  *
  * POST body: {
  *   crop, stage, ageDays, plot,
@@ -91,9 +92,29 @@ function buildUserText(body) {
   return lines.join('\n');
 }
 
+// 用 Firebase Identity Toolkit 驗證 ID Token，回傳 email；無效回傳 null
+async function verifyEmail(idToken) {
+  const res = await fetch(
+    'https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=' + process.env.FIREBASE_API_KEY,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken }) }
+  );
+  if (!res.ok) return null;
+  const u = ((await res.json()).users || [])[0];
+  return u && u.emailVerified ? u.email : null;
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
+  }
+  const allowed = process.env.ALLOWED_EMAIL;
+  if (!allowed || !process.env.FIREBASE_API_KEY) {
+    return { statusCode: 500, body: JSON.stringify({ ok: false, error: '尚未設定 ALLOWED_EMAIL / FIREBASE_API_KEY（請在 Netlify 環境變數加入）' }) };
+  }
+  const idToken = (event.headers.authorization || '').replace(/^Bearer\s+/i, '');
+  const email = idToken ? await verifyEmail(idToken).catch(() => null) : null;
+  if (!email || email.toLowerCase() !== allowed.toLowerCase()) {
+    return { statusCode: 401, body: JSON.stringify({ ok: false, error: '未授權：請用授權的 Google 帳號登入' }) };
   }
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
