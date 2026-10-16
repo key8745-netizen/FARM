@@ -6863,7 +6863,7 @@ function renderTools(){
     function hasPIN(){return!!localStorage.getItem(_PIN_KEY);}
     function refresh(){
       if(hasPIN()){
-        stLbl.textContent='🔒 已設定 PIN 碼';stSub.textContent='重新開啟瀏覽器後需輸入 PIN 碼';
+        stLbl.textContent='🔒 已設定 PIN 碼';stSub.textContent='每次開啟 App 都需輸入 PIN 碼（Google 已登入也一樣）';
         lockNow.style.display='block';newVal.placeholder='更換 PIN 碼（留空則不變）';
       }else{
         stLbl.textContent='🔓 未設定 PIN 碼';stSub.textContent='PIN 碼為備用登入方式';
@@ -7940,12 +7940,18 @@ async function googleSignOut(){
           var allowed=localStorage.getItem(_AUTH_EMAIL);
           if(allowed&&user.email!==allowed){window.firebase.auth().signOut();return;}
           if(!allowed)localStorage.setItem(_AUTH_EMAIL,user.email);
-          sessionStorage.setItem(_SESS_KEY,'1');
-          document.getElementById('lock-screen').style.display='none';
           startupPull();
+          // 有設 PIN：Google 登入不自動解鎖，每次開啟仍須輸入 PIN
+          if(localStorage.getItem(_PIN_KEY)&&!sessionStorage.getItem(_SESS_KEY)){
+            var le=document.getElementById('lock-err');if(le)le.textContent='已登入 Google，請輸入 PIN 碼';
+            _showLockScreen();
+          }else{
+            sessionStorage.setItem(_SESS_KEY,'1');
+            document.getElementById('lock-screen').style.display='none';
+          }
           var ui=document.getElementById('gauth-status');if(ui)ui.textContent='已登入：'+user.displayName+' ('+user.email+')';
           var gb2=document.getElementById('lock-google-btn');if(gb2){gb2.disabled=false;gb2.style.opacity='1';}
-        }else{
+        }else if(!localStorage.getItem(_PIN_KEY)){
           sessionStorage.removeItem(_SESS_KEY);
           _showLockScreen();
         }
